@@ -105,9 +105,12 @@ const isFetching = computed(() => uiFlags.value.isFetching);
 const isCreating = computed(() => uiFlags.value.isCreating);
 const isUpdating = computed(() => uiFlags.value.isUpdating);
 
-async function reloadFunnels() {
+async function reloadFunnels(preserveSelection = false) {
   try {
     error.value = null;
+    // Salvar o funil selecionado antes de recarregar
+    const previousFunnelId = preserveSelection ? selectedFunnelId.value : null;
+
     await store.dispatch('funnels/get');
     await store.dispatch('teams/get');
 
@@ -116,6 +119,22 @@ async function reloadFunnels() {
       setTimeout(resolve, 100);
     });
 
+    // Se deve preservar a seleção e havia um funil selecionado, restaurar
+    if (preserveSelection && previousFunnelId) {
+      const preservedFunnel = funnels.value?.find(
+        f => f.id === previousFunnelId
+      );
+      if (preservedFunnel) {
+        selectedFunnelId.value = previousFunnelId;
+        columnsOrder.value = (preservedFunnel.columns || []).map(col => col.id);
+        await store.dispatch('funnels/getContacts', {
+          funnelId: previousFunnelId,
+        });
+        return;
+      }
+    }
+
+    // Caso contrário, usar o comportamento padrão
     const funnel =
       defaultFunnel.value || (funnels.value && funnels.value[0]) || null;
     if (funnel) {
@@ -179,13 +198,17 @@ const handleColumnCreated = async ({ name }) => {
     // Atualizar a ordem das colunas localmente
     columnsOrder.value = updatedColumns.map(col => col.id);
 
-    // Recarregar os funis para garantir sincronização
-    await reloadFunnels();
+    // Recarregar os funis para garantir sincronização, preservando a seleção atual
+    await reloadFunnels(true);
 
     showCreateColumnDialog.value = false;
     useAlert(t('KANBAN.CREATE_COLUMN.SUCCESS'));
-  } catch {
-    useAlert(t('KANBAN.CREATE_COLUMN_ERROR'));
+  } catch (err) {
+    const errorMessage =
+      err?.response?.data?.error ||
+      err?.message ||
+      t('KANBAN.CREATE_COLUMN_ERROR');
+    useAlert(errorMessage);
   }
 };
 

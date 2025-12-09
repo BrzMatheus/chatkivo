@@ -23,6 +23,10 @@ class Api::V1::Accounts::FunnelsController < Api::V1::Accounts::BaseController
 
   def update
     @funnel.update!(funnel_params)
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.join(', ') }, status: :unprocessable_entity
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def destroy
@@ -47,6 +51,11 @@ class Api::V1::Accounts::FunnelsController < Api::V1::Accounts::BaseController
   end
 
   def funnel_params
-    params.require(:funnel).permit(:name, :team_id, columns: [:id, :name, :position])
+    permitted = params.require(:funnel).permit(:name, :team_id, columns: [:id, :name, :position])
+    # Garantir que columns seja um array válido
+    if permitted[:columns].present? && permitted[:columns].is_a?(Array)
+      permitted[:columns] = permitted[:columns].reject { |col| col.blank? || (col.is_a?(Hash) && col.values.all?(&:blank?)) }
+    end
+    permitted
   end
 end
