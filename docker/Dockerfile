@@ -22,6 +22,7 @@ ENV RAILS_ENV ${RAILS_ENV}
 ARG NODE_OPTIONS="--max-old-space-size=4096 --openssl-legacy-provider"
 ENV NODE_OPTIONS ${NODE_OPTIONS}
 
+ARG GIT_SHA
 ENV BUNDLE_PATH="/gems"
 
 RUN apk update && apk add --no-cache \
@@ -87,7 +88,14 @@ RUN if [ "$RAILS_ENV" = "production" ]; then \
   fi
 
 # Generate .git_sha file with current commit hash
-RUN git rev-parse HEAD > /app/.git_sha
+# Use GIT_SHA build arg if provided, otherwise try git rev-parse HEAD
+RUN if [ -n "$GIT_SHA" ]; then \
+  echo "$GIT_SHA" > /app/.git_sha; \
+  elif git rev-parse HEAD > /app/.git_sha 2>/dev/null; then \
+  echo "Generated .git_sha from git rev-parse HEAD"; \
+  else \
+  echo "unknown" > /app/.git_sha; \
+  fi
 
 # Remove unnecessary files
 RUN rm -rf /gems/ruby/3.4.0/cache/*.gem \
