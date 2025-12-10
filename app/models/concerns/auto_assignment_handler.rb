@@ -24,9 +24,7 @@ module AutoAssignmentHandler
   end
 
   def should_run_auto_assignment?
-    return false unless inbox.enable_auto_assignment?
-
-    # run only if assignee is blank or doesn't have access to inbox
-    assignee.blank? || inbox.members.exclude?(assignee)
+    # Desabilitado: nenhuma conversa será direcionada automaticamente
+    false
   end
 end
