@@ -16,7 +16,6 @@ import ContactsBulkActionBar from '../components/ContactsBulkActionBar.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import BulkActionsAPI from 'dashboard/api/bulkActions';
 import KanbanView from 'dashboard/components-next/Contacts/Kanban/KanbanView.vue';
-import TabBar from 'dashboard/components-next/tabbar/TabBar.vue';
 
 const DEFAULT_SORT_FIELD = 'last_activity_at';
 const DEBOUNCE_DELAY = 300;
@@ -89,28 +88,6 @@ const bulkDeleteDialogConfirmLabel = computed(() =>
 );
 const hasSelection = computed(() => selectedCount.value > 0);
 
-const VIEW_TABS = [
-  { key: 'LIST', value: 'list', label: t('CONTACTS_LAYOUT.TABS.LIST') },
-  { key: 'KANBAN', value: 'kanban', label: t('CONTACTS_LAYOUT.TABS.KANBAN') },
-];
-
-const tabs = computed(() =>
-  VIEW_TABS.map(tab => ({
-    label: tab.label,
-    value: tab.value,
-  }))
-);
-
-const activeTabIndex = computed(() =>
-  VIEW_TABS.findIndex(v => v.value === activeView.value)
-);
-
-const handleTabChange = tab => {
-  activeView.value = tab.value;
-  router.replace({
-    query: { ...route.query, view: tab.value },
-  });
-};
 const activeSegment = computed(() => {
   if (!activeSegmentId.value) return undefined;
   return segments.value.find(view => view.id === Number(activeSegmentId.value));
@@ -444,16 +421,6 @@ onMounted(async () => {
       <KanbanView />
     </div>
     <div v-else class="flex flex-col h-full">
-      <div
-        class="flex items-center justify-end px-6 py-2 border-b border-n-strong"
-      >
-        <TabBar
-          :tabs="tabs"
-          :initial-active-tab="activeTabIndex"
-          class="[&>button]:px-4 [&>button]:py-2"
-          @tab-changed="handleTabChange"
-        />
-      </div>
       <ContactsListLayout
         :search-value="searchValue"
         :header-title="headerTitle"

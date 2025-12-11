@@ -619,7 +619,7 @@ const menuItems = computed(() => {
     <section class="grid gap-2 mt-2 mb-4">
       <div class="flex gap-2 items-center px-2 min-w-0">
         <div class="grid flex-shrink-0 place-content-center">
-          <Logo class="w-4 h-auto" />
+          <Logo class="w-4 h-auto ml-2" />
         </div>
         <div class="flex-shrink-0 w-px h-3 bg-n-strong" />
         <SidebarAccountSwitcher
