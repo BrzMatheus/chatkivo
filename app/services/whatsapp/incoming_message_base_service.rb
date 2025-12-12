@@ -82,21 +82,40 @@ class Whatsapp::IncomingMessageBaseService
 
   def set_contact
     contact_params = @processed_params[:contacts]&.first
-    return if contact_params.blank?
+    message = @processed_params[:messages].first
+    from_number = message[:from]
 
-    waid = processed_waid(contact_params[:wa_id])
+    return if from_number.blank?
+
+    # Use wa_id from contact_params if available, otherwise use the from number
+    waid = if contact_params&.dig(:wa_id).present?
+             processed_waid(contact_params[:wa_id])
+           else
+             processed_waid(from_number)
+           end
+
+    # Format phone number with + prefix
+    phone_number = from_number.start_with?('+') ? from_number : "+#{from_number}"
+
+    # Get contact name from profile if available, otherwise use formatted phone number
+    contact_name = contact_params&.dig(:profile, :name)
+    contact_name ||= begin
+      TelephoneNumber.parse(phone_number).international_number
+    rescue StandardError
+      phone_number
+    end
 
     contact_inbox = ::ContactInboxWithContactBuilder.new(
       source_id: waid,
       inbox: inbox,
-      contact_attributes: { name: contact_params.dig(:profile, :name), phone_number: "+#{@processed_params[:messages].first[:from]}" }
+      contact_attributes: { name: contact_name, phone_number: phone_number }
     ).perform
 
     @contact_inbox = contact_inbox
     @contact = contact_inbox.contact
 
     # Update existing contact name if ProfileName is available and current name is just phone number
-    update_contact_with_profile_name(contact_params)
+    update_contact_with_profile_name(contact_params) if contact_params.present?
   end
 
   def set_conversation
@@ -189,8 +208,13 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def contact_name_matches_phone_number?
-    phone_number = "+#{@processed_params[:messages].first[:from]}"
-    formatted_phone_number = TelephoneNumber.parse(phone_number).international_number
+    from_number = @processed_params[:messages].first[:from]
+    phone_number = from_number.start_with?('+') ? from_number : "+#{from_number}"
+    formatted_phone_number = begin
+      TelephoneNumber.parse(phone_number).international_number
+    rescue StandardError
+      phone_number
+    end
     @contact.name == phone_number || @contact.name == formatted_phone_number
   end
 end

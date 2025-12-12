@@ -92,6 +92,7 @@ class Telegram::IncomingMessageService
   def contact_attributes
     {
       name: "#{telegram_params_first_name} #{telegram_params_last_name}",
+      identifier: "telegram_#{telegram_params_from_id}",
       additional_attributes: additional_attributes
     }
   end
