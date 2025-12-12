@@ -21,7 +21,35 @@ class Api::V1::Widget::BaseController < ApplicationController
   end
 
   def create_conversation
-    ::Conversation.create!(conversation_params)
+    # Verificar se já existe uma conversa para evitar duplicatas
+    # especialmente em casos de requisições simultâneas (mensagens automáticas, stickers, etc)
+    existing_conversation = find_or_create_conversation
+    existing_conversation || create_new_conversation_with_lock
+  end
+
+  def find_or_create_conversation
+    # Se lock_to_single_conversation está habilitado, usar a última conversa
+    if inbox.lock_to_single_conversation?
+      @contact_inbox.conversations.last
+    else
+      # Caso contrário, usar a última conversa não resolvida
+      @contact_inbox.conversations.where.not(status: :resolved).last
+    end
+  end
+
+  def create_new_conversation_with_lock
+    # Usar lock no contact_inbox para prevenir condições de corrida
+    @contact_inbox.with_lock do
+      # Verificar novamente após adquirir o lock
+      existing = find_or_create_conversation
+      return existing if existing
+
+      ::Conversation.create!(conversation_params)
+    end
+  rescue ActiveRecord::RecordNotUnique => e
+    # Se ainda assim houver duplicação (por constraints de DB), buscar a existente
+    Rails.logger.warn "Conversa duplicada detectada para contact_inbox #{@contact_inbox.id}: #{e.message}"
+    find_or_create_conversation || raise
   end
 
   def inbox

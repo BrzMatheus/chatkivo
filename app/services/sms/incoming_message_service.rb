@@ -58,15 +58,30 @@ class Sms::IncomingMessageService
 
   def set_conversation
     # if lock to single conversation is disabled, we will create a new conversation if previous conversation is resolved
-    @conversation = if @inbox.lock_to_single_conversation
-                      @contact_inbox.conversations.last
-                    else
-                      @contact_inbox.conversations.where
-                                    .not(status: :resolved).last
-                    end
+    @conversation = find_existing_conversation
     return if @conversation
 
-    @conversation = ::Conversation.create!(conversation_params)
+    # Usar lock no contact_inbox para prevenir condições de corrida
+    # especialmente importante para mensagens automáticas, stickers e respostas rápidas
+    @contact_inbox.with_lock do
+      # Verificar novamente após adquirir o lock
+      @conversation = find_existing_conversation
+      return if @conversation
+
+      @conversation = ::Conversation.create!(conversation_params)
+    end
+  rescue ActiveRecord::RecordNotUnique => e
+    # Se ainda assim houver duplicação (por constraints de DB), buscar a existente
+    Rails.logger.warn "Conversa duplicada detectada para contact_inbox #{@contact_inbox.id}: #{e.message}"
+    @conversation = find_existing_conversation || raise
+  end
+
+  def find_existing_conversation
+    if @inbox.lock_to_single_conversation
+      @contact_inbox.conversations.last
+    else
+      @contact_inbox.conversations.where.not(status: :resolved).last
+    end
   end
 
   def contact_attributes

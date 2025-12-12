@@ -104,6 +104,7 @@ const showAddFoldersModal = ref(false);
 const showDeleteFoldersModal = ref(false);
 const isContextMenuOpen = ref(false);
 const appliedFilter = ref([]);
+const searchQuery = ref('');
 const advancedFilterTypes = ref(
   advancedFilterOptions.map(filter => ({
     ...filter,
@@ -339,6 +340,27 @@ const conversationList = computed(() => {
     });
   }
 
+  // Aplicar filtro de busca se houver termo de pesquisa
+  if (searchQuery.value && searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    localConversationList = localConversationList.filter(conversation => {
+      const contact = conversation.meta?.sender || {};
+      const contactName = (contact.name || '').toLowerCase();
+      const phoneNumber = (contact.phone_number || '').toLowerCase();
+      const email = (contact.email || '').toLowerCase();
+      const identifier = (contact.identifier || '').toLowerCase();
+      const displayId = String(conversation.id || '').toLowerCase();
+
+      return (
+        contactName.includes(query) ||
+        phoneNumber.includes(query) ||
+        email.includes(query) ||
+        identifier.includes(query) ||
+        displayId.includes(query)
+      );
+    });
+  }
+
   return localConversationList;
 });
 
@@ -571,6 +593,7 @@ function fetchConversations() {
 
 function resetAndFetchData() {
   appliedFilter.value = [];
+  searchQuery.value = '';
   resetBulkActions();
   store.dispatch('conversationPage/reset');
   store.dispatch('emptyAllConversations');
@@ -615,6 +638,7 @@ function updateAssigneeTab(selectedTab) {
   if (activeAssigneeTab.value !== selectedTab) {
     resetBulkActions();
     emitter.emit('clearSearchInput');
+    searchQuery.value = '';
     activeAssigneeTab.value = selectedTab;
     if (!currentPage.value) {
       fetchConversations();
@@ -629,6 +653,10 @@ function onBasicFilterChange(value, type) {
     activeSortBy.value = value;
   }
   resetAndFetchData();
+}
+
+function onSearch(value) {
+  searchQuery.value = value || '';
 }
 
 function openLastSavedItemInFolder() {
@@ -862,6 +890,7 @@ watch(conversationFilters, (newVal, oldVal) => {
       @filters-modal="onToggleAdvanceFiltersModal"
       @reset-filters="resetAndFetchData"
       @basic-filter-change="onBasicFilterChange"
+      @search="onSearch"
     />
 
     <TeleportWithDirection

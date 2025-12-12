@@ -13,6 +13,7 @@
     "SEARCH": {
       "INPUT": "Search for People, Chats, Saved Replies .."
     },
+    "SEARCH_PLACEHOLDER": "Search by name, phone, email...",
     "FILTER_ALL": "All",
     "ASSIGNEE_TYPE_TABS": {
       "me": "Mine",
