@@ -184,7 +184,11 @@ class Contact < ApplicationRecord
     if use_crm_v2
       where(contact_type: 'lead')
     else
-      where("contacts.email <> '' OR contacts.phone_number <> '' OR contacts.identifier <> ''")
+      where(
+        "(contacts.email IS NOT NULL AND contacts.email <> '') OR " \
+        "(contacts.phone_number IS NOT NULL AND contacts.phone_number <> '') OR " \
+        "(contacts.identifier IS NOT NULL AND contacts.identifier <> '')"
+      )
     end
   end
 

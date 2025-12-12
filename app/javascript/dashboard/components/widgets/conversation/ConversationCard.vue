@@ -121,8 +121,7 @@ const showLabelsSection = computed(() => {
 const messagePreviewClass = computed(() => {
   return [
     hasUnread.value ? 'font-medium text-n-slate-12' : 'text-n-slate-11',
-    !props.compact && hasUnread.value ? 'ltr:pr-4 rtl:pl-4' : '',
-    props.compact && hasUnread.value ? 'ltr:pr-6 rtl:pl-6' : '',
+    'ltr:pr-12 rtl:pl-12',
   ];
 });
 

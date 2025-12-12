@@ -98,8 +98,25 @@ export const mutations = {
   },
 
   [types.ASSIGN_TEAM](_state, { team, conversationId }) {
-    const [chat] = _state.allConversations.filter(c => c.id === conversationId);
-    chat.meta.team = team;
+    // Atualiza a conversa na lista
+    const chatInList = _state.allConversations.find(
+      c => c.id === conversationId
+    );
+    if (chatInList) {
+      if (!chatInList.meta) {
+        chatInList.meta = {};
+      }
+      chatInList.meta.team = team;
+    }
+
+    // Atualiza a conversa selecionada se for a mesma
+    const [selectedChat] = getSelectedChatConversation(_state);
+    if (selectedChat && selectedChat.id === conversationId) {
+      if (!selectedChat.meta) {
+        selectedChat.meta = {};
+      }
+      selectedChat.meta.team = team;
+    }
   },
 
   [types.UPDATE_CONVERSATION_LAST_ACTIVITY](

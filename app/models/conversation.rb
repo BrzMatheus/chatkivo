@@ -121,7 +121,6 @@ class Conversation < ApplicationRecord
   after_update_commit :execute_after_update_commit_callbacks
   after_create_commit :notify_conversation_creation
   after_create_commit :load_attributes_created_by_db_triggers
-  after_create_commit :sync_contact_type_on_creation
 
   delegate :auto_resolve_after, to: :account
 
@@ -291,15 +290,6 @@ class Conversation < ApplicationRecord
     obj_from_db = self.class.find(id)
     self[:display_id] = obj_from_db[:display_id]
     self[:uuid] = obj_from_db[:uuid]
-  end
-
-  def sync_contact_type_on_creation
-    # Update contact type to 'lead' if contact has conversations but is still 'visitor'
-    # This ensures contacts with conversations appear in the contacts list
-    return unless contact.contact_type == 'visitor'
-
-    contact.sync_contact_attributes
-    contact.save! if contact.changed?
   end
 
   def notify_status_change
