@@ -13,7 +13,8 @@ module AssignmentHandler
     return unless team_id_changed?
 
     validate_current_assignee_team
-    self.assignee ||= find_assignee_from_team
+    # Desativado: atribuição automática ao atendente online quando atribui ao time
+    # self.assignee ||= find_assignee_from_team
   end
 
   def validate_current_assignee_team
