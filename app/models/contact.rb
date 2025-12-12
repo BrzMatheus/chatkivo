@@ -187,7 +187,8 @@ class Contact < ApplicationRecord
       where(
         "(contacts.email IS NOT NULL AND contacts.email <> '') OR " \
         "(contacts.phone_number IS NOT NULL AND contacts.phone_number <> '') OR " \
-        "(contacts.identifier IS NOT NULL AND contacts.identifier <> '')"
+        "(contacts.identifier IS NOT NULL AND contacts.identifier <> '') OR " \
+        'EXISTS (SELECT 1 FROM conversations WHERE conversations.contact_id = contacts.id)'
       )
     end
   end
