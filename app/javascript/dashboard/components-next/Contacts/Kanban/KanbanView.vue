@@ -205,47 +205,7 @@ const handleCreateColumn = () => {
 };
 
 const handleColumnCreated = async columnData => {
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'KanbanView.vue:180',
-      message: 'handleColumnCreated called',
-      data: {
-        columnData,
-        hasCurrentFunnel: !!currentFunnel.value,
-        currentFunnelId: currentFunnel.value?.id,
-        currentColumnsCount: currentFunnel.value?.columns?.length,
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A',
-    }),
-  }).catch(() => {});
-  // #endregion
-
   if (!currentFunnel.value || !columnData?.name) {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'KanbanView.vue:185',
-        message: 'handleColumnCreated validation failed',
-        data: {
-          hasCurrentFunnel: !!currentFunnel.value,
-          hasColumnData: !!columnData,
-          hasColumnName: !!columnData?.name,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
     useAlert(t('KANBAN.CREATE_COLUMN_ERROR'));
     return;
   }
@@ -267,44 +227,8 @@ const handleColumnCreated = async columnData => {
       position: maxPosition + 1,
     };
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'KanbanView.vue:199',
-        message: 'Creating new column',
-        data: {
-          funnelId: funnel.id,
-          newColumn,
-          existingColumnsCount: existingColumns.length,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
-
     // Adicionar nova coluna ao array de colunas
     const updatedColumns = [...existingColumns, newColumn];
-
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'KanbanView.vue:205',
-        message: 'Dispatching funnels/update',
-        data: { funnelId: funnel.id, columnsCount: updatedColumns.length },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
 
     // Atualizar o funil com a nova coluna
     await store.dispatch('funnels/update', {
@@ -312,71 +236,20 @@ const handleColumnCreated = async columnData => {
       columns: updatedColumns,
     });
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'KanbanView.vue:212',
-        message: 'Funnel updated successfully, reloading',
-        data: { funnelId: funnel.id },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
-
     // Recarregar os funis para garantir sincronização, preservando a seleção atual
     await reloadFunnels(true);
 
     // Atualizar a ordem das colunas após recarregar
     const updatedFunnel = currentFunnel.value;
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'KanbanView.vue:220',
-        message: 'After reloadFunnels',
-        data: {
-          hasFunnel: !!updatedFunnel,
-          funnelId: updatedFunnel?.id,
-          columnsCount: updatedFunnel?.columns?.length,
-          columnsOrderLength: columnsOrder.value?.length,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
     if (updatedFunnel && updatedFunnel.columns) {
       columnsOrder.value = updatedFunnel.columns.map(col => col.id);
     }
   } catch (err) {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'KanbanView.vue:226',
-        message: 'Error creating column',
-        data: {
-          error: err?.message || err?.toString(),
-          errorResponse: err?.response?.data,
-          status: err?.response?.status,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
-    useAlert(t('KANBAN.CREATE_COLUMN_ERROR'));
+    const errorMessage =
+      err?.response?.data?.error ||
+      err?.message ||
+      t('KANBAN.CREATE_COLUMN_ERROR');
+    useAlert(errorMessage);
   }
 };
 

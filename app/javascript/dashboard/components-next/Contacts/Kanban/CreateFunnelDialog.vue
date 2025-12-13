@@ -38,9 +38,42 @@ const resetForm = () => {
 watch(
   () => props.show,
   newValue => {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'CreateFunnelDialog.vue:38',
+        message: 'watch show prop changed',
+        data: { newValue, hasDialogRef: !!dialogRef.value },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
     // Usar nextTick para garantir que o DOM foi atualizado
     if (newValue) {
       setTimeout(() => {
+        // #region agent log
+        fetch(
+          'http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location: 'CreateFunnelDialog.vue:44',
+              message: 'Opening dialog',
+              data: { hasDialogRef: !!dialogRef.value },
+              timestamp: Date.now(),
+              sessionId: 'debug-session',
+              runId: 'run1',
+              hypothesisId: 'B',
+            }),
+          }
+        ).catch(() => {});
+        // #endregion
         dialogRef.value?.open();
       }, 0);
     } else {
@@ -172,7 +205,31 @@ const handleClose = () => {
           color="teal"
           :is-loading="isLoading"
           :disabled="!canCreate || isLoading"
-          @click="handleCreate"
+          @click="
+            () => {
+              fetch(
+                'http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814',
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    location: 'CreateFunnelDialog.vue:106',
+                    message: 'Button clicked',
+                    data: {
+                      canCreate: canCreate.value,
+                      isLoading: isLoading.value,
+                      funnelName: funnelName.value,
+                    },
+                    timestamp: Date.now(),
+                    sessionId: 'debug-session',
+                    runId: 'run1',
+                    hypothesisId: 'B',
+                  }),
+                }
+              ).catch(() => {});
+              handleCreate();
+            }
+          "
         />
       </div>
     </template>
