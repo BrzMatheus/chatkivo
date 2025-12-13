@@ -7,6 +7,7 @@ import { frontendURL } from 'dashboard/helper/URLHelper';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
+import PaginationFooter from 'dashboard/components-next/pagination/PaginationFooter.vue';
 
 const props = defineProps({
   searchQuery: {
@@ -34,6 +35,10 @@ const contacts = useMapGetter('contacts/getContactsList');
 const uiFlags = useMapGetter('contacts/getUIFlags');
 const getFunnelContacts = useMapGetter('funnels/getFunnelContacts');
 const getContactLabels = useMapGetter('contactLabels/getContactLabels');
+
+// Estado de paginação
+const currentPage = ref(1);
+const itemsPerPage = ref(15);
 
 // Helper para obter valor do contato
 const getContactValue = (contact, attributeKey) => {
@@ -436,6 +441,28 @@ const filteredContacts = computed(() => {
   return filtered;
 });
 
+// Contatos paginados
+const paginatedContacts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return filteredContacts.value.slice(start, end);
+});
+
+// Total de contatos filtrados
+const totalFilteredContacts = computed(() => filteredContacts.value.length);
+
+// Resetar para primeira página quando filtros ou busca mudarem
+watch(
+  () => [props.searchQuery, props.appliedFilters],
+  () => {
+    currentPage.value = 1;
+  }
+);
+
+const handlePageChange = page => {
+  currentPage.value = page;
+};
+
 const handleContactClick = contact => {
   router.push(
     frontendURL(`accounts/${route.params.accountId}/contacts/${contact.id}`)
@@ -539,7 +566,7 @@ const handleDrop = async e => {
       </div>
       <div v-else class="divide-y divide-n-strong">
         <div
-          v-for="contact in filteredContacts"
+          v-for="contact in paginatedContacts"
           :key="contact.id"
           class="flex items-center gap-2 px-4 py-3 hover:bg-n-slate-2 cursor-move transition-colors group"
           draggable="true"
@@ -572,5 +599,17 @@ const handleDrop = async e => {
         </div>
       </div>
     </div>
+    <footer
+      v-if="totalFilteredContacts > 0"
+      class="sticky bottom-0 z-0 px-4 pb-4 border-t border-n-strong bg-n-slate-1"
+    >
+      <PaginationFooter
+        current-page-info="CONTACTS_LAYOUT.PAGINATION_FOOTER.SHOWING"
+        :current-page="currentPage"
+        :total-items="totalFilteredContacts"
+        :items-per-page="itemsPerPage"
+        @update:current-page="handlePageChange"
+      />
+    </footer>
   </div>
 </template>
