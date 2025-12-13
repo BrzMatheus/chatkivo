@@ -51,17 +51,81 @@ watch(
 );
 
 const handleCreate = async () => {
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'CreateFunnelDialog.vue:53',
+      message: 'handleCreate called',
+      data: { funnelName: funnelName.value, canCreate: canCreate.value },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'B',
+    }),
+  }).catch(() => {});
+  // #endregion
   if (!canCreate.value) return;
 
   try {
-    const funnel = await store.dispatch('funnels/create', {
+    const funnelData = {
       name: funnelName.value.trim(),
       team_id: null,
-    });
+    };
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'CreateFunnelDialog.vue:57',
+        message: 'Dispatching funnels/create',
+        data: { funnelData },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
+    const funnel = await store.dispatch('funnels/create', funnelData);
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'CreateFunnelDialog.vue:61',
+        message: 'Funnel created successfully',
+        data: { funnelId: funnel?.id, funnelName: funnel?.name },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
     emit('create', funnel);
     resetForm();
     emit('update:show', false);
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'CreateFunnelDialog.vue:65',
+        message: 'Error creating funnel',
+        data: {
+          error: error?.message || error?.toString(),
+          errorStack: error?.stack,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
     useAlert(t('KANBAN.CREATE_ERROR'));
   }
 };
@@ -83,7 +147,7 @@ const handleClose = () => {
     <div class="flex flex-col gap-4">
       <div>
         <label class="block mb-2 text-sm font-medium text-n-slate-12">
-          * {{ t('KANBAN.FUNNEL_NAME_LABEL') }}
+          <span>{{ t('KANBAN.FUNNEL_NAME_LABEL') }}</span>
         </label>
         <input
           v-model="funnelName"

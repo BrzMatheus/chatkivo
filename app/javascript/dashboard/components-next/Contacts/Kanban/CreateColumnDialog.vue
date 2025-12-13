@@ -49,13 +49,59 @@ watch(
 );
 
 const handleCreate = async () => {
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'CreateColumnDialog.vue:51',
+      message: 'handleCreate called',
+      data: { columnName: columnName.value, canCreate: canCreate.value },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A',
+    }),
+  }).catch(() => {});
+  // #endregion
   if (!canCreate.value) return;
 
   try {
-    emit('create', { name: columnName.value.trim() });
+    const columnData = { name: columnName.value.trim() };
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'CreateColumnDialog.vue:55',
+        message: 'Emitting create event',
+        data: { columnData },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
+    emit('create', columnData);
     resetForm();
     emit('update:show', false);
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'CreateColumnDialog.vue:59',
+        message: 'Error in handleCreate',
+        data: { error: error?.message || error?.toString() },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
     useAlert(t('KANBAN.CREATE_COLUMN_ERROR'));
   }
 };
@@ -77,7 +123,7 @@ const handleClose = () => {
     <div class="flex flex-col gap-4">
       <div>
         <label class="block mb-2 text-sm font-medium text-n-slate-12">
-          * {{ t('KANBAN.COLUMN_NAME_LABEL') }}
+          <span>{{ t('KANBAN.COLUMN_NAME_LABEL') }}</span>
         </label>
         <input
           v-model="columnName"

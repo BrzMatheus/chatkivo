@@ -13,13 +13,89 @@ import FunnelsAPI from '../../../api/funnels';
 
 export const actions = {
   create: async ({ commit }, funnelInfo) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'funnels/actions.js:15',
+        message: 'funnels/create action called',
+        data: { funnelInfo },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
     commit(SET_FUNNEL_UI_FLAG, { isCreating: true });
     try {
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'funnels/actions.js:18',
+            message: 'Calling FunnelsAPI.create',
+            data: { funnelInfo, url: window.location.pathname },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       const response = await FunnelsAPI.create({ funnel: funnelInfo });
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'funnels/actions.js:20',
+            message: 'FunnelsAPI.create success',
+            data: {
+              funnelId: response?.data?.id,
+              funnelName: response?.data?.name,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       const funnel = response.data;
       commit(SET_FUNNEL_ITEM, funnel);
       return funnel;
     } catch (error) {
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'funnels/actions.js:23',
+            message: 'Error in funnels/create',
+            data: {
+              error: error?.message || error?.toString(),
+              errorResponse: error?.response?.data,
+              status: error?.response?.status,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       throw new Error(error);
     } finally {
       commit(SET_FUNNEL_UI_FLAG, { isCreating: false });
@@ -60,11 +136,92 @@ export const actions = {
   },
 
   update: async ({ commit }, { id, ...updateObj }) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'funnels/actions.js:62',
+        message: 'funnels/update action called',
+        data: {
+          id,
+          updateObj,
+          hasColumns: !!updateObj.columns,
+          columnsCount: updateObj.columns?.length,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
     commit(SET_FUNNEL_UI_FLAG, { isUpdating: true });
     try {
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'funnels/actions.js:65',
+            message: 'Calling FunnelsAPI.update',
+            data: { id, updateObj, url: window.location.pathname },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'A',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       const response = await FunnelsAPI.update(id, { funnel: updateObj });
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'funnels/actions.js:67',
+            message: 'FunnelsAPI.update success',
+            data: {
+              funnelId: response?.data?.id,
+              columnsCount: response?.data?.columns?.length,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'A',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       commit(EDIT_FUNNEL, response.data);
     } catch (error) {
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'funnels/actions.js:69',
+            message: 'Error in funnels/update',
+            data: {
+              error: error?.message || error?.toString(),
+              errorResponse: error?.response?.data,
+              status: error?.response?.status,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'A',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       throw new Error(error);
     } finally {
       commit(SET_FUNNEL_UI_FLAG, { isUpdating: false });

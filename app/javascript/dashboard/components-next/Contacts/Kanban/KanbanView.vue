@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { debounce } from '@chatwoot/utils';
 import filterQueryGenerator from 'dashboard/helper/filterQueryGenerator';
 
 import KanbanColumn from './KanbanColumn.vue';
@@ -23,6 +24,7 @@ const funnels = useMapGetter('funnels/getFunnels');
 const uiFlags = useMapGetter('funnels/getUIFlags');
 const defaultFunnel = useMapGetter('funnels/getDefaultFunnel');
 const teams = useMapGetter('teams/getTeams');
+const meta = useMapGetter('contacts/getMeta');
 
 const selectedFunnelId = ref(null);
 const showCreateDialog = ref(false);
@@ -33,8 +35,12 @@ const searchQuery = ref('');
 const error = ref(null);
 const sidebarWidth = ref(290);
 const draggedColumnIndex = ref(null);
+const draggedOverColumnIndex = ref(null);
+const dragLeaveTimeout = ref(null);
 const columnsOrder = ref([]);
 const appliedFilters = ref([]);
+const currentPage = ref(1);
+const isPageLoading = ref(false);
 
 // Sidebar resize functionality
 const MIN_SIDEBAR_WIDTH = 200;
@@ -151,11 +157,44 @@ async function reloadFunnels(preserveSelection = false) {
 }
 
 const handleCreateFunnel = () => {
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'KanbanView.vue:159',
+      message: 'handleCreateFunnel called',
+      data: {},
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A',
+    }),
+  }).catch(() => {});
+  // #endregion
   showCreateDialog.value = true;
   showCreateDropdown.value = false;
 };
 
 const handleCreateColumn = () => {
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'KanbanView.vue:164',
+      message: 'handleCreateColumn called',
+      data: {
+        hasCurrentFunnel: !!currentFunnel.value,
+        currentFunnelId: currentFunnel.value?.id,
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A',
+    }),
+  }).catch(() => {});
+  // #endregion
   if (!currentFunnel.value) {
     useAlert(t('KANBAN.CREATE_COLUMN.NO_FUNNEL_SELECTED'));
     showCreateDropdown.value = false;
@@ -165,50 +204,179 @@ const handleCreateColumn = () => {
   showCreateDropdown.value = false;
 };
 
-const handleColumnCreated = async ({ name }) => {
-  const funnel = currentFunnel.value;
-  if (!funnel) return;
+const handleColumnCreated = async columnData => {
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'KanbanView.vue:180',
+      message: 'handleColumnCreated called',
+      data: {
+        columnData,
+        hasCurrentFunnel: !!currentFunnel.value,
+        currentFunnelId: currentFunnel.value?.id,
+        currentColumnsCount: currentFunnel.value?.columns?.length,
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A',
+    }),
+  }).catch(() => {});
+  // #endregion
+
+  if (!currentFunnel.value || !columnData?.name) {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:185',
+        message: 'handleColumnCreated validation failed',
+        data: {
+          hasCurrentFunnel: !!currentFunnel.value,
+          hasColumnData: !!columnData,
+          hasColumnName: !!columnData?.name,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
+    useAlert(t('KANBAN.CREATE_COLUMN_ERROR'));
+    return;
+  }
 
   try {
-    // Criar ID único para a nova coluna
-    const newColumnId = `col_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const funnel = currentFunnel.value;
+    const existingColumns = funnel.columns || [];
 
-    // Obter a posição máxima atual e adicionar 1
+    // Gerar ID único para a nova coluna
+    const newColumnId = `col_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const maxPosition =
-      funnel.columns && funnel.columns.length > 0
-        ? Math.max(...funnel.columns.map(col => col.position || 0))
+      existingColumns.length > 0
+        ? Math.max(...existingColumns.map(col => col.position || 0))
         : -1;
 
-    // Criar nova coluna
     const newColumn = {
       id: newColumnId,
-      name: name.trim(),
+      name: columnData.name.trim(),
       position: maxPosition + 1,
     };
 
-    // Adicionar a nova coluna ao array de colunas
-    const updatedColumns = [...(funnel.columns || []), newColumn];
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:199',
+        message: 'Creating new column',
+        data: {
+          funnelId: funnel.id,
+          newColumn,
+          existingColumnsCount: existingColumns.length,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
 
-    // Atualizar o funil via API
+    // Adicionar nova coluna ao array de colunas
+    const updatedColumns = [...existingColumns, newColumn];
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:205',
+        message: 'Dispatching funnels/update',
+        data: { funnelId: funnel.id, columnsCount: updatedColumns.length },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    // Atualizar o funil com a nova coluna
     await store.dispatch('funnels/update', {
       id: funnel.id,
       columns: updatedColumns,
     });
 
-    // Atualizar a ordem das colunas localmente
-    columnsOrder.value = updatedColumns.map(col => col.id);
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:212',
+        message: 'Funnel updated successfully, reloading',
+        data: { funnelId: funnel.id },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
 
     // Recarregar os funis para garantir sincronização, preservando a seleção atual
     await reloadFunnels(true);
 
-    showCreateColumnDialog.value = false;
-    useAlert(t('KANBAN.CREATE_COLUMN.SUCCESS'));
+    // Atualizar a ordem das colunas após recarregar
+    const updatedFunnel = currentFunnel.value;
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:220',
+        message: 'After reloadFunnels',
+        data: {
+          hasFunnel: !!updatedFunnel,
+          funnelId: updatedFunnel?.id,
+          columnsCount: updatedFunnel?.columns?.length,
+          columnsOrderLength: columnsOrder.value?.length,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
+    if (updatedFunnel && updatedFunnel.columns) {
+      columnsOrder.value = updatedFunnel.columns.map(col => col.id);
+    }
   } catch (err) {
-    const errorMessage =
-      err?.response?.data?.error ||
-      err?.message ||
-      t('KANBAN.CREATE_COLUMN_ERROR');
-    useAlert(errorMessage);
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:226',
+        message: 'Error creating column',
+        data: {
+          error: err?.message || err?.toString(),
+          errorResponse: err?.response?.data,
+          status: err?.response?.status,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
+    useAlert(t('KANBAN.CREATE_COLUMN_ERROR'));
   }
 };
 
@@ -235,9 +403,10 @@ const handleCreateAction = ({ action }) => {
   }
 };
 
-const loadContacts = async () => {
+const loadContacts = async (page = 1) => {
   try {
-    await store.dispatch('contacts/get', { page: 1 });
+    currentPage.value = page;
+    await store.dispatch('contacts/get', { page });
   } catch {
     // Error is handled by the store
   }
@@ -294,6 +463,9 @@ const handleApplyFilter = async filters => {
     );
   });
 
+  // Resetar para página 1 ao aplicar filtros
+  currentPage.value = 1;
+
   // Se há filtros válidos, sempre buscar contatos via API com filtros
   if (validFilters.length > 0) {
     try {
@@ -340,7 +512,7 @@ const handleApplyFilter = async filters => {
     }
   } else {
     // Se não há filtros válidos, recarregar contatos sem filtro
-    await loadContacts();
+    await loadContacts(1);
   }
 
   appliedFilters.value = filters;
@@ -351,8 +523,9 @@ const handleClearFilters = async () => {
   store.dispatch('contacts/clearContactFilters');
   appliedFilters.value = [];
   showFilterDialog.value = false;
+  currentPage.value = 1;
   // Recarregar contatos sem filtro
-  await loadContacts();
+  await loadContacts(1);
 };
 
 // Limpar filtros quando o diálogo é fechado sem aplicar
@@ -423,16 +596,50 @@ const handleColumnDragStart = (e, index) => {
   e.dataTransfer.effectAllowed = 'move';
 };
 
-const handleColumnDragOver = e => {
+const handleColumnDragOver = (e, columnIndex) => {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
+
+  // Limpar timeout se existir
+  if (dragLeaveTimeout.value) {
+    clearTimeout(dragLeaveTimeout.value);
+    dragLeaveTimeout.value = null;
+  }
+
+  if (
+    draggedColumnIndex.value !== null &&
+    draggedColumnIndex.value !== columnIndex
+  ) {
+    draggedOverColumnIndex.value = columnIndex;
+  }
+};
+
+const handleColumnDragLeave = e => {
+  // Verificar se realmente saímos da área da coluna
+  const relatedTarget = e.relatedTarget;
+  if (relatedTarget && e.currentTarget.contains(relatedTarget)) {
+    return; // Ainda estamos dentro da coluna
+  }
+
+  // Usar timeout para evitar limpeza prematura ao passar sobre elementos filhos
+  dragLeaveTimeout.value = setTimeout(() => {
+    draggedOverColumnIndex.value = null;
+    dragLeaveTimeout.value = null;
+  }, 50);
 };
 
 const handleColumnDrop = (e, dropIndex) => {
   e.preventDefault();
 
+  // Limpar timeout se existir
+  if (dragLeaveTimeout.value) {
+    clearTimeout(dragLeaveTimeout.value);
+    dragLeaveTimeout.value = null;
+  }
+
   const fromIndex = draggedColumnIndex.value;
   draggedColumnIndex.value = null;
+  draggedOverColumnIndex.value = null;
 
   if (fromIndex === null || fromIndex === dropIndex || !currentFunnel.value) {
     return;
@@ -470,9 +677,128 @@ const handleClickOutside = event => {
   }
 };
 
+// Função para carregar contatos com pesquisa ou filtros
+const loadContactsWithSearchOrFilter = async (page = 1) => {
+  currentPage.value = page;
+
+  // Verificar se há filtros aplicados
+  const validFilters = appliedFilters.value.filter(f => {
+    const hasValue =
+      f.values !== null &&
+      f.values !== undefined &&
+      f.values !== '' &&
+      (!Array.isArray(f.values) || f.values.length > 0);
+    return (
+      hasValue || ['is_present', 'is_not_present'].includes(f.filterOperator)
+    );
+  });
+
+  if (validFilters.length > 0) {
+    // Aplicar filtros
+    const filtersForQuery = validFilters.map(f => {
+      let processedValues = f.values;
+
+      if (f.attributeKey === 'team_id') {
+        if (
+          typeof f.values === 'object' &&
+          f.values !== null &&
+          !Array.isArray(f.values)
+        ) {
+          processedValues = [f.values.id || f.values];
+        } else if (Array.isArray(f.values)) {
+          processedValues = f.values.map(v =>
+            typeof v === 'object' && v !== null ? v.id || v : v
+          );
+        } else {
+          processedValues = [f.values];
+        }
+      }
+
+      return {
+        attribute_key: f.attributeKey,
+        filter_operator: f.filterOperator,
+        values: processedValues,
+        query_operator: f.queryOperator || 'and',
+      };
+    });
+
+    const queryPayload = filterQueryGenerator(filtersForQuery);
+    await store.dispatch('contacts/filter', {
+      page,
+      queryPayload,
+    });
+  } else if (searchQuery.value) {
+    // Aplicar pesquisa
+    await store.dispatch('contacts/search', {
+      search: encodeURIComponent(searchQuery.value),
+      page,
+      sortAttr: 'name',
+    });
+  } else {
+    // Carregar contatos normais
+    await loadContacts(page);
+  }
+};
+
+// Função de pesquisa com debounce
+const searchContactsDebounced = debounce(async (query, page = 1) => {
+  currentPage.value = page;
+
+  if (!query || query.trim() === '') {
+    // Se não há pesquisa, carregar contatos normais ou com filtros
+    await loadContactsWithSearchOrFilter(1);
+    return;
+  }
+
+  // Aplicar pesquisa via API (a pesquisa já busca em todas as páginas)
+  await store.dispatch('contacts/search', {
+    search: encodeURIComponent(query.trim()),
+    page,
+    sortAttr: 'name',
+  });
+}, 300);
+
+// Watch para pesquisa - resetar página quando pesquisa mudar
+watch(searchQuery, async (newQuery, oldQuery) => {
+  // Se a pesquisa mudou (não é apenas inicialização), resetar para página 1
+  if (oldQuery !== undefined && newQuery !== oldQuery) {
+    currentPage.value = 1;
+    await searchContactsDebounced(newQuery, 1);
+  }
+});
+
+// Handler para mudança de página da sidebar
+const handleLoadPage = async page => {
+  // Prevenir múltiplas chamadas simultâneas
+  if (isPageLoading.value || uiFlags.value.isFetching) {
+    return;
+  }
+
+  // Garantir que a página seja válida e diferente da atual
+  const currentMetaPage = meta.value?.currentPage || 1;
+
+  // Se a página solicitada for a mesma que já está carregada, ignorar
+  if (page === currentMetaPage && !isPageLoading.value) {
+    return;
+  }
+
+  isPageLoading.value = true;
+  try {
+    currentPage.value = page;
+    await loadContactsWithSearchOrFilter(page);
+  } catch {
+    // Error is handled by the store
+  } finally {
+    // Aguardar um pouco antes de liberar para evitar cliques muito rápidos
+    setTimeout(() => {
+      isPageLoading.value = false;
+    }, 300);
+  }
+};
+
 onMounted(() => {
   try {
-    loadContacts();
+    loadContacts(1);
     reloadFunnels();
     document.addEventListener('click', handleClickOutside);
   } catch (err) {
@@ -482,6 +808,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
+  if (dragLeaveTimeout.value) {
+    clearTimeout(dragLeaveTimeout.value);
+  }
 });
 </script>
 
@@ -497,6 +826,7 @@ onUnmounted(() => {
         :funnel-id="currentFunnel?.id"
         :applied-filters="appliedFilters"
         @add-contact="handleAddContact"
+        @load-page="handleLoadPage"
       />
       <!-- Resize handle -->
       <div
@@ -574,6 +904,7 @@ onUnmounted(() => {
                 type="text"
                 :placeholder="t('KANBAN.SEARCH_PLACEHOLDER')"
                 class="w-full h-full px-4 pr-10 text-sm border border-n-weak rounded-lg bg-n-background text-n-slate-12 focus:outline-none focus:border-n-strong focus:ring-1 focus:ring-n-weak"
+                @input="searchContactsDebounced(searchQuery, 1)"
               />
               <Icon
                 icon="i-lucide-search"
@@ -629,8 +960,18 @@ onUnmounted(() => {
               <div
                 v-for="(column, columnIndex) in sortedColumns"
                 :key="column.id || column"
-                class="kanban-column-wrapper"
+                class="kanban-column-wrapper transition-all duration-200"
+                :class="{
+                  'opacity-50 scale-95': draggedColumnIndex === columnIndex,
+                  'ring-4 ring-n-teal-9 ring-opacity-60 shadow-lg scale-105':
+                    draggedOverColumnIndex === columnIndex &&
+                    draggedColumnIndex !== columnIndex,
+                  'ring-2 ring-n-teal-7 ring-opacity-40':
+                    draggedOverColumnIndex === columnIndex &&
+                    draggedColumnIndex === columnIndex,
+                }"
                 @dragover.prevent="handleColumnDragOver($event, columnIndex)"
+                @dragleave="handleColumnDragLeave"
                 @drop.prevent="handleColumnDrop($event, columnIndex)"
               >
                 <KanbanColumn
@@ -639,6 +980,7 @@ onUnmounted(() => {
                   :column-index="columnIndex"
                   :search-query="searchQuery"
                   :applied-filters="appliedFilters"
+                  :is-dragging="draggedColumnIndex === columnIndex"
                   @contact-moved="handleContactMoved"
                   @add-contact-from-sidebar="handleAddContactFromSidebar"
                   @column-drag-start="handleColumnDragStart"
@@ -672,6 +1014,7 @@ onUnmounted(() => {
       <CreateColumnDialog
         v-model:show="showCreateColumnDialog"
         :is-loading="isUpdating"
+        :funnel="currentFunnel"
         @create="handleColumnCreated"
       />
     </div>
