@@ -36,42 +36,9 @@ const resetForm = () => {
 watch(
   () => props.show,
   newValue => {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'CreateColumnDialog.vue:36',
-        message: 'watch show prop changed',
-        data: { newValue, hasDialogRef: !!dialogRef.value },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
     // Usar nextTick para garantir que o DOM foi atualizado
     if (newValue) {
       setTimeout(() => {
-        // #region agent log
-        fetch(
-          'http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: 'CreateColumnDialog.vue:42',
-              message: 'Opening dialog',
-              data: { hasDialogRef: !!dialogRef.value },
-              timestamp: Date.now(),
-              sessionId: 'debug-session',
-              runId: 'run1',
-              hypothesisId: 'A',
-            }),
-          }
-        ).catch(() => {});
-        // #endregion
         dialogRef.value?.open();
       }, 0);
     } else {
@@ -82,59 +49,14 @@ watch(
 );
 
 const handleCreate = async () => {
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'CreateColumnDialog.vue:51',
-      message: 'handleCreate called',
-      data: { columnName: columnName.value, canCreate: canCreate.value },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A',
-    }),
-  }).catch(() => {});
-  // #endregion
   if (!canCreate.value) return;
 
   try {
     const columnData = { name: columnName.value.trim() };
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'CreateColumnDialog.vue:55',
-        message: 'Emitting create event',
-        data: { columnData },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
     emit('create', columnData);
     resetForm();
     emit('update:show', false);
   } catch (error) {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'CreateColumnDialog.vue:59',
-        message: 'Error in handleCreate',
-        data: { error: error?.message || error?.toString() },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
     useAlert(t('KANBAN.CREATE_COLUMN_ERROR'));
   }
 };
@@ -181,31 +103,7 @@ const handleClose = () => {
           color="teal"
           :is-loading="isLoading"
           :disabled="!canCreate || isLoading"
-          @click="
-            () => {
-              fetch(
-                'http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814',
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    location: 'CreateColumnDialog.vue:100',
-                    message: 'Button clicked',
-                    data: {
-                      canCreate: canCreate.value,
-                      isLoading: isLoading.value,
-                      columnName: columnName.value,
-                    },
-                    timestamp: Date.now(),
-                    sessionId: 'debug-session',
-                    runId: 'run1',
-                    hypothesisId: 'A',
-                  }),
-                }
-              ).catch(() => {});
-              handleCreate();
-            }
-          "
+          @click="handleCreate"
         />
       </div>
     </template>

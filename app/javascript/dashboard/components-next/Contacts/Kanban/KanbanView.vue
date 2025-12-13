@@ -157,44 +157,11 @@ async function reloadFunnels(preserveSelection = false) {
 }
 
 const handleCreateFunnel = () => {
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'KanbanView.vue:159',
-      message: 'handleCreateFunnel called',
-      data: {},
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A',
-    }),
-  }).catch(() => {});
-  // #endregion
   showCreateDialog.value = true;
   showCreateDropdown.value = false;
 };
 
 const handleCreateColumn = () => {
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'KanbanView.vue:164',
-      message: 'handleCreateColumn called',
-      data: {
-        hasCurrentFunnel: !!currentFunnel.value,
-        currentFunnelId: currentFunnel.value?.id,
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A',
-    }),
-  }).catch(() => {});
-  // #endregion
   if (!currentFunnel.value) {
     useAlert(t('KANBAN.CREATE_COLUMN.NO_FUNNEL_SELECTED'));
     showCreateDropdown.value = false;
