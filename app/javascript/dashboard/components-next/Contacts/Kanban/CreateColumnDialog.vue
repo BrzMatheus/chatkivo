@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+/* eslint-disable no-console */
+import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 
@@ -35,28 +36,49 @@ const resetForm = () => {
 // Watch para controlar abertura/fechamento do dialog
 watch(
   () => props.show,
-  newValue => {
-    // Usar nextTick para garantir que o DOM foi atualizado
+  async newValue => {
+    console.log(
+      '[DEBUG] CreateColumnDialog show prop changed to:',
+      newValue,
+      'dialogRef:',
+      !!dialogRef.value
+    );
     if (newValue) {
-      setTimeout(() => {
-        dialogRef.value?.open();
-      }, 0);
-    } else {
-      dialogRef.value?.close();
+      await nextTick();
+      console.log('[DEBUG] After nextTick, dialogRef:', !!dialogRef.value);
+      if (dialogRef.value) {
+        console.log('[DEBUG] Opening CreateColumnDialog');
+        dialogRef.value.open();
+      } else {
+        console.error('[DEBUG] dialogRef is null!');
+      }
+    } else if (dialogRef.value) {
+      dialogRef.value.close();
     }
   },
   { immediate: true }
 );
 
 const handleCreate = async () => {
-  if (!canCreate.value) return;
+  console.log(
+    '[DEBUG] CreateColumnDialog handleCreate called, canCreate:',
+    canCreate.value,
+    'columnName:',
+    columnName.value
+  );
+  if (!canCreate.value) {
+    console.log('[DEBUG] Cannot create - validation failed');
+    return;
+  }
 
   try {
     const columnData = { name: columnName.value.trim() };
+    console.log('[DEBUG] Emitting create event with:', columnData);
     emit('create', columnData);
     resetForm();
     emit('update:show', false);
   } catch (error) {
+    console.error('[DEBUG] Error in handleCreate:', error);
     useAlert(t('KANBAN.CREATE_COLUMN_ERROR'));
   }
 };

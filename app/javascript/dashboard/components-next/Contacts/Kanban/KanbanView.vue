@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable no-console */
 import { onMounted, onUnmounted, computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -157,11 +158,17 @@ async function reloadFunnels(preserveSelection = false) {
 }
 
 const handleCreateFunnel = () => {
+  console.log('[DEBUG] handleCreateFunnel called');
   showCreateDialog.value = true;
   showCreateDropdown.value = false;
+  console.log('[DEBUG] showCreateDialog set to:', showCreateDialog.value);
 };
 
 const handleCreateColumn = () => {
+  console.log(
+    '[DEBUG] handleCreateColumn called, currentFunnel:',
+    currentFunnel.value
+  );
   if (!currentFunnel.value) {
     useAlert(t('KANBAN.CREATE_COLUMN.NO_FUNNEL_SELECTED'));
     showCreateDropdown.value = false;
@@ -169,10 +176,21 @@ const handleCreateColumn = () => {
   }
   showCreateColumnDialog.value = true;
   showCreateDropdown.value = false;
+  console.log(
+    '[DEBUG] showCreateColumnDialog set to:',
+    showCreateColumnDialog.value
+  );
 };
 
 const handleColumnCreated = async columnData => {
+  console.log('[DEBUG] handleColumnCreated called with:', columnData);
   if (!currentFunnel.value || !columnData?.name) {
+    console.log(
+      '[DEBUG] Validation failed - currentFunnel:',
+      !!currentFunnel.value,
+      'columnData:',
+      columnData
+    );
     useAlert(t('KANBAN.CREATE_COLUMN_ERROR'));
     return;
   }
@@ -180,6 +198,12 @@ const handleColumnCreated = async columnData => {
   try {
     const funnel = currentFunnel.value;
     const existingColumns = funnel.columns || [];
+    console.log(
+      '[DEBUG] Creating column in funnel:',
+      funnel.id,
+      'existing columns:',
+      existingColumns.length
+    );
 
     // Gerar ID único para a nova coluna
     const newColumnId = `col_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -194,15 +218,19 @@ const handleColumnCreated = async columnData => {
       position: maxPosition + 1,
     };
 
+    console.log('[DEBUG] New column:', newColumn);
+
     // Adicionar nova coluna ao array de colunas
     const updatedColumns = [...existingColumns, newColumn];
 
+    console.log('[DEBUG] Updating funnel with columns:', updatedColumns.length);
     // Atualizar o funil com a nova coluna
     await store.dispatch('funnels/update', {
       id: funnel.id,
       columns: updatedColumns,
     });
 
+    console.log('[DEBUG] Funnel updated, reloading...');
     // Recarregar os funis para garantir sincronização, preservando a seleção atual
     await reloadFunnels(true);
 
@@ -211,7 +239,9 @@ const handleColumnCreated = async columnData => {
     if (updatedFunnel && updatedFunnel.columns) {
       columnsOrder.value = updatedFunnel.columns.map(col => col.id);
     }
+    console.log('[DEBUG] Column created successfully');
   } catch (err) {
+    console.error('[DEBUG] Error creating column:', err);
     const errorMessage =
       err?.response?.data?.error ||
       err?.message ||

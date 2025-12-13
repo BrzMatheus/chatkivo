@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+/* eslint-disable no-console */
+import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -37,32 +38,54 @@ const resetForm = () => {
 // Watch para controlar abertura/fechamento do dialog
 watch(
   () => props.show,
-  newValue => {
-    // Usar nextTick para garantir que o DOM foi atualizado
+  async newValue => {
+    console.log(
+      '[DEBUG] CreateFunnelDialog show prop changed to:',
+      newValue,
+      'dialogRef:',
+      !!dialogRef.value
+    );
     if (newValue) {
-      setTimeout(() => {
-        dialogRef.value?.open();
-      }, 0);
-    } else {
-      dialogRef.value?.close();
+      await nextTick();
+      console.log('[DEBUG] After nextTick, dialogRef:', !!dialogRef.value);
+      if (dialogRef.value) {
+        console.log('[DEBUG] Opening CreateFunnelDialog');
+        dialogRef.value.open();
+      } else {
+        console.error('[DEBUG] dialogRef is null!');
+      }
+    } else if (dialogRef.value) {
+      dialogRef.value.close();
     }
   },
   { immediate: true }
 );
 
 const handleCreate = async () => {
-  if (!canCreate.value) return;
+  console.log(
+    '[DEBUG] CreateFunnelDialog handleCreate called, canCreate:',
+    canCreate.value,
+    'funnelName:',
+    funnelName.value
+  );
+  if (!canCreate.value) {
+    console.log('[DEBUG] Cannot create - validation failed');
+    return;
+  }
 
   try {
     const funnelData = {
       name: funnelName.value.trim(),
       team_id: null,
     };
+    console.log('[DEBUG] Dispatching funnels/create with:', funnelData);
     const funnel = await store.dispatch('funnels/create', funnelData);
+    console.log('[DEBUG] Funnel created:', funnel);
     emit('create', funnel);
     resetForm();
     emit('update:show', false);
   } catch (error) {
+    console.error('[DEBUG] Error creating funnel:', error);
     useAlert(t('KANBAN.CREATE_ERROR'));
   }
 };
