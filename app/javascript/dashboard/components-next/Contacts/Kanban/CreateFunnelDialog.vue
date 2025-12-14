@@ -91,6 +91,7 @@ const handleCreate = async () => {
 };
 
 const handleClose = () => {
+  console.log('[DEBUG] CreateFunnelDialog handleClose called');
   resetForm();
   emit('update:show', false);
 };

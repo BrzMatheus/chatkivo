@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable no-console */
 import { ref, computed } from 'vue';
 import { OnClickOutside } from '@vueuse/components';
 import { useI18n } from 'vue-i18n';
@@ -76,12 +77,19 @@ const maxWidthClass = computed(() => {
 });
 
 const open = () => {
-  dialogRef.value?.showModal();
+  console.log('[DEBUG] Dialog.open() called, dialogRef:', !!dialogRef.value);
+  if (dialogRef.value) {
+    dialogRef.value.showModal();
+    console.log('[DEBUG] Dialog.showModal() called');
+  }
 };
 
 const close = () => {
+  console.log('[DEBUG] Dialog.close() called - emitting close event');
   emit('close');
-  dialogRef.value?.close();
+  if (dialogRef.value) {
+    dialogRef.value.close();
+  }
 };
 
 const confirm = () => {

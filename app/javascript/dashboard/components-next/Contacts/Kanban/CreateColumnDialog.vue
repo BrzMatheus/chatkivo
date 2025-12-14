@@ -84,6 +84,7 @@ const handleCreate = async () => {
 };
 
 const handleClose = () => {
+  console.log('[DEBUG] CreateColumnDialog handleClose called');
   resetForm();
   emit('update:show', false);
 };
