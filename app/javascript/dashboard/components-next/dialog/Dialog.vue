@@ -141,7 +141,9 @@ const handleBackdropClick = event => {
     'dialogOpen:',
     dialogRef.value?.open,
     'event.target:',
-    event.target
+    event.target,
+    'event.type:',
+    event.type
   );
   // Prevenir fechamento imediato após abrir
   if (isOpening.value) {
@@ -149,9 +151,10 @@ const handleBackdropClick = event => {
       '[DEBUG] Dialog.handleBackdropClick() prevented - dialog is still opening'
     );
     event.preventDefault();
+    event.stopPropagation();
     return;
   }
-  // Verificar se o clique foi no backdrop (o próprio dialog) e se está aberto
+  // Verificar se o clique foi no backdrop (o próprio dialog) e não em um filho
   if (event.target === dialogRef.value && dialogRef.value?.open) {
     console.log('[DEBUG] Backdrop clicked, closing dialog');
     close();
@@ -160,8 +163,12 @@ const handleBackdropClick = event => {
       '[DEBUG] Dialog.handleBackdropClick() - not backdrop or not open, target:',
       event.target,
       'dialogRef:',
-      dialogRef.value
+      dialogRef.value,
+      'target.tagName:',
+      event.target?.tagName
     );
+    // Prevenir propagação se não foi no backdrop
+    event.stopPropagation();
   }
 };
 

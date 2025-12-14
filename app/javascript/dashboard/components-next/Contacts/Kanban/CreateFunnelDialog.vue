@@ -122,6 +122,27 @@ const handleClose = () => {
           :placeholder="t('KANBAN.FUNNEL_NAME_PLACEHOLDER')"
           class="w-full px-3 py-2 text-sm border rounded-lg bg-n-background border-n-weak text-n-slate-12 focus:outline-none focus:ring-2 focus:ring-n-weak"
           @keyup.enter="handleCreate"
+          @focus="
+            () =>
+              console.log(
+                '[DEBUG] CreateFunnelDialog input focused, funnelName:',
+                funnelName.value
+              )
+          "
+          @blur="
+            () =>
+              console.log(
+                '[DEBUG] CreateFunnelDialog input blurred, funnelName:',
+                funnelName.value
+              )
+          "
+          @input="
+            () =>
+              console.log(
+                '[DEBUG] CreateFunnelDialog input changed, funnelName:',
+                funnelName.value
+              )
+          "
         />
       </div>
     </div>
