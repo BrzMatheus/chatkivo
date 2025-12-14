@@ -154,6 +154,13 @@ const handleBackdropClick = event => {
     event.stopPropagation();
     return;
   }
+  // Só processar eventos de mouse (não teclado)
+  if (event.type !== 'mousedown' && event.type !== 'click') {
+    console.log(
+      '[DEBUG] Dialog.handleBackdropClick() - not a mouse event, ignoring'
+    );
+    return;
+  }
   // Verificar se o clique foi no backdrop (o próprio dialog) e não em um filho
   if (event.target === dialogRef.value && dialogRef.value?.open) {
     console.log('[DEBUG] Backdrop clicked, closing dialog');
@@ -221,7 +228,7 @@ defineExpose({ open, close });
         overflowYAuto ? 'overflow-y-auto' : 'overflow-visible',
       ]"
       @close="handleDialogClose"
-      @click.self="handleBackdropClick"
+      @mousedown.self="handleBackdropClick"
     >
       <form
         ref="dialogContentRef"
