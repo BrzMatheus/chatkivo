@@ -62,6 +62,7 @@ const { t } = useI18n();
 
 const dialogRef = ref(null);
 const dialogContentRef = ref(null);
+const isOpening = ref(false);
 
 const maxWidthClass = computed(() => {
   const classesMap = {
@@ -79,16 +80,41 @@ const maxWidthClass = computed(() => {
 const open = () => {
   console.log('[DEBUG] Dialog.open() called, dialogRef:', !!dialogRef.value);
   if (dialogRef.value) {
-    dialogRef.value.showModal();
-    console.log('[DEBUG] Dialog.showModal() called');
+    // Verificar se o dialog já está aberto
+    const isOpen = dialogRef.value.open;
+    console.log('[DEBUG] Dialog isOpen before showModal:', isOpen);
+    if (!isOpen) {
+      isOpening.value = true;
+      dialogRef.value.showModal();
+      console.log('[DEBUG] Dialog.showModal() called');
+      // Resetar a flag após um pequeno delay para permitir que o dialog abra
+      setTimeout(() => {
+        isOpening.value = false;
+        console.log('[DEBUG] Dialog isOpening flag reset');
+      }, 100);
+    } else {
+      console.log('[DEBUG] Dialog already open, skipping showModal');
+    }
   }
 };
 
 const close = () => {
-  console.log('[DEBUG] Dialog.close() called - emitting close event');
-  emit('close');
-  if (dialogRef.value) {
+  console.log(
+    '[DEBUG] Dialog.close() called, isOpening:',
+    isOpening.value,
+    'dialogRef:',
+    !!dialogRef.value
+  );
+  // Prevenir fechamento imediato após abrir
+  if (isOpening.value) {
+    console.log('[DEBUG] Dialog.close() prevented - dialog is still opening');
+    return;
+  }
+  if (dialogRef.value && dialogRef.value.open) {
+    emit('close');
     dialogRef.value.close();
+  } else {
+    console.log('[DEBUG] Dialog.close() called but dialog is not open');
   }
 };
 
