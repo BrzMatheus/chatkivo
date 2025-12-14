@@ -85,13 +85,28 @@ const open = () => {
     console.log('[DEBUG] Dialog isOpen before showModal:', isOpen);
     if (!isOpen) {
       isOpening.value = true;
-      dialogRef.value.showModal();
-      console.log('[DEBUG] Dialog.showModal() called');
-      // Resetar a flag após um pequeno delay para permitir que o dialog abra
-      setTimeout(() => {
-        isOpening.value = false;
-        console.log('[DEBUG] Dialog isOpening flag reset');
-      }, 100);
+      // Usar requestAnimationFrame para garantir que o DOM está pronto
+      requestAnimationFrame(() => {
+        if (dialogRef.value && !dialogRef.value.open) {
+          dialogRef.value.showModal();
+          console.log('[DEBUG] Dialog.showModal() called');
+          // Verificar se realmente abriu
+          requestAnimationFrame(() => {
+            console.log(
+              '[DEBUG] Dialog isOpen after showModal:',
+              dialogRef.value?.open
+            );
+            // Resetar a flag após um delay maior para permitir que o dialog abra completamente
+            setTimeout(() => {
+              isOpening.value = false;
+              console.log(
+                '[DEBUG] Dialog isOpening flag reset, dialog isOpen:',
+                dialogRef.value?.open
+              );
+            }, 200);
+          });
+        }
+      });
     } else {
       console.log('[DEBUG] Dialog already open, skipping showModal');
     }
@@ -118,6 +133,64 @@ const close = () => {
   }
 };
 
+const handleClickOutside = () => {
+  console.log(
+    '[DEBUG] Dialog.handleClickOutside() called, isOpening:',
+    isOpening.value,
+    'dialogRef:',
+    !!dialogRef.value,
+    'dialogOpen:',
+    dialogRef.value?.open
+  );
+  // Prevenir fechamento imediato após abrir
+  if (isOpening.value) {
+    console.log(
+      '[DEBUG] Dialog.handleClickOutside() prevented - dialog is still opening'
+    );
+    return;
+  }
+  // Verificar se o dialog está realmente aberto antes de fechar
+  if (dialogRef.value && dialogRef.value.open) {
+    close();
+  } else {
+    console.log(
+      '[DEBUG] Dialog.handleClickOutside() prevented - dialog is not open'
+    );
+  }
+};
+
+const handleDialogClose = event => {
+  console.log(
+    '[DEBUG] Dialog.handleDialogClose() called from @close event, isOpening:',
+    isOpening.value,
+    'dialogRef:',
+    !!dialogRef.value,
+    'event:',
+    event
+  );
+  // Prevenir fechamento imediato após abrir
+  if (isOpening.value) {
+    console.log(
+      '[DEBUG] Dialog.handleDialogClose() prevented - dialog is still opening'
+    );
+    // Prevenir o fechamento padrão do dialog
+    if (event && event.preventDefault) {
+      event.preventDefault();
+    }
+    // Reabrir o dialog se ele foi fechado durante a abertura
+    if (dialogRef.value && !dialogRef.value.open) {
+      console.log('[DEBUG] Reopening dialog that was closed during opening');
+      setTimeout(() => {
+        if (dialogRef.value && !dialogRef.value.open) {
+          dialogRef.value.showModal();
+        }
+      }, 10);
+    }
+    return;
+  }
+  close();
+};
+
 const confirm = () => {
   emit('confirm');
 };
@@ -134,9 +207,9 @@ defineExpose({ open, close });
         maxWidthClass,
         overflowYAuto ? 'overflow-y-auto' : 'overflow-visible',
       ]"
-      @close="close"
+      @close="handleDialogClose"
     >
-      <OnClickOutside @trigger="close">
+      <OnClickOutside @trigger="handleClickOutside">
         <form
           ref="dialogContentRef"
           class="flex flex-col w-full h-auto gap-6 p-6 overflow-visible text-left align-middle transition-all duration-300 ease-in-out transform bg-n-alpha-3 backdrop-blur-[100px] shadow-xl rounded-xl"
