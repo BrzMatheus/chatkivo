@@ -38,13 +38,20 @@ const resetForm = () => {
 // Watch para controlar abertura/fechamento do dialog
 watch(
   () => props.show,
-  async newValue => {
+  async (newValue, oldValue) => {
     console.log(
       '[DEBUG] CreateFunnelDialog show prop changed to:',
       newValue,
+      'from:',
+      oldValue,
       'dialogRef:',
       !!dialogRef.value
     );
+    // Só processar se o valor realmente mudou
+    if (newValue === oldValue) {
+      console.log('[DEBUG] CreateFunnelDialog show value unchanged, skipping');
+      return;
+    }
     if (newValue) {
       await nextTick();
       console.log('[DEBUG] After nextTick, dialogRef:', !!dialogRef.value);
@@ -57,8 +64,7 @@ watch(
     } else if (dialogRef.value) {
       dialogRef.value.close();
     }
-  },
-  { immediate: true }
+  }
 );
 
 const handleCreate = async () => {
