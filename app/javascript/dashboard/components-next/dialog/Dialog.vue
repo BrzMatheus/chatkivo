@@ -62,6 +62,7 @@ const { t } = useI18n();
 const dialogRef = ref(null);
 const dialogContentRef = ref(null);
 const isOpening = ref(false);
+const lastOpenTime = ref(0);
 
 const maxWidthClass = computed(() => {
   const classesMap = {
@@ -98,9 +99,12 @@ const open = () => {
             // Resetar a flag após um delay maior para permitir que o dialog abra completamente
             setTimeout(() => {
               isOpening.value = false;
+              lastOpenTime.value = Date.now();
               console.log(
                 '[DEBUG] Dialog isOpening flag reset, dialog isOpen:',
-                dialogRef.value?.open
+                dialogRef.value?.open,
+                'lastOpenTime:',
+                lastOpenTime.value
               );
             }, 200);
           });
@@ -132,66 +136,26 @@ const close = () => {
   }
 };
 
-const handleBackdropClick = event => {
-  console.log(
-    '[DEBUG] Dialog.handleBackdropClick() called, isOpening:',
-    isOpening.value,
-    'dialogRef:',
-    !!dialogRef.value,
-    'dialogOpen:',
-    dialogRef.value?.open,
-    'event.target:',
-    event.target,
-    'event.type:',
-    event.type
-  );
-  // Prevenir fechamento imediato após abrir
-  if (isOpening.value) {
-    console.log(
-      '[DEBUG] Dialog.handleBackdropClick() prevented - dialog is still opening'
-    );
-    event.preventDefault();
-    event.stopPropagation();
-    return;
-  }
-  // Só processar eventos de mouse (não teclado)
-  if (event.type !== 'mousedown' && event.type !== 'click') {
-    console.log(
-      '[DEBUG] Dialog.handleBackdropClick() - not a mouse event, ignoring'
-    );
-    return;
-  }
-  // Verificar se o clique foi no backdrop (o próprio dialog) e não em um filho
-  if (event.target === dialogRef.value && dialogRef.value?.open) {
-    console.log('[DEBUG] Backdrop clicked, closing dialog');
-    close();
-  } else {
-    console.log(
-      '[DEBUG] Dialog.handleBackdropClick() - not backdrop or not open, target:',
-      event.target,
-      'dialogRef:',
-      dialogRef.value,
-      'target.tagName:',
-      event.target?.tagName
-    );
-    // Prevenir propagação se não foi no backdrop
-    event.stopPropagation();
-  }
-};
-
 const handleDialogClose = event => {
+  const timeSinceOpen = Date.now() - lastOpenTime.value;
   console.log(
     '[DEBUG] Dialog.handleDialogClose() called from @close event, isOpening:',
     isOpening.value,
     'dialogRef:',
     !!dialogRef.value,
     'event:',
-    event
+    event,
+    'dialogOpen:',
+    dialogRef.value?.open,
+    'timeSinceOpen:',
+    timeSinceOpen
   );
-  // Prevenir fechamento imediato após abrir
-  if (isOpening.value) {
+  // Prevenir fechamento imediato após abrir (dentro de 500ms)
+  if (isOpening.value || timeSinceOpen < 500) {
     console.log(
-      '[DEBUG] Dialog.handleDialogClose() prevented - dialog is still opening'
+      '[DEBUG] Dialog.handleDialogClose() prevented - dialog is still opening or just opened (timeSinceOpen:',
+      timeSinceOpen,
+      'ms)'
     );
     // Prevenir o fechamento padrão do dialog
     if (event && event.preventDefault) {
@@ -206,6 +170,14 @@ const handleDialogClose = event => {
         }
       }, 10);
     }
+    return;
+  }
+  // Verificar se o dialog está realmente aberto antes de fechar
+  // Isso previne fechamentos acidentais quando o dialog já está fechado
+  if (dialogRef.value && !dialogRef.value.open) {
+    console.log(
+      '[DEBUG] Dialog.handleDialogClose() prevented - dialog is already closed'
+    );
     return;
   }
   close();
@@ -228,7 +200,6 @@ defineExpose({ open, close });
         overflowYAuto ? 'overflow-y-auto' : 'overflow-visible',
       ]"
       @close="handleDialogClose"
-      @mousedown.self="handleBackdropClick"
     >
       <form
         ref="dialogContentRef"
