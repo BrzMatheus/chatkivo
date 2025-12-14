@@ -1,7 +1,6 @@
 <script setup>
 /* eslint-disable no-console */
 import { ref, computed } from 'vue';
-import { OnClickOutside } from '@vueuse/components';
 import { useI18n } from 'vue-i18n';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -133,28 +132,35 @@ const close = () => {
   }
 };
 
-const handleClickOutside = () => {
+const handleBackdropClick = event => {
   console.log(
-    '[DEBUG] Dialog.handleClickOutside() called, isOpening:',
+    '[DEBUG] Dialog.handleBackdropClick() called, isOpening:',
     isOpening.value,
     'dialogRef:',
     !!dialogRef.value,
     'dialogOpen:',
-    dialogRef.value?.open
+    dialogRef.value?.open,
+    'event.target:',
+    event.target
   );
   // Prevenir fechamento imediato após abrir
   if (isOpening.value) {
     console.log(
-      '[DEBUG] Dialog.handleClickOutside() prevented - dialog is still opening'
+      '[DEBUG] Dialog.handleBackdropClick() prevented - dialog is still opening'
     );
+    event.preventDefault();
     return;
   }
-  // Verificar se o dialog está realmente aberto antes de fechar
-  if (dialogRef.value && dialogRef.value.open) {
+  // Verificar se o clique foi no backdrop (o próprio dialog) e se está aberto
+  if (event.target === dialogRef.value && dialogRef.value?.open) {
+    console.log('[DEBUG] Backdrop clicked, closing dialog');
     close();
   } else {
     console.log(
-      '[DEBUG] Dialog.handleClickOutside() prevented - dialog is not open'
+      '[DEBUG] Dialog.handleBackdropClick() - not backdrop or not open, target:',
+      event.target,
+      'dialogRef:',
+      dialogRef.value
     );
   }
 };
@@ -208,53 +214,52 @@ defineExpose({ open, close });
         overflowYAuto ? 'overflow-y-auto' : 'overflow-visible',
       ]"
       @close="handleDialogClose"
+      @click.self="handleBackdropClick"
     >
-      <OnClickOutside @trigger="handleClickOutside">
-        <form
-          ref="dialogContentRef"
-          class="flex flex-col w-full h-auto gap-6 p-6 overflow-visible text-left align-middle transition-all duration-300 ease-in-out transform bg-n-alpha-3 backdrop-blur-[100px] shadow-xl rounded-xl"
-          @submit.prevent="confirm"
-          @click.stop
-        >
-          <div v-if="title || description" class="flex flex-col gap-2">
-            <h3 class="text-base font-medium leading-6 text-n-slate-12">
-              {{ title }}
-            </h3>
-            <slot name="description">
-              <p v-if="description" class="mb-0 text-sm text-n-slate-11">
-                {{ description }}
-              </p>
-            </slot>
-          </div>
-          <slot />
-          <!-- Dialog content will be injected here -->
-          <slot name="footer">
-            <div
-              v-if="showCancelButton || showConfirmButton"
-              class="flex items-center justify-between w-full gap-3"
-            >
-              <Button
-                v-if="showCancelButton"
-                variant="faded"
-                color="slate"
-                :label="cancelButtonLabel || t('DIALOG.BUTTONS.CANCEL')"
-                class="w-full"
-                type="button"
-                @click="close"
-              />
-              <Button
-                v-if="showConfirmButton"
-                :color="type === 'edit' ? 'blue' : 'ruby'"
-                :label="confirmButtonLabel || t('DIALOG.BUTTONS.CONFIRM')"
-                class="w-full"
-                :is-loading="isLoading"
-                :disabled="disableConfirmButton || isLoading"
-                type="submit"
-              />
-            </div>
+      <form
+        ref="dialogContentRef"
+        class="flex flex-col w-full h-auto gap-6 p-6 overflow-visible text-left align-middle transition-all duration-300 ease-in-out transform bg-n-alpha-3 backdrop-blur-[100px] shadow-xl rounded-xl"
+        @submit.prevent="confirm"
+        @click.stop
+      >
+        <div v-if="title || description" class="flex flex-col gap-2">
+          <h3 class="text-base font-medium leading-6 text-n-slate-12">
+            {{ title }}
+          </h3>
+          <slot name="description">
+            <p v-if="description" class="mb-0 text-sm text-n-slate-11">
+              {{ description }}
+            </p>
           </slot>
-        </form>
-      </OnClickOutside>
+        </div>
+        <slot />
+        <!-- Dialog content will be injected here -->
+        <slot name="footer">
+          <div
+            v-if="showCancelButton || showConfirmButton"
+            class="flex items-center justify-between w-full gap-3"
+          >
+            <Button
+              v-if="showCancelButton"
+              variant="faded"
+              color="slate"
+              :label="cancelButtonLabel || t('DIALOG.BUTTONS.CANCEL')"
+              class="w-full"
+              type="button"
+              @click="close"
+            />
+            <Button
+              v-if="showConfirmButton"
+              :color="type === 'edit' ? 'blue' : 'ruby'"
+              :label="confirmButtonLabel || t('DIALOG.BUTTONS.CONFIRM')"
+              class="w-full"
+              :is-loading="isLoading"
+              :disabled="disableConfirmButton || isLoading"
+              type="submit"
+            />
+          </div>
+        </slot>
+      </form>
     </dialog>
   </TeleportWithDirection>
 </template>
