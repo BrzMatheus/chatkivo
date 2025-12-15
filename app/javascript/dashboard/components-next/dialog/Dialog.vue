@@ -136,6 +136,37 @@ const close = () => {
   }
 };
 
+const handleDialogCancel = event => {
+  const timeSinceOpen = Date.now() - lastOpenTime.value;
+  console.log(
+    '[DEBUG] Dialog.handleDialogCancel() called from @cancel event, isOpening:',
+    isOpening.value,
+    'timeSinceOpen:',
+    timeSinceOpen,
+    'event:',
+    event
+  );
+  // Prevenir cancelamento durante abertura ou logo após abrir
+  if (isOpening.value || timeSinceOpen < 1000) {
+    console.log(
+      '[DEBUG] Dialog.handleDialogCancel() prevented - dialog is still opening or just opened (timeSinceOpen:',
+      timeSinceOpen,
+      'ms)'
+    );
+    event.preventDefault();
+    event.stopPropagation();
+    // Reabrir o dialog se ele foi fechado
+    if (dialogRef.value && !dialogRef.value.open) {
+      console.log('[DEBUG] Reopening dialog that was cancelled during opening');
+      setTimeout(() => {
+        if (dialogRef.value && !dialogRef.value.open) {
+          dialogRef.value.showModal();
+        }
+      }, 10);
+    }
+  }
+};
+
 const handleDialogClose = event => {
   const timeSinceOpen = Date.now() - lastOpenTime.value;
   console.log(
@@ -148,10 +179,14 @@ const handleDialogClose = event => {
     'dialogOpen:',
     dialogRef.value?.open,
     'timeSinceOpen:',
-    timeSinceOpen
+    timeSinceOpen,
+    'event.type:',
+    event?.type,
+    'event.target:',
+    event?.target?.tagName
   );
-  // Prevenir fechamento imediato após abrir (dentro de 500ms)
-  if (isOpening.value || timeSinceOpen < 500) {
+  // Prevenir fechamento imediato após abrir (dentro de 1000ms para dar mais tempo)
+  if (isOpening.value || timeSinceOpen < 1000) {
     console.log(
       '[DEBUG] Dialog.handleDialogClose() prevented - dialog is still opening or just opened (timeSinceOpen:',
       timeSinceOpen,
@@ -200,17 +235,7 @@ defineExpose({ open, close });
         overflowYAuto ? 'overflow-y-auto' : 'overflow-visible',
       ]"
       @close="handleDialogClose"
-      @cancel="
-        e => {
-          console.log(
-            '[DEBUG] Dialog @cancel event, event:',
-            e,
-            'dialogOpen:',
-            dialogRef.value?.open
-          );
-          e.preventDefault();
-        }
-      "
+      @cancel="handleDialogCancel"
       @click="
         e => {
           console.log(
