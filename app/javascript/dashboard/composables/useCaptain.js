@@ -1,5 +1,5 @@
 import { computed } from 'vue';
-import { useStore } from 'dashboard/composables/store.js';
+import { useStore, useMapGetter } from 'dashboard/composables/store.js';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { useCamelCase } from 'dashboard/composables/useTransformKeys';
@@ -9,6 +9,7 @@ export function useCaptain() {
   const store = useStore();
   const { isCloudFeatureEnabled, currentAccount } = useAccount();
   const { isEnterprise } = useConfig();
+  const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 
   const captainEnabled = computed(() => {
     return isCloudFeatureEnabled(FEATURE_FLAGS.CAPTAIN);
@@ -35,7 +36,7 @@ export function useCaptain() {
   });
 
   const fetchLimits = () => {
-    if (isEnterprise) {
+    if (isEnterprise && isOnChatwootCloud.value) {
       store.dispatch('accounts/limits');
     }
   };

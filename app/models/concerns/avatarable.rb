@@ -11,9 +11,14 @@ module Avatarable
   end
 
   def avatar_url
-    return url_for(avatar.representation(resize_to_fill: [250, nil])) if avatar.attached? && avatar.representable?
+    return '' unless avatar.attached? && avatar.representable?
 
-    ''
+    begin
+      url_for(avatar.representation(resize_to_fill: [250, nil]))
+    rescue StandardError => e
+      Rails.logger.warn "Failed to generate avatar representation: #{e.message}"
+      ''
+    end
   end
 
   def fetch_avatar_from_gravatar
