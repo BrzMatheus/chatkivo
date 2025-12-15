@@ -1,5 +1,5 @@
 <script setup>
-/* eslint-disable no-console */
+/* eslint-disable no-console, no-alert, no-restricted-globals */
 import { onMounted, onUnmounted, computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -292,6 +292,31 @@ const handleFunnelSelect = async () => {
   } catch {
     // Erro silencioso - a UI já mostra feedback através do store
   }
+};
+
+const handleDeleteFunnel = async () => {
+  const funnel = currentFunnel.value;
+  if (!funnel) return;
+
+  // Confirmar exclusão
+  if (!window.confirm(t('KANBAN.DELETE_FUNNEL_CONFIRM'))) {
+    return;
+  }
+
+  try {
+    await store.dispatch('funnels/delete', funnel.id);
+    useAlert(t('KANBAN.DELETE_FUNNEL_RESULT.SUCCESS'));
+
+    // Recarregar funis e selecionar o padrão
+    await reloadFunnels(false);
+  } catch (deleteError) {
+    useAlert(t('KANBAN.DELETE_FUNNEL_RESULT.ERROR'));
+  }
+};
+
+const handleColumnDeleted = async () => {
+  // Recarregar funis para sincronizar após deletar coluna
+  await reloadFunnels(true);
 };
 
 const handleAddContact = async ({ contactId, funnelId }) => {
@@ -729,24 +754,36 @@ onUnmounted(() => {
           <div class="flex items-center gap-4 flex-shrink-0">
             <div
               v-if="funnels && funnels.length > 0"
-              class="relative w-[140px] flex-shrink-0 h-10"
+              class="flex items-center gap-2"
             >
-              <select
-                v-model="selectedFunnelId"
-                class="funnel-select w-full h-full px-3 pr-8 text-sm border rounded-lg bg-n-background border-n-weak text-n-slate-12 focus:outline-none focus:ring-2 focus:ring-n-weak"
-                @change="handleFunnelSelect"
-              >
-                <option
-                  v-for="funnel in funnels"
-                  :key="funnel.id"
-                  :value="funnel.id"
+              <div class="relative w-[140px] flex-shrink-0 h-10">
+                <select
+                  v-model="selectedFunnelId"
+                  class="funnel-select w-full h-full px-3 pr-8 text-sm border rounded-lg bg-n-background border-n-weak text-n-slate-12 focus:outline-none focus:ring-2 focus:ring-n-weak"
+                  @change="handleFunnelSelect"
                 >
-                  {{ funnel.name }}
-                </option>
-              </select>
-              <Icon
-                icon="i-lucide-chevron-down"
-                class="absolute right-2 top-1/2 -translate-y-1/2 size-4 text-n-slate-10 pointer-events-none"
+                  <option
+                    v-for="funnel in funnels"
+                    :key="funnel.id"
+                    :value="funnel.id"
+                  >
+                    {{ funnel.name }}
+                  </option>
+                </select>
+                <Icon
+                  icon="i-lucide-chevron-down"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 size-4 text-n-slate-10 pointer-events-none"
+                />
+              </div>
+              <Button
+                v-if="currentFunnel && funnels.length > 1"
+                icon="i-lucide-trash"
+                variant="ghost"
+                color="ruby"
+                size="sm"
+                :title="t('KANBAN.DELETE_FUNNEL')"
+                class="flex-shrink-0"
+                @click="handleDeleteFunnel"
               />
             </div>
             <div class="relative flex items-center group">
@@ -854,6 +891,7 @@ onUnmounted(() => {
                   @contact-moved="handleContactMoved"
                   @add-contact-from-sidebar="handleAddContactFromSidebar"
                   @column-drag-start="handleColumnDragStart"
+                  @column-deleted="handleColumnDeleted"
                 />
               </div>
             </div>

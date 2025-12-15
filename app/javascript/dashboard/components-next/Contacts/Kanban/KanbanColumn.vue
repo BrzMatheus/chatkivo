@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable no-alert, no-restricted-globals */
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -28,12 +29,17 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  isDragging: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
   'contactMoved',
   'columnDragStart',
   'addContactFromSidebar',
+  'columnDeleted',
 ]);
 
 const store = useStore();
@@ -650,9 +656,45 @@ const handleCancelEdit = () => {
   isEditingColumn.value = false;
 };
 
-const handleDeleteColumn = () => {
+const handleDeleteColumn = async () => {
   showColumnMenu.value = false;
-  // TODO: Implementar exclusão de coluna
+
+  // Confirmar exclusão
+  if (!window.confirm(t('KANBAN.DELETE_COLUMN_CONFIRM'))) {
+    return;
+  }
+
+  try {
+    // Obter o funil atual
+    const funnels = store.getters['funnels/getFunnels'];
+    const funnel = funnels.find(f => f.id === props.funnelId);
+
+    if (!funnel) {
+      throw new Error('Funnel not found');
+    }
+
+    // Remover a coluna do array de colunas
+    const updatedColumns = funnel.columns.filter(
+      col => col.id !== props.column.id
+    );
+
+    // Reordenar as posições das colunas restantes
+    const reorderedColumns = updatedColumns.map((col, index) => ({
+      ...col,
+      position: index,
+    }));
+
+    // Atualizar o funil
+    await store.dispatch('funnels/update', {
+      id: props.funnelId,
+      columns: reorderedColumns,
+    });
+
+    useAlert(t('KANBAN.DELETE_COLUMN_RESULT.SUCCESS'));
+    emit('columnDeleted');
+  } catch (deleteError) {
+    useAlert(t('KANBAN.DELETE_COLUMN_RESULT.ERROR'));
+  }
 };
 
 const handleRemoveContact = async contactId => {
@@ -686,13 +728,17 @@ onUnmounted(() => {
 <template>
   <div
     class="flex flex-col w-80 bg-n-slate-2 rounded-lg transition-all"
-    :class="{ 'ring-2 ring-n-teal-9 ring-opacity-50': isDraggingOver }"
+    :class="{
+      'ring-2 ring-n-teal-9 ring-opacity-50': isDraggingOver,
+      'shadow-2xl': isDragging,
+    }"
     @dragover.prevent="handleDragOver"
     @dragleave="handleDragLeave"
     @drop.prevent="handleDrop"
   >
     <div
-      class="flex items-center justify-between px-4 py-3 bg-n-teal-9 rounded-t-lg cursor-move"
+      class="flex items-center justify-between px-4 py-3 bg-n-teal-9 rounded-t-lg cursor-move transition-all"
+      :class="{ 'bg-n-teal-10 brightness-110': isDragging }"
       draggable="true"
       @dragstart.stop="emit('columnDragStart', $event, columnIndex)"
     >

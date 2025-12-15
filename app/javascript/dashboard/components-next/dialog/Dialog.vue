@@ -200,12 +200,61 @@ defineExpose({ open, close });
         overflowYAuto ? 'overflow-y-auto' : 'overflow-visible',
       ]"
       @close="handleDialogClose"
+      @cancel="
+        e => {
+          console.log(
+            '[DEBUG] Dialog @cancel event, event:',
+            e,
+            'dialogOpen:',
+            dialogRef.value?.open
+          );
+          e.preventDefault();
+        }
+      "
+      @click="
+        e => {
+          console.log(
+            '[DEBUG] Dialog @click event, target:',
+            e.target.tagName,
+            'currentTarget:',
+            e.currentTarget.tagName,
+            'dialogOpen:',
+            dialogRef.value?.open
+          );
+        }
+      "
     >
       <form
         ref="dialogContentRef"
         class="flex flex-col w-full h-auto gap-6 p-6 overflow-visible text-left align-middle transition-all duration-300 ease-in-out transform bg-n-alpha-3 backdrop-blur-[100px] shadow-xl rounded-xl"
         @submit.prevent="confirm"
         @click.stop
+        @keydown="
+          e => {
+            console.log(
+              '[DEBUG] Dialog form keydown, key:',
+              e.key,
+              'code:',
+              e.code,
+              'target:',
+              e.target.tagName,
+              'target.type:',
+              e.target.type
+            );
+          }
+        "
+        @keyup="
+          e => {
+            console.log(
+              '[DEBUG] Dialog form keyup, key:',
+              e.key,
+              'code:',
+              e.code,
+              'target:',
+              e.target.tagName
+            );
+          }
+        "
       >
         <div v-if="title || description" class="flex flex-col gap-2">
           <h3 class="text-base font-medium leading-6 text-n-slate-12">

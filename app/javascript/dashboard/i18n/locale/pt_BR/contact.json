@@ -702,6 +702,17 @@
     "DROP_HERE": "Solte aqui",
     "EDIT_COLUMN": "Editar coluna",
     "DELETE_COLUMN": "Excluir coluna",
+    "DELETE_COLUMN_CONFIRM": "Tem certeza que deseja excluir esta coluna? Esta ação não pode ser desfeita.",
+    "DELETE_COLUMN_RESULT": {
+      "SUCCESS": "Coluna excluída com sucesso!",
+      "ERROR": "Erro ao excluir coluna. Tente novamente."
+    },
+    "DELETE_FUNNEL": "Excluir funil",
+    "DELETE_FUNNEL_CONFIRM": "Tem certeza que deseja excluir este funil? Esta ação não pode ser desfeita.",
+    "DELETE_FUNNEL_RESULT": {
+      "SUCCESS": "Funil excluído com sucesso!",
+      "ERROR": "Erro ao excluir funil. Tente novamente."
+    },
     "VIEW_CONTACT": "Ver contato",
     "REMOVE_FROM_FUNNEL": "Remover do funil",
     "REMOVE_CONTACT": {
@@ -712,6 +723,11 @@
     "FILTER_DIALOG": {
       "TITLE": "Filtrar contatos",
       "ERROR": "Erro ao aplicar filtros. Tente novamente."
+    },
+    "PAGINATION": {
+      "PREVIOUS": "Anterior",
+      "NEXT": "Próxima",
+      "PAGE_INFO": "Página {current} de {total}"
     }
   }
 }
