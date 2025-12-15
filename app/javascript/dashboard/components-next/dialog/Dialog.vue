@@ -219,49 +219,8 @@ const handleDialogClose = event => {
 };
 
 const confirm = () => {
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'Dialog.vue:confirm',
-      message: 'confirm() called',
-      data: { dialogOpen: dialogRef.value?.open },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      hypothesisId: 'A',
-    }),
-  }).catch(() => {});
-  // #endregion
   emit('confirm');
 };
-
-// #region agent log
-const handleFormSubmit = event => {
-  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'Dialog.vue:handleFormSubmit',
-      message: 'Form submit event triggered',
-      data: {
-        eventType: event?.type,
-        targetTagName: event?.target?.tagName,
-        dialogOpen: dialogRef.value?.open,
-        hasConfirmButton: props.showConfirmButton,
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      hypothesisId: 'A-B',
-    }),
-  }).catch(() => {});
-  console.log(
-    '[DEBUG] Dialog form submit event, hasConfirmButton:',
-    props.showConfirmButton
-  );
-  confirm();
-};
-// #endregion
 
 defineExpose({ open, close });
 </script>
@@ -293,7 +252,7 @@ defineExpose({ open, close });
       <form
         ref="dialogContentRef"
         class="flex flex-col w-full h-auto gap-6 p-6 overflow-visible text-left align-middle transition-all duration-300 ease-in-out transform bg-n-alpha-3 backdrop-blur-[100px] shadow-xl rounded-xl"
-        @submit.prevent="handleFormSubmit"
+        @submit.prevent="confirm"
         @click.stop
         @keydown="
           e => {
