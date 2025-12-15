@@ -89,13 +89,15 @@ RUN if [ "$RAILS_ENV" = "production" ]; then \
 
 # Generate .git_sha file with current commit hash
 # Use GIT_SHA build arg if provided, otherwise try git rev-parse HEAD
-RUN if [ -n "$GIT_SHA" ]; then \
-  echo "$GIT_SHA" > /app/.git_sha; \
-  elif git rev-parse HEAD > /app/.git_sha 2>/dev/null; then \
-  echo "Generated .git_sha from git rev-parse HEAD"; \
+RUN set +e; \
+  if [ -n "$GIT_SHA" ]; then \
+    echo "$GIT_SHA" > /app/.git_sha; \
+  elif [ -d ".git" ]; then \
+    git rev-parse HEAD > /app/.git_sha 2>/dev/null || echo "unknown" > /app/.git_sha; \
   else \
-  echo "unknown" > /app/.git_sha; \
-  fi
+    echo "unknown" > /app/.git_sha; \
+  fi; \
+  echo "Git SHA: $(cat /app/.git_sha)"
 
 # Remove unnecessary files
 RUN rm -rf /gems/ruby/3.4.0/cache/*.gem \
