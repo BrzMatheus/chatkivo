@@ -1,5 +1,5 @@
 <script setup>
-/* eslint-disable no-console, no-alert, no-restricted-globals */
+/* eslint-disable no-alert, no-restricted-globals */
 import { onMounted, onUnmounted, computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -115,18 +115,15 @@ const isUpdating = computed(() => uiFlags.value.isUpdating);
 async function reloadFunnels(preserveSelection = false) {
   try {
     error.value = null;
-    // Salvar o funil selecionado antes de recarregar
     const previousFunnelId = preserveSelection ? selectedFunnelId.value : null;
 
     await store.dispatch('funnels/get');
     await store.dispatch('teams/get');
 
-    // Aguardar um tick para garantir que os getters foram atualizados
     await new Promise(resolve => {
       setTimeout(resolve, 100);
     });
 
-    // Se deve preservar a seleção e havia um funil selecionado, restaurar
     if (preserveSelection && previousFunnelId) {
       const preservedFunnel = funnels.value?.find(
         f => f.id === previousFunnelId
@@ -141,7 +138,6 @@ async function reloadFunnels(preserveSelection = false) {
       }
     }
 
-    // Caso contrário, usar o comportamento padrão
     const funnel =
       defaultFunnel.value || (funnels.value && funnels.value[0]) || null;
     if (funnel) {
@@ -158,17 +154,11 @@ async function reloadFunnels(preserveSelection = false) {
 }
 
 const handleCreateFunnel = () => {
-  console.log('[DEBUG] handleCreateFunnel called');
   showCreateDialog.value = true;
   showCreateDropdown.value = false;
-  console.log('[DEBUG] showCreateDialog set to:', showCreateDialog.value);
 };
 
 const handleCreateColumn = () => {
-  console.log(
-    '[DEBUG] handleCreateColumn called, currentFunnel:',
-    currentFunnel.value
-  );
   if (!currentFunnel.value) {
     useAlert(t('KANBAN.CREATE_COLUMN.NO_FUNNEL_SELECTED'));
     showCreateDropdown.value = false;
@@ -176,21 +166,10 @@ const handleCreateColumn = () => {
   }
   showCreateColumnDialog.value = true;
   showCreateDropdown.value = false;
-  console.log(
-    '[DEBUG] showCreateColumnDialog set to:',
-    showCreateColumnDialog.value
-  );
 };
 
 const handleColumnCreated = async columnData => {
-  console.log('[DEBUG] handleColumnCreated called with:', columnData);
   if (!currentFunnel.value || !columnData?.name) {
-    console.log(
-      '[DEBUG] Validation failed - currentFunnel:',
-      !!currentFunnel.value,
-      'columnData:',
-      columnData
-    );
     useAlert(t('KANBAN.CREATE_COLUMN_ERROR'));
     return;
   }
@@ -198,14 +177,7 @@ const handleColumnCreated = async columnData => {
   try {
     const funnel = currentFunnel.value;
     const existingColumns = funnel.columns || [];
-    console.log(
-      '[DEBUG] Creating column in funnel:',
-      funnel.id,
-      'existing columns:',
-      existingColumns.length
-    );
 
-    // Gerar ID único para a nova coluna
     const newColumnId = `col_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const maxPosition =
       existingColumns.length > 0
@@ -218,30 +190,20 @@ const handleColumnCreated = async columnData => {
       position: maxPosition + 1,
     };
 
-    console.log('[DEBUG] New column:', newColumn);
-
-    // Adicionar nova coluna ao array de colunas
     const updatedColumns = [...existingColumns, newColumn];
 
-    console.log('[DEBUG] Updating funnel with columns:', updatedColumns.length);
-    // Atualizar o funil com a nova coluna
     await store.dispatch('funnels/update', {
       id: funnel.id,
       columns: updatedColumns,
     });
 
-    console.log('[DEBUG] Funnel updated, reloading...');
-    // Recarregar os funis para garantir sincronização, preservando a seleção atual
     await reloadFunnels(true);
 
-    // Atualizar a ordem das colunas após recarregar
     const updatedFunnel = currentFunnel.value;
     if (updatedFunnel && updatedFunnel.columns) {
       columnsOrder.value = updatedFunnel.columns.map(col => col.id);
     }
-    console.log('[DEBUG] Column created successfully');
   } catch (err) {
-    console.error('[DEBUG] Error creating column:', err);
     const errorMessage =
       err?.response?.data?.error ||
       err?.message ||
@@ -298,7 +260,6 @@ const handleDeleteFunnel = async () => {
   const funnel = currentFunnel.value;
   if (!funnel) return;
 
-  // Confirmar exclusão
   if (!window.confirm(t('KANBAN.DELETE_FUNNEL_CONFIRM'))) {
     return;
   }
@@ -306,8 +267,6 @@ const handleDeleteFunnel = async () => {
   try {
     await store.dispatch('funnels/delete', funnel.id);
     useAlert(t('KANBAN.DELETE_FUNNEL_RESULT.SUCCESS'));
-
-    // Recarregar funis e selecionar o padrão
     await reloadFunnels(false);
   } catch (deleteError) {
     useAlert(t('KANBAN.DELETE_FUNNEL_RESULT.ERROR'));
@@ -315,7 +274,6 @@ const handleDeleteFunnel = async () => {
 };
 
 const handleColumnDeleted = async () => {
-  // Recarregar funis para sincronizar após deletar coluna
   await reloadFunnels(true);
 };
 
@@ -327,7 +285,6 @@ const handleAddContact = async ({ contactId, funnelId }) => {
       return;
     }
 
-    // Adiciona o contato na primeira coluna
     const firstColumnId = funnel.columns[0].id;
     await store.dispatch('funnels/addContact', {
       funnelId,
@@ -335,7 +292,6 @@ const handleAddContact = async ({ contactId, funnelId }) => {
       columnId: firstColumnId,
     });
     useAlert(t('KANBAN.ADD_CONTACT.SUCCESS'));
-    // UI já é atualizada localmente pela mutation UPDATE_FUNNEL_CONTACT
   } catch {
     useAlert(t('KANBAN.ADD_CONTACT.ERROR'));
   }
@@ -346,7 +302,6 @@ const handleFilter = () => {
 };
 
 const handleApplyFilter = async filters => {
-  // Filtrar apenas filtros que têm valores válidos
   const validFilters = filters.filter(f => {
     const hasValue =
       f.values !== null &&
@@ -358,32 +313,25 @@ const handleApplyFilter = async filters => {
     );
   });
 
-  // Resetar para página 1 ao aplicar filtros
   currentPage.value = 1;
 
-  // Se há filtros válidos, sempre buscar contatos via API com filtros
   if (validFilters.length > 0) {
     try {
-      // Converter filtros para o formato esperado pelo filterQueryGenerator
       const filtersForQuery = validFilters.map(f => {
         let processedValues = f.values;
 
-        // Para team_id, extrair o ID do objeto se for um objeto
         if (f.attributeKey === 'team_id') {
           if (
             typeof f.values === 'object' &&
             f.values !== null &&
             !Array.isArray(f.values)
           ) {
-            // Se é um objeto único, extrair o ID
             processedValues = [f.values.id || f.values];
           } else if (Array.isArray(f.values)) {
-            // Se é array, extrair IDs dos objetos
             processedValues = f.values.map(v =>
               typeof v === 'object' && v !== null ? v.id || v : v
             );
           } else {
-            // Se é um valor simples, colocar em array
             processedValues = [f.values];
           }
         }
@@ -406,7 +354,6 @@ const handleApplyFilter = async filters => {
       useAlert(t('KANBAN.FILTER.ERROR'));
     }
   } else {
-    // Se não há filtros válidos, recarregar contatos sem filtro
     await loadContacts(1);
   }
 
@@ -419,16 +366,13 @@ const handleClearFilters = async () => {
   appliedFilters.value = [];
   showFilterDialog.value = false;
   currentPage.value = 1;
-  // Recarregar contatos sem filtro
   await loadContacts(1);
 };
 
-// Limpar filtros quando o diálogo é fechado sem aplicar
 watch(
   () => showFilterDialog.value,
   newValue => {
     if (!newValue && appliedFilters.value.length > 0) {
-      // Verificar se os filtros ainda são válidos
       const hasValidFilters = appliedFilters.value.some(f => {
         const hasValue =
           f.values !== null &&
@@ -461,7 +405,6 @@ const handleFunnelCreated = async funnel => {
 };
 
 const handleContactMoved = async () => {
-  // Recarrega os contatos após mover
   if (currentFunnel.value) {
     await store.dispatch('funnels/getContacts', {
       funnelId: currentFunnel.value.id,
@@ -480,7 +423,6 @@ const handleAddContactFromSidebar = async ({ contactId, columnId }) => {
       columnId,
     });
     useAlert(t('KANBAN.ADD_CONTACT.SUCCESS'));
-    // UI já é atualizada localmente pela mutation UPDATE_FUNNEL_CONTACT
   } catch {
     useAlert(t('KANBAN.ADD_CONTACT.ERROR'));
   }
@@ -495,7 +437,6 @@ const handleColumnDragOver = (e, columnIndex) => {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
 
-  // Limpar timeout se existir
   if (dragLeaveTimeout.value) {
     clearTimeout(dragLeaveTimeout.value);
     dragLeaveTimeout.value = null;
@@ -510,13 +451,11 @@ const handleColumnDragOver = (e, columnIndex) => {
 };
 
 const handleColumnDragLeave = e => {
-  // Verificar se realmente saímos da área da coluna
   const relatedTarget = e.relatedTarget;
   if (relatedTarget && e.currentTarget.contains(relatedTarget)) {
-    return; // Ainda estamos dentro da coluna
+    return;
   }
 
-  // Usar timeout para evitar limpeza prematura ao passar sobre elementos filhos
   dragLeaveTimeout.value = setTimeout(() => {
     draggedOverColumnIndex.value = null;
     dragLeaveTimeout.value = null;
@@ -526,7 +465,6 @@ const handleColumnDragLeave = e => {
 const handleColumnDrop = (e, dropIndex) => {
   e.preventDefault();
 
-  // Limpar timeout se existir
   if (dragLeaveTimeout.value) {
     clearTimeout(dragLeaveTimeout.value);
     dragLeaveTimeout.value = null;
@@ -540,8 +478,6 @@ const handleColumnDrop = (e, dropIndex) => {
     return;
   }
 
-  // Usamos apenas o array de IDs `columnsOrder` para reordenar,
-  // garantindo que o índice vindo do v-for corresponda à ordem atual exibida.
   const currentOrder =
     columnsOrder.value && columnsOrder.value.length
       ? [...columnsOrder.value]
@@ -555,7 +491,6 @@ const handleColumnDrop = (e, dropIndex) => {
   columnsOrder.value = currentOrder;
 };
 
-// Fechar dropdown ao clicar fora
 const handleClickOutside = event => {
   if (showCreateDropdown.value) {
     const target = event.target;
@@ -572,11 +507,9 @@ const handleClickOutside = event => {
   }
 };
 
-// Função para carregar contatos com pesquisa ou filtros
 const loadContactsWithSearchOrFilter = async (page = 1) => {
   currentPage.value = page;
 
-  // Verificar se há filtros aplicados
   const validFilters = appliedFilters.value.filter(f => {
     const hasValue =
       f.values !== null &&
@@ -589,7 +522,6 @@ const loadContactsWithSearchOrFilter = async (page = 1) => {
   });
 
   if (validFilters.length > 0) {
-    // Aplicar filtros
     const filtersForQuery = validFilters.map(f => {
       let processedValues = f.values;
 
@@ -623,29 +555,24 @@ const loadContactsWithSearchOrFilter = async (page = 1) => {
       queryPayload,
     });
   } else if (searchQuery.value) {
-    // Aplicar pesquisa
     await store.dispatch('contacts/search', {
       search: encodeURIComponent(searchQuery.value),
       page,
       sortAttr: 'name',
     });
   } else {
-    // Carregar contatos normais
     await loadContacts(page);
   }
 };
 
-// Função de pesquisa com debounce
 const searchContactsDebounced = debounce(async (query, page = 1) => {
   currentPage.value = page;
 
   if (!query || query.trim() === '') {
-    // Se não há pesquisa, carregar contatos normais ou com filtros
     await loadContactsWithSearchOrFilter(1);
     return;
   }
 
-  // Aplicar pesquisa via API (a pesquisa já busca em todas as páginas)
   await store.dispatch('contacts/search', {
     search: encodeURIComponent(query.trim()),
     page,
@@ -653,26 +580,20 @@ const searchContactsDebounced = debounce(async (query, page = 1) => {
   });
 }, 300);
 
-// Watch para pesquisa - resetar página quando pesquisa mudar
 watch(searchQuery, async (newQuery, oldQuery) => {
-  // Se a pesquisa mudou (não é apenas inicialização), resetar para página 1
   if (oldQuery !== undefined && newQuery !== oldQuery) {
     currentPage.value = 1;
     await searchContactsDebounced(newQuery, 1);
   }
 });
 
-// Handler para mudança de página da sidebar
 const handleLoadPage = async page => {
-  // Prevenir múltiplas chamadas simultâneas
   if (isPageLoading.value || uiFlags.value.isFetching) {
     return;
   }
 
-  // Garantir que a página seja válida e diferente da atual
   const currentMetaPage = meta.value?.currentPage || 1;
 
-  // Se a página solicitada for a mesma que já está carregada, ignorar
   if (page === currentMetaPage && !isPageLoading.value) {
     return;
   }
@@ -684,7 +605,6 @@ const handleLoadPage = async page => {
   } catch {
     // Error is handled by the store
   } finally {
-    // Aguardar um pouco antes de liberar para evitar cliques muito rápidos
     setTimeout(() => {
       isPageLoading.value = false;
     }, 300);

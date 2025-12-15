@@ -1,5 +1,4 @@
 <script setup>
-/* eslint-disable no-console */
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -78,86 +77,41 @@ const maxWidthClass = computed(() => {
 });
 
 const open = () => {
-  console.log('[DEBUG] Dialog.open() called, dialogRef:', !!dialogRef.value);
   if (dialogRef.value) {
-    // Verificar se o dialog já está aberto
     const isOpen = dialogRef.value.open;
-    console.log('[DEBUG] Dialog isOpen before showModal:', isOpen);
     if (!isOpen) {
       isOpening.value = true;
-      // Usar requestAnimationFrame para garantir que o DOM está pronto
       requestAnimationFrame(() => {
         if (dialogRef.value && !dialogRef.value.open) {
           dialogRef.value.showModal();
-          console.log('[DEBUG] Dialog.showModal() called');
-          // Verificar se realmente abriu
           requestAnimationFrame(() => {
-            console.log(
-              '[DEBUG] Dialog isOpen after showModal:',
-              dialogRef.value?.open
-            );
-            // Resetar a flag após um delay maior para permitir que o dialog abra completamente
             setTimeout(() => {
               isOpening.value = false;
               lastOpenTime.value = Date.now();
-              console.log(
-                '[DEBUG] Dialog isOpening flag reset, dialog isOpen:',
-                dialogRef.value?.open,
-                'lastOpenTime:',
-                lastOpenTime.value
-              );
             }, 200);
           });
         }
       });
-    } else {
-      console.log('[DEBUG] Dialog already open, skipping showModal');
     }
   }
 };
 
 const close = () => {
-  console.log(
-    '[DEBUG] Dialog.close() called, isOpening:',
-    isOpening.value,
-    'dialogRef:',
-    !!dialogRef.value
-  );
-  // Prevenir fechamento imediato após abrir
   if (isOpening.value) {
-    console.log('[DEBUG] Dialog.close() prevented - dialog is still opening');
     return;
   }
   if (dialogRef.value && dialogRef.value.open) {
     emit('close');
     dialogRef.value.close();
-  } else {
-    console.log('[DEBUG] Dialog.close() called but dialog is not open');
   }
 };
 
 const handleDialogCancel = event => {
   const timeSinceOpen = Date.now() - lastOpenTime.value;
-  console.log(
-    '[DEBUG] Dialog.handleDialogCancel() called from @cancel event, isOpening:',
-    isOpening.value,
-    'timeSinceOpen:',
-    timeSinceOpen,
-    'event:',
-    event
-  );
-  // Prevenir cancelamento durante abertura ou logo após abrir
   if (isOpening.value || timeSinceOpen < 1000) {
-    console.log(
-      '[DEBUG] Dialog.handleDialogCancel() prevented - dialog is still opening or just opened (timeSinceOpen:',
-      timeSinceOpen,
-      'ms)'
-    );
     event.preventDefault();
     event.stopPropagation();
-    // Reabrir o dialog se ele foi fechado
     if (dialogRef.value && !dialogRef.value.open) {
-      console.log('[DEBUG] Reopening dialog that was cancelled during opening');
       setTimeout(() => {
         if (dialogRef.value && !dialogRef.value.open) {
           dialogRef.value.showModal();
@@ -169,36 +123,11 @@ const handleDialogCancel = event => {
 
 const handleDialogClose = event => {
   const timeSinceOpen = Date.now() - lastOpenTime.value;
-  console.log(
-    '[DEBUG] Dialog.handleDialogClose() called from @close event, isOpening:',
-    isOpening.value,
-    'dialogRef:',
-    !!dialogRef.value,
-    'event:',
-    event,
-    'dialogOpen:',
-    dialogRef.value?.open,
-    'timeSinceOpen:',
-    timeSinceOpen,
-    'event.type:',
-    event?.type,
-    'event.target:',
-    event?.target?.tagName
-  );
-  // Prevenir fechamento imediato após abrir (dentro de 1000ms para dar mais tempo)
   if (isOpening.value || timeSinceOpen < 1000) {
-    console.log(
-      '[DEBUG] Dialog.handleDialogClose() prevented - dialog is still opening or just opened (timeSinceOpen:',
-      timeSinceOpen,
-      'ms)'
-    );
-    // Prevenir o fechamento padrão do dialog
     if (event && event.preventDefault) {
       event.preventDefault();
     }
-    // Reabrir o dialog se ele foi fechado durante a abertura
     if (dialogRef.value && !dialogRef.value.open) {
-      console.log('[DEBUG] Reopening dialog that was closed during opening');
       setTimeout(() => {
         if (dialogRef.value && !dialogRef.value.open) {
           dialogRef.value.showModal();
@@ -207,61 +136,15 @@ const handleDialogClose = event => {
     }
     return;
   }
-  // Verificar se o dialog está realmente aberto antes de fechar
-  // Isso previne fechamentos acidentais quando o dialog já está fechado
   if (dialogRef.value && !dialogRef.value.open) {
-    console.log(
-      '[DEBUG] Dialog.handleDialogClose() prevented - dialog is already closed'
-    );
     return;
   }
   close();
 };
 
 const confirm = () => {
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'Dialog.vue:confirm',
-      message: 'confirm() called',
-      data: { dialogOpen: dialogRef.value?.open },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      hypothesisId: 'A',
-    }),
-  }).catch(() => {});
-  // #endregion
   emit('confirm');
 };
-
-// #region agent log
-const handleFormSubmit = event => {
-  fetch('http://127.0.0.1:7243/ingest/f236a0bf-1671-49c4-876d-286a49e47814', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'Dialog.vue:handleFormSubmit',
-      message: 'Form submit event triggered',
-      data: {
-        eventType: event?.type,
-        targetTagName: event?.target?.tagName,
-        dialogOpen: dialogRef.value?.open,
-        hasConfirmButton: props.showConfirmButton,
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      hypothesisId: 'A-B',
-    }),
-  }).catch(() => {});
-  console.log(
-    '[DEBUG] Dialog form submit event, hasConfirmButton:',
-    props.showConfirmButton
-  );
-  confirm();
-};
-// #endregion
 
 defineExpose({ open, close });
 </script>
@@ -277,50 +160,12 @@ defineExpose({ open, close });
       ]"
       @close="handleDialogClose"
       @cancel="handleDialogCancel"
-      @click="
-        e => {
-          console.log(
-            '[DEBUG] Dialog @click event, target:',
-            e.target.tagName,
-            'currentTarget:',
-            e.currentTarget.tagName,
-            'dialogOpen:',
-            dialogRef.value?.open
-          );
-        }
-      "
     >
       <form
         ref="dialogContentRef"
         class="flex flex-col w-full h-auto gap-6 p-6 overflow-visible text-left align-middle transition-all duration-300 ease-in-out transform bg-n-alpha-3 backdrop-blur-[100px] shadow-xl rounded-xl"
-        @submit.prevent="handleFormSubmit"
+        @submit.prevent="confirm"
         @click.stop
-        @keydown="
-          e => {
-            console.log(
-              '[DEBUG] Dialog form keydown, key:',
-              e.key,
-              'code:',
-              e.code,
-              'target:',
-              e.target.tagName,
-              'target.type:',
-              e.target.type
-            );
-          }
-        "
-        @keyup="
-          e => {
-            console.log(
-              '[DEBUG] Dialog form keyup, key:',
-              e.key,
-              'code:',
-              e.code,
-              'target:',
-              e.target.tagName
-            );
-          }
-        "
       >
         <div v-if="title || description" class="flex flex-col gap-2">
           <h3 class="text-base font-medium leading-6 text-n-slate-12">
