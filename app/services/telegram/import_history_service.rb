@@ -7,6 +7,11 @@ class Telegram::ImportHistoryService
     raise 'Inbox must be a Telegram inbox' unless inbox.channel_type == 'Channel::Telegram'
 
     json_data = parse_json_file
+
+    # Extrair o user_id do proprietário da exportação
+    @owner_user_id = json_data.dig('personal_information', 'user_id')&.to_s
+    Rails.logger.info "Telegram import: owner_user_id=#{@owner_user_id.inspect}"
+
     process_chats(json_data)
 
     {
@@ -237,11 +242,15 @@ class Telegram::ImportHistoryService
   end
 
   def extract_is_outgoing(message_data, _contact)
-    # Campo 'out' do Telegram export indica mensagem enviada
-    # Pode ser boolean true ou string "true"
-    out_value = message_data['out']
-    is_outgoing = out_value == true || out_value == 'true' || out_value == 1
-    Rails.logger.info "Telegram import message type: out=#{out_value.inspect}, is_outgoing=#{is_outgoing}, message_id=#{message_data['id']}"
+    # O formato do Telegram Desktop não usa campo 'out'
+    # Mensagens enviadas têm from_id igual ao user_id do proprietário
+    # O from_id tem formato "userXXXXX", extrair apenas o número
+    from_id = message_data['from_id']&.to_s&.gsub('user', '')
+
+    # Se from_id == owner_user_id, é mensagem enviada (outgoing)
+    is_outgoing = from_id.present? && @owner_user_id.present? && from_id == @owner_user_id
+
+    Rails.logger.info "Telegram import message type: from_id=#{from_id.inspect}, owner_user_id=#{@owner_user_id.inspect}, is_outgoing=#{is_outgoing}, message_id=#{message_data['id']}"
     is_outgoing
   end
 
