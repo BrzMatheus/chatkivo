@@ -136,20 +136,37 @@ class Telegram::ImportHistoryService
     # Se inbox tem lock_to_single_conversation, usar última conversa
     if inbox.lock_to_single_conversation
       conversation = contact_inbox.conversations.last
-      return conversation if conversation
+      if conversation
+        # Garantir que chat_id está salvo mesmo se conversa já existe
+        conversation.additional_attributes ||= {}
+        conversation.additional_attributes['chat_id'] = chat_id.to_s
+        conversation.save! if conversation.changed?
+        Rails.logger.info "Telegram import conversation: conversation_id=#{conversation.id}, chat_id=#{chat_id}, additional_attributes=#{conversation.additional_attributes.inspect}"
+        return conversation
+      end
     end
 
     # Buscar conversa existente ou criar nova
-    Conversation.find_or_create_by!(
+    conversation = Conversation.find_or_create_by!(
       account: account,
       inbox: inbox,
       contact: contact_inbox.contact,
       contact_inbox: contact_inbox
     ) do |conv|
       conv.additional_attributes = {
-        chat_id: chat_id
+        'chat_id' => chat_id.to_s  # Garantir string
       }
     end
+
+    # Atualizar chat_id se conversa já existia mas não tinha chat_id ou tem um chat_id diferente
+    conversation.additional_attributes ||= {}
+    if conversation.additional_attributes['chat_id'] != chat_id.to_s
+      conversation.additional_attributes['chat_id'] = chat_id.to_s
+      conversation.save! if conversation.changed?
+    end
+
+    Rails.logger.info "Telegram import conversation: conversation_id=#{conversation.id}, chat_id=#{chat_id}, additional_attributes=#{conversation.additional_attributes.inspect}"
+    conversation
   end
 
   def process_messages_batch(conversation, messages_batch, contact)
@@ -220,9 +237,12 @@ class Telegram::ImportHistoryService
   end
 
   def extract_is_outgoing(message_data, _contact)
-    # No formato do Telegram export, mensagens recebidas têm 'from' e 'from_id'
-    # Mensagens enviadas não teriam 'from' ou teriam 'out': true
-    message_data['out'] == true
+    # Campo 'out' do Telegram export indica mensagem enviada
+    # Pode ser boolean true ou string "true"
+    out_value = message_data['out']
+    is_outgoing = out_value == true || out_value == 'true' || out_value == 1
+    Rails.logger.info "Telegram import message type: out=#{out_value.inspect}, is_outgoing=#{is_outgoing}, message_id=#{message_data['id']}"
+    is_outgoing
   end
 
   def extract_timestamp(message_data)

@@ -69,11 +69,13 @@ class Channel::Telegram < ApplicationRecord
   end
 
   def chat_id(message)
-    message.conversation[:additional_attributes]['chat_id']
+    chat_id_value = message.conversation.additional_attributes&.[]('chat_id')
+    Rails.logger.info "Telegram chat_id: conversation_id=#{message.conversation.id}, chat_id=#{chat_id_value.inspect}, additional_attributes=#{message.conversation.additional_attributes.inspect}"
+    chat_id_value
   end
 
   def business_connection_id(message)
-    message.conversation[:additional_attributes]['business_connection_id']
+    message.conversation.additional_attributes&.[]('business_connection_id')
   end
 
   def reply_to_message_id(message)
@@ -102,15 +104,25 @@ class Channel::Telegram < ApplicationRecord
   end
 
   def send_message(message)
+    chat_id_value = chat_id(message)
+    Rails.logger.info "Telegram send_message: message_id=#{message.id}, conversation_id=#{message.conversation_id}, chat_id=#{chat_id_value.inspect}, content=#{message.outgoing_content[0..50]}"
+
+    if chat_id_value.blank?
+      Rails.logger.error "Telegram send_message: chat_id está vazio! conversation_id=#{message.conversation_id}, additional_attributes=#{message.conversation.additional_attributes.inspect}"
+      return nil
+    end
+
     response = message_request(
-      chat_id(message),
+      chat_id_value,
       message.outgoing_content,
       reply_markup(message),
       reply_to_message_id(message),
       business_connection_id: business_connection_id(message)
     )
     process_error(message, response)
-    response.parsed_response['result']['message_id'] if response.success?
+    message_id = response.parsed_response['result']['message_id'] if response.success?
+    Rails.logger.info "Telegram send_message result: success=#{response.success?}, telegram_message_id=#{message_id}, response=#{response.parsed_response.inspect}"
+    message_id
   end
 
   def reply_markup(message)
