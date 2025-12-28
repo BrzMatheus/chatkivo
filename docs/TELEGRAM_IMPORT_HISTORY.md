@@ -43,7 +43,14 @@ O sistema evita criar dados duplicados através de verificações:
 
 ### 4. Preservação de Timestamps
 
-As mensagens importadas mantêm seus timestamps originais do Telegram, garantindo que a ordem cronológica seja preservada no Chatwoot.
+As mensagens importadas mantêm seus timestamps originais do Telegram, garantindo que a ordem cronológica seja preservada no Chatwoot. O sistema extrai o timestamp do campo `date_unixtime` (ou `date` como fallback) e o converte corretamente, definindo `created_at` e `updated_at` da mensagem com o valor original preservado.
+
+### 5. Diferenciação de Mensagens Enviadas/Recebidas
+
+O sistema identifica corretamente se uma mensagem foi enviada ou recebida comparando o `from_id` da mensagem com o `chat.id`:
+
+- **Mensagem RECEBIDA (incoming):** Quando `from_id` da mensagem corresponde ao `chat.id` (mensagem enviada pelo contato)
+- **Mensagem ENVIADA (outgoing):** Quando `from_id` da mensagem é diferente do `chat.id` (mensagem enviada pelo usuário que exportou os dados)
 
 ## Estrutura de Arquivos
 
@@ -101,7 +108,8 @@ O serviço espera o formato padrão de exportação do Telegram:
           {
             "id": 107,
             "type": "message",
-            "date_unixtime": 1766093602,
+            "date_unixtime": "1766093602",
+            "date": "2025-12-18T18:33:22",
             "from": "Nome do Remetente",
             "from_id": "user6266715127",
             "text": "Conteúdo da mensagem"
@@ -113,15 +121,19 @@ O serviço espera o formato padrão de exportação do Telegram:
 }
 ```
 
+**Nota:** O campo `date_unixtime` pode aparecer como string numérica (ex: `"1766093602"`) ou como número no JSON exportado pelo Telegram Desktop. O sistema trata ambos os formatos corretamente.
+
 ### Mapeamento de Dados
 
 | Campo Telegram | Campo Chatwoot | Observações |
 |---------------|----------------|-------------|
 | `chat.id` | `contact_inbox.source_id` | ID único do chat |
 | `message.id` | `message.source_id` | ID único da mensagem |
-| `message.date_unixtime` | `message.created_at` | Timestamp preservado |
-| `message.from_id` | `contact.identifier` | Extraído como `telegram_#{user_id}` |
+| `message.date_unixtime` | `message.created_at` | Timestamp preservado (converte string numérica para Time) |
+| `message.from_id` | Usado para determinar `message_type` | Comparado com `chat.id` para identificar se é incoming/outgoing |
 | `message.text` | `message.content` | Suporta string ou array |
+| `from_id == chat.id` | `message.message_type = :incoming` | Mensagem recebida do contato |
+| `from_id != chat.id` | `message.message_type = :outgoing` | Mensagem enviada pelo usuário |
 
 ## Fluxo de Processamento
 
@@ -164,11 +176,16 @@ Para cada chat no JSON:
 
 4. **Importar Mensagens:**
    - Para cada mensagem, verifica duplicata por `source_id`
+   - Extrai timestamp do campo `date_unixtime` (ou `date` como fallback)
+   - Determina `message_type` comparando `from_id` com `chat.id`:
+     - Se `from_id == chat.id` → `incoming` (recebida do contato)
+     - Se `from_id != chat.id` → `outgoing` (enviada pelo usuário)
    - Cria mensagem com:
      - `source_id`: ID da mensagem no Telegram
-     - `created_at`: Timestamp original preservado
+     - `created_at`: Timestamp original preservado (usando `update_columns` para garantir preservação)
+     - `updated_at`: Mesmo valor do timestamp original
      - `content`: Texto da mensagem (suporta arrays)
-     - `message_type`: incoming/outgoing baseado em `out`
+     - `message_type`: incoming ou outgoing (determinado pela comparação acima)
      - `sender`: Contato (para incoming) ou nil (para outgoing)
 
 ### 5. Finalização
@@ -191,6 +208,21 @@ Para cada chat no JSON:
 - Conversão automática para UTF-8
 - Tratamento de caracteres inválidos
 - Suporte a emojis e caracteres especiais
+
+### Processamento de Timestamps
+
+- **Extração:** Prioriza `date_unixtime`, usa `date` como fallback
+- **Formato suportado:** Aceita timestamps como número ou string numérica (ex: `1766093602` ou `"1766093602"`)
+- **Conversão:** Usa `Time.at()` para converter timestamps unix para objetos `Time` em UTC
+- **Preservação:** Usa `update_columns` após salvar para garantir que `created_at` e `updated_at` mantenham o valor original (ignorando callbacks do ActiveRecord que poderiam sobrescrever)
+
+### Diferenciação de Mensagens Enviadas/Recebidas
+
+- **Método:** Compara `from_id` extraído da mensagem (removendo prefixo "user") com `chat.id`
+- **Lógica:** 
+  - `from_id == chat.id` → Mensagem recebida do contato (`message_type: :incoming`)
+  - `from_id != chat.id` → Mensagem enviada pelo usuário (`message_type: :outgoing`)
+- **Observação:** Não utiliza `personal_information.user_id` do JSON pois essa seção não existe no formato de exportação do Telegram Desktop
 
 ### Tipos de Mensagens Suportados
 
@@ -347,8 +379,17 @@ DataImport.where(data_type: 'telegram_history')
 ### Timestamps incorretos
 
 - Verifique se o JSON tem `date_unixtime` (preferido) ou `date`
-- Timestamps são convertidos para UTC
-- Ordem cronológica é preservada
+- O sistema suporta `date_unixtime` como string numérica (ex: `"1766093602"`) ou número
+- Timestamps são convertidos para UTC usando `Time.at()` para valores numéricos
+- O sistema usa `update_columns` após salvar para garantir que o timestamp original seja preservado
+- Ordem cronológica é preservada - as mensagens aparecem com as datas/horas originais do Telegram, não com a data da importação
+
+### Mensagens todas aparecem como recebidas (incoming)
+
+- O sistema compara `from_id` da mensagem com `chat.id` para determinar o tipo
+- Se `from_id == chat.id` → mensagem é **recebida** (incoming)
+- Se `from_id != chat.id` → mensagem é **enviada** (outgoing)
+- Verifique os logs para confirmar a comparação: `Rails.logger.info "Telegram import message type: from_id=..., chat_id=..., is_outgoing=..."`
 
 ## Melhorias Futuras
 
@@ -373,7 +414,19 @@ Para problemas ou dúvidas:
 
 ---
 
-**Última atualização:** Dezembro 2024  
-**Versão:** 1.0  
+**Última atualização:** Janeiro 2025  
+**Versão:** 1.1  
 **Autor:** Equipe de Desenvolvimento Chatwoot
+
+### Changelog
+
+**v1.1 (Janeiro 2025)**
+- ✅ Corrigida preservação de timestamps: mensagens agora mantêm datas/horas originais do Telegram
+- ✅ Corrigida diferenciação de mensagens enviadas/recebidas: comparação correta entre `from_id` e `chat.id`
+- ✅ Suporte melhorado para `date_unixtime` como string numérica no JSON
+
+**v1.0 (Dezembro 2024)**
+- ✅ Implementação inicial da importação de histórico do Telegram
+- ✅ Suporte a arquivos JSON de exportação do Telegram Desktop
+- ✅ Prevenção de duplicatas
 
