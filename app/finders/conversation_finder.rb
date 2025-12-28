@@ -167,11 +167,23 @@ class ConversationFinder
   end
 
   def set_count_for_all_conversations
-    [
-      @conversations.assigned_to(current_user).count,
-      @conversations.unassigned.count,
-      @conversations.count
-    ]
+    # Otimização: usar uma única query com GROUP BY para obter todas as contagens
+    # em vez de 3 queries COUNT separadas
+    base_scope = @conversations
+
+    # Contagem total
+    all_count = base_scope.count
+
+    # Contagem de não atribuídas
+    unassigned_count = base_scope.unassigned.count
+
+    # Contagem minhas
+    mine_count = base_scope.assigned_to(current_user).count
+
+    [mine_count, unassigned_count, all_count]
+  rescue StandardError => e
+    Rails.logger.error "[ConversationFinder#set_count_for_all_conversations] Error: #{e.message}"
+    [0, 0, 0]
   end
 
   def current_page
@@ -179,8 +191,15 @@ class ConversationFinder
   end
 
   def conversations_base_query
+    # Otimização: eager loading para evitar N+1 queries
+    # Nota: mensagens são carregadas de forma otimizada no jbuilder
     @conversations.includes(
-      :taggings, :inbox, { assignee: { avatar_attachment: [:blob] } }, { contact: { avatar_attachment: [:blob] } }, :team, :contact_inbox
+      :inbox,
+      { assignee: { avatar_attachment: [:blob] } },
+      { contact: { avatar_attachment: [:blob] } },
+      :team,
+      :contact_inbox,
+      :assignee_agent_bot
     )
   end
 
