@@ -105,11 +105,17 @@ class Channel::Telegram < ApplicationRecord
 
   def send_message(message)
     chat_id_value = chat_id(message)
-    Rails.logger.info "Telegram send_message: message_id=#{message.id}, conversation_id=#{message.conversation_id}, chat_id=#{chat_id_value.inspect}, content=#{message.outgoing_content[0..50]}"
+    biz_conn_id = business_connection_id(message)
+
+    Rails.logger.info "Telegram send_message: message_id=#{message.id}, conversation_id=#{message.conversation_id}, chat_id=#{chat_id_value.inspect}, business_connection_id=#{biz_conn_id.inspect}, content=#{message.outgoing_content[0..50]}"
 
     if chat_id_value.blank?
-      Rails.logger.error "Telegram send_message: chat_id está vazio! conversation_id=#{message.conversation_id}, additional_attributes=#{message.conversation.additional_attributes.inspect}"
+      Rails.logger.error "Telegram send_message: chat_id vazio para conversa #{message.conversation_id}, additional_attributes=#{message.conversation.additional_attributes.inspect}"
       return nil
+    end
+
+    if biz_conn_id.blank?
+      Rails.logger.warn "Telegram send_message: business_connection_id vazio para conversa #{message.conversation_id} - aguardando primeira mensagem real do cliente para sincronizar"
     end
 
     response = message_request(
@@ -117,7 +123,7 @@ class Channel::Telegram < ApplicationRecord
       message.outgoing_content,
       reply_markup(message),
       reply_to_message_id(message),
-      business_connection_id: business_connection_id(message)
+      business_connection_id: biz_conn_id
     )
     process_error(message, response)
     message_id = response.parsed_response['result']['message_id'] if response.success?

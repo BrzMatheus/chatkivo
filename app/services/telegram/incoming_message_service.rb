@@ -109,14 +109,22 @@ class Telegram::IncomingMessageService
   def set_conversation
     # if lock to single conversation is disabled, we will create a new conversation if previous conversation is resolved
     @conversation = find_existing_conversation
-    return if @conversation
+
+    if @conversation
+      # Atualizar business_connection_id e chat_id se necessário
+      sync_conversation_attributes
+      return
+    end
 
     # Usar lock no contact_inbox para prevenir condições de corrida
     # especialmente importante para mensagens automáticas, stickers e respostas rápidas
     @contact_inbox.with_lock do
       # Verificar novamente após adquirir o lock
       @conversation = find_existing_conversation
-      return if @conversation
+      if @conversation
+        sync_conversation_attributes
+        return
+      end
 
       @conversation = ::Conversation.create!(conversation_params)
     end
@@ -124,6 +132,7 @@ class Telegram::IncomingMessageService
     # Se ainda assim houver duplicação (por constraints de DB), buscar a existente
     Rails.logger.warn "Conversa duplicada detectada para contact_inbox #{@contact_inbox.id}: #{e.message}"
     @conversation = find_existing_conversation || raise
+    sync_conversation_attributes if @conversation
   end
 
   def find_existing_conversation
@@ -132,6 +141,31 @@ class Telegram::IncomingMessageService
     else
       @contact_inbox.conversations.where.not(status: :resolved).last
     end
+  end
+
+  def sync_conversation_attributes
+    return unless @conversation
+
+    @conversation.additional_attributes ||= {}
+    updates = {}
+
+    # Sincronizar business_connection_id
+    if telegram_params_business_connection_id.present? &&
+       @conversation.additional_attributes['business_connection_id'].blank?
+      updates['business_connection_id'] = telegram_params_business_connection_id
+    end
+
+    # Sincronizar chat_id
+    if telegram_params_chat_id.present? &&
+       @conversation.additional_attributes['chat_id'] != telegram_params_chat_id
+      updates['chat_id'] = telegram_params_chat_id
+    end
+
+    return unless updates.present?
+
+    @conversation.additional_attributes.merge!(updates)
+    @conversation.save!
+    Rails.logger.info "Telegram: Sincronizado conversation #{@conversation.id}: #{updates.inspect}"
   end
 
   def contact_attributes
