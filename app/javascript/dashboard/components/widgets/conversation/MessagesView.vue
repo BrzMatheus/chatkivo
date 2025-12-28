@@ -137,7 +137,7 @@ export default {
     },
     getMessages() {
       const messages = this.currentChat.messages || [];
-      if (this.isAWhatsAppChannel) {
+      if (this.isAWhatsAppChannel || this.isATelegramChannel) {
         return filterDuplicateSourceMessages(messages);
       }
       return messages;

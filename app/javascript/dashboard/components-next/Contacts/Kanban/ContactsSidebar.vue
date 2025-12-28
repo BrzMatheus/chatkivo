@@ -82,11 +82,49 @@ const filteredContacts = computed(() => {
     : [];
   const funnelContactIds = funnelContactsList.map(fc => fc.contact_id);
 
-  // A API já faz a busca e filtros, só precisamos remover os que estão no funil
-  return contacts.value.filter(
+  const filtered = contacts.value.filter(
     contact => !funnelContactIds.includes(contact.id)
   );
+
+  // A API já faz a busca e filtros, só precisamos remover os que estão no funil
+  return filtered;
 });
+
+// Watch para logging (movido do computed para evitar async em computed)
+watch(
+  () => filteredContacts.value,
+  filtered => {
+    // #region agent log
+    if (contacts.value && Array.isArray(contacts.value)) {
+      const funnelContactsList = props.funnelId
+        ? getFunnelContacts.value(props.funnelId) || []
+        : [];
+      const funnelContactIds = funnelContactsList.map(fc => fc.contact_id);
+      fetch(
+        'http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'ContactsSidebar.vue:86',
+            message: 'filteredContacts computed',
+            data: {
+              contactsCount: contacts.value.length,
+              funnelContactsCount: funnelContactIds.length,
+              filteredCount: filtered.length,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+          }),
+        }
+      ).catch(() => {});
+    }
+    // #endregion
+  },
+  { immediate: true }
+);
 
 const handleContactClick = contact => {
   router.push(

@@ -1,0 +1,40 @@
+<section class="main-content__body">
+  <hr/>
+  <%= form_for([:telegram_import, namespace, page.resource], method: :post, html: { class: "form", multipart: true }) do |f| %>
+    <div class="form-actions">
+      <div class="pb-3">
+        <h3>Importar Histórico do Telegram</h3>
+        <p>Faça upload de um arquivo JSON exportado do Telegram para importar conversas e mensagens antigas.</p>
+        <p class="text-color-orange">Nota: O processo pode levar alguns minutos para arquivos grandes.</p>
+      </div>
+
+      <div class="pb-3">
+        <%= label_tag :inbox_id, "Selecionar Inbox Telegram:", class: "block mb-2" %>
+        <% telegram_inboxes = page.resource.inboxes.where(channel_type: 'Channel::Telegram') %>
+        <% if telegram_inboxes.any? %>
+          <%= select_tag :inbox_id, 
+              options_from_collection_for_select(telegram_inboxes, :id, :name),
+              { class: "form-control", required: true, prompt: "Escolha um inbox Telegram" } %>
+        <% else %>
+          <p class="text-color-red">Nenhum inbox Telegram encontrado para esta conta.</p>
+        <% end %>
+      </div>
+
+      <div class="pb-3">
+        <%= label_tag :import_file, "Arquivo JSON:", class: "block mb-2" %>
+        <%= file_field_tag :import_file, 
+            accept: ".json,application/json", 
+            required: true,
+            class: "form-control" %>
+        <small class="text-muted">Tamanho máximo: 50MB. Formato esperado: Export JSON do Telegram.</small>
+      </div>
+
+      <% if telegram_inboxes.any? %>
+        <%= f.submit 'Importar Histórico', class: "button", data: { confirm: "Tem certeza que deseja importar o histórico? Isso pode levar alguns minutos." } %>
+      <% else %>
+        <%= f.submit 'Importar Histórico', class: "button", disabled: true %>
+      <% end %>
+    </div>
+  <% end %>
+</section>
+

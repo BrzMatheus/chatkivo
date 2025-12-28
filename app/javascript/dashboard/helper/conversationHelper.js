@@ -18,26 +18,47 @@ const getLastNonActivityMessage = (messageInStore, messageFromAPI) => {
 
 /**
  * Filters out duplicate source messages from an array of messages.
+ * When duplicates are found, keeps the message with the smallest ID (first one created).
+ * This ensures that even if messages are processed out of order, we always keep the original message.
  * @param {Array} messages - The array of messages to filter.
- * @returns {Array} An array of messages without duplicates.
+ * @returns {Array} An array of messages without duplicates, maintaining the original order.
  */
 export const filterDuplicateSourceMessages = (messages = []) => {
+  // Track which source_ids we've seen and which message (with smallest ID) to keep
+  const seenSourceIds = new Map();
   const messagesWithoutDuplicates = [];
-  // We cannot use Map or any short hand method as it returns the last message with the duplicate ID
-  // We should return the message with smaller id when there is a duplicate
-  messages.forEach(m1 => {
-    if (m1.source_id) {
-      const index = messagesWithoutDuplicates.findIndex(
-        m2 => m1.source_id === m2.source_id
-      );
 
-      if (index < 0) {
-        messagesWithoutDuplicates.push(m1);
+  // First pass: identify the message with smallest ID for each source_id
+  messages.forEach(msg => {
+    if (msg.source_id) {
+      if (!seenSourceIds.has(msg.source_id)) {
+        seenSourceIds.set(msg.source_id, msg);
+      } else {
+        // If we've seen this source_id, keep the one with smaller ID
+        const existingMsg = seenSourceIds.get(msg.source_id);
+        if (msg.id < existingMsg.id) {
+          seenSourceIds.set(msg.source_id, msg);
+        }
       }
-    } else {
-      messagesWithoutDuplicates.push(m1);
     }
   });
+
+  // Second pass: build result array maintaining original order
+  const addedSourceIds = new Set();
+  messages.forEach(msg => {
+    if (msg.source_id) {
+      // Only add the message if it's the one we decided to keep (smallest ID)
+      const messageToKeep = seenSourceIds.get(msg.source_id);
+      if (msg.id === messageToKeep.id && !addedSourceIds.has(msg.source_id)) {
+        messagesWithoutDuplicates.push(msg);
+        addedSourceIds.add(msg.source_id);
+      }
+    } else {
+      // Messages without source_id are always included
+      messagesWithoutDuplicates.push(msg);
+    }
+  });
+
   return messagesWithoutDuplicates;
 };
 

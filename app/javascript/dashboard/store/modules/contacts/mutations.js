@@ -21,6 +21,21 @@ export const mutations = {
   },
 
   [types.SET_CONTACTS]: ($state, data) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'mutations.js:23',
+        message: 'SET_CONTACTS mutation',
+        data: { contactsCount: data.length, contactIds: data.map(c => c.id) },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'E',
+      }),
+    }).catch(() => {});
+    // #endregion
     const sortOrder = data.map(contact => {
       $state.records[contact.id] = {
         ...($state.records[contact.id] || {}),

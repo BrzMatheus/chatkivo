@@ -65,6 +65,53 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     redirect_back(fallback_location: [namespace, requested_resource], notice: 'Account deletion is in progress.')
     # rubocop:enable Rails/I18nLocaleTexts
   end
+
+  def telegram_import
+    account = requested_resource
+    inbox_id = params[:inbox_id]
+    import_file = params[:import_file]
+
+    unless import_file.present?
+      redirect_back(fallback_location: [namespace, requested_resource], alert: 'Arquivo JSON é obrigatório')
+      return
+    end
+
+    # Validar tamanho máximo (50MB)
+    max_size = 50.megabytes
+    if import_file.size > max_size
+      redirect_back(fallback_location: [namespace, requested_resource], alert: "Arquivo muito grande. Tamanho máximo: #{max_size / 1.megabyte}MB")
+      return
+    end
+
+    inbox = account.inboxes.find_by(id: inbox_id)
+    unless inbox&.channel_type == 'Channel::Telegram'
+      redirect_back(fallback_location: [namespace, requested_resource], alert: 'Inbox Telegram inválido')
+      return
+    end
+
+    # Validar se é JSON
+    begin
+      JSON.parse(import_file.read)
+      import_file.rewind
+    rescue JSON::ParserError
+      redirect_back(fallback_location: [namespace, requested_resource], alert: 'Arquivo JSON inválido')
+      return
+    end
+
+    # Criar DataImport record
+    data_import = account.data_imports.create!(
+      data_type: 'telegram_history'
+    )
+    data_import.import_file.attach(import_file)
+
+    # Processar assincronamente
+    Telegram::ImportHistoryJob.perform_later(data_import.id, inbox.id)
+
+    # rubocop:disable Rails/I18nLocaleTexts
+    redirect_back(fallback_location: [namespace, requested_resource],
+                  notice: 'Importação de histórico do Telegram iniciada. O processo pode levar alguns minutos.')
+    # rubocop:enable Rails/I18nLocaleTexts
+  end
 end
 
 SuperAdmin::AccountsController.prepend_mod_with('SuperAdmin::AccountsController')

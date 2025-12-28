@@ -126,7 +126,6 @@
 - name: sla
   display_name: SLA
   enabled: false
-  premium: true
   help_url: https://chwt.app/hc/sla
 - name: help_center_embedding_search
   display_name: Help Center Embedding Search
@@ -143,7 +142,6 @@
 - name: custom_roles
   display_name: Custom Roles
   enabled: false
-  premium: true
 - name: chatwoot_v4
   display_name: Chatwoot V4
   enabled: true
@@ -207,7 +205,6 @@
 - name: saml
   display_name: SAML
   enabled: false
-  premium: true
 - name: advanced_search_indexing
   display_name: Advanced Search Indexing
   enabled: false

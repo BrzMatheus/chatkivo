@@ -26,6 +26,8 @@ const uiFlags = useMapGetter('funnels/getUIFlags');
 const defaultFunnel = useMapGetter('funnels/getDefaultFunnel');
 const teams = useMapGetter('teams/getTeams');
 const meta = useMapGetter('contacts/getMeta');
+const contacts = useMapGetter('contacts/getContactsList');
+const getFunnelContacts = useMapGetter('funnels/getFunnelContacts');
 
 const selectedFunnelId = ref(null);
 const showCreateDialog = ref(false);
@@ -42,6 +44,7 @@ const columnsOrder = ref([]);
 const appliedFilters = ref([]);
 const currentPage = ref(1);
 const isPageLoading = ref(false);
+const isCheckingAndReloading = ref(false); // Flag para evitar loops infinitos
 
 // Sidebar resize functionality
 const MIN_SIDEBAR_WIDTH = 200;
@@ -112,6 +115,411 @@ const isFetching = computed(() => uiFlags.value.isFetching);
 const isCreating = computed(() => uiFlags.value.isCreating);
 const isUpdating = computed(() => uiFlags.value.isUpdating);
 
+const loadContacts = async (page = 1) => {
+  try {
+    currentPage.value = page;
+    await store.dispatch('contacts/get', { page });
+  } catch {
+    // Error is handled by the store
+  }
+};
+
+const loadContactsWithSearchOrFilter = async (page = 1) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'KanbanView.vue:516',
+      message: 'loadContactsWithSearchOrFilter ENTRY',
+      data: { page, currentPageBefore: currentPage.value },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'D',
+    }),
+  }).catch(() => {});
+  // #endregion
+  currentPage.value = page;
+
+  const validFilters = appliedFilters.value.filter(f => {
+    const hasValue =
+      f.values !== null &&
+      f.values !== undefined &&
+      f.values !== '' &&
+      (!Array.isArray(f.values) || f.values.length > 0);
+    return (
+      hasValue || ['is_present', 'is_not_present'].includes(f.filterOperator)
+    );
+  });
+
+  if (validFilters.length > 0) {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:530',
+        message: 'BRANCH: validFilters.length > 0',
+        data: { validFiltersLength: validFilters.length, page },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
+    const filtersForQuery = validFilters.map(f => {
+      let processedValues = f.values;
+
+      if (f.attributeKey === 'team_id') {
+        if (
+          typeof f.values === 'object' &&
+          f.values !== null &&
+          !Array.isArray(f.values)
+        ) {
+          processedValues = [f.values.id || f.values];
+        } else if (Array.isArray(f.values)) {
+          processedValues = f.values.map(v =>
+            typeof v === 'object' && v !== null ? v.id || v : v
+          );
+        } else {
+          processedValues = [f.values];
+        }
+      }
+
+      return {
+        attribute_key: f.attributeKey,
+        filter_operator: f.filterOperator,
+        values: processedValues,
+        query_operator: f.queryOperator || 'and',
+      };
+    });
+
+    const queryPayload = filterQueryGenerator(filtersForQuery);
+    await store.dispatch('contacts/filter', {
+      page,
+      queryPayload,
+    });
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:559',
+        message: 'AFTER contacts/filter dispatch',
+        data: { page },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
+  } else if (searchQuery.value) {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:563',
+        message: 'BRANCH: searchQuery.value',
+        data: { searchQuery: searchQuery.value, page },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
+    await store.dispatch('contacts/search', {
+      search: encodeURIComponent(searchQuery.value),
+      page,
+      sortAttr: 'name',
+    });
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:568',
+        message: 'AFTER contacts/search dispatch',
+        data: { page },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
+  } else {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:570',
+        message: 'BRANCH: else (loadContacts)',
+        data: { page },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'C',
+      }),
+    }).catch(() => {});
+    // #endregion
+    await loadContacts(page);
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:571',
+        message: 'AFTER loadContacts dispatch',
+        data: { page },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'C',
+      }),
+    }).catch(() => {});
+    // #endregion
+  }
+};
+
+// Função para buscar contatos que não estão no funil nas próximas páginas
+// e atualizar a página atual com esses contatos
+const findAndLoadContactsNotInFunnel = async (
+  startPage = 1,
+  originalPage = 1
+) => {
+  const totalItems = meta.value?.count || 0;
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const funnelContactsList =
+    getFunnelContacts.value(currentFunnel.value.id) || [];
+  const funnelContactIds = funnelContactsList.map(fc => fc.contact_id);
+
+  // #region agent log
+  fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'KanbanView.vue:434',
+      message: 'findAndLoadContactsNotInFunnel ENTRY',
+      data: {
+        startPage,
+        originalPage,
+        totalPages,
+        funnelContactsCount: funnelContactIds.length,
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'F',
+    }),
+  }).catch(() => {});
+  // #endregion
+
+  // Busca sequencialmente nas próximas páginas até encontrar contatos que não estão no funil
+  const pagesToCheck = [];
+  for (
+    let page = startPage;
+    page <= totalPages && page <= startPage + 10;
+    page += 1
+  ) {
+    pagesToCheck.push(page);
+  }
+
+  // Processa páginas em paralelo para evitar await em loop
+  const pageResults = await Promise.all(
+    pagesToCheck.map(async page => {
+      try {
+        // Carrega a página temporariamente para verificar os contatos
+        await store.dispatch('contacts/get', { page });
+        const loadedContacts = store.getters['contacts/getContactsList'] || [];
+
+        const contactsNotInFunnel = loadedContacts.filter(
+          contact => !funnelContactIds.includes(contact.id)
+        );
+
+        // #region agent log
+        fetch(
+          'http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location: 'KanbanView.vue:450',
+              message: 'Verificando página',
+              data: {
+                page,
+                loadedContactsCount: loadedContacts.length,
+                contactsNotInFunnelCount: contactsNotInFunnel.length,
+              },
+              timestamp: Date.now(),
+              sessionId: 'debug-session',
+              runId: 'run1',
+              hypothesisId: 'F',
+            }),
+          }
+        ).catch(() => {});
+        // #endregion
+
+        return { page, contactsNotInFunnel, success: true };
+      } catch (pageError) {
+        // #region agent log
+        fetch(
+          'http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location: 'KanbanView.vue:469',
+              message: 'Erro ao buscar página',
+              data: { page, error: pageError.message },
+              timestamp: Date.now(),
+              sessionId: 'debug-session',
+              runId: 'run1',
+              hypothesisId: 'F',
+            }),
+          }
+        ).catch(() => {});
+        // #endregion
+        return { page, contactsNotInFunnel: [], success: false };
+      }
+    })
+  );
+
+  // Encontra a primeira página com contatos que não estão no funil
+  const foundPage = pageResults.find(
+    result => result.success && result.contactsNotInFunnel.length > 0
+  );
+
+  if (foundPage) {
+    // Atualiza o meta para manter a visualização como página original
+    store.commit('contacts/SET_CONTACT_META', {
+      count: totalItems,
+      current_page: originalPage,
+    });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:461',
+        message:
+          'Encontrou contatos não no funil, mantendo como página original',
+        data: {
+          page: foundPage.page,
+          originalPage,
+          contactsNotInFunnelCount: foundPage.contactsNotInFunnel.length,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'F',
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    currentPage.value = originalPage;
+    return; // Encontrou contatos, para de buscar
+  }
+
+  // Se não encontrou nenhum contato que não está no funil, recarrega a página original
+  // #region agent log
+  fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'KanbanView.vue:481',
+      message: 'Não encontrou contatos, recarregando página original',
+      data: { originalPage },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'F',
+    }),
+  }).catch(() => {});
+  // #endregion
+  await loadContactsWithSearchOrFilter(originalPage);
+};
+
+// Função para verificar se todos os contatos da página atual estão no funil
+// e buscar nas próximas páginas para preencher a página 1
+const checkAndReloadIfEmpty = async () => {
+  // Evita loops infinitos
+  if (isCheckingAndReloading.value) {
+    return;
+  }
+
+  if (!currentFunnel.value || !contacts.value || contacts.value.length === 0) {
+    return;
+  }
+
+  isCheckingAndReloading.value = true;
+
+  try {
+    const funnelContactsList =
+      getFunnelContacts.value(currentFunnel.value.id) || [];
+    const funnelContactIds = funnelContactsList.map(fc => fc.contact_id);
+    const filteredCount = contacts.value.filter(
+      contact => !funnelContactIds.includes(contact.id)
+    ).length;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:488',
+        message: 'checkAndReloadIfEmpty',
+        data: {
+          contactsCount: contacts.value.length,
+          funnelContactsCount: funnelContactIds.length,
+          filteredCount,
+          currentPage: currentPage.value,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'F',
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    // Se a lista filtrada está vazia e há contatos carregados, busca nas próximas páginas
+    if (filteredCount === 0 && contacts.value.length > 0) {
+      const currentPageNum = currentPage.value;
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'KanbanView.vue:496',
+            message: 'Lista vazia, buscando contatos nas próximas páginas',
+            data: { currentPage: currentPageNum },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'F',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
+
+      // Busca sequencialmente nas próximas páginas até encontrar contatos que não estão no funil
+      await findAndLoadContactsNotInFunnel(currentPageNum + 1);
+    }
+  } finally {
+    isCheckingAndReloading.value = false;
+  }
+};
+
 async function reloadFunnels(preserveSelection = false) {
   try {
     error.value = null;
@@ -134,6 +542,8 @@ async function reloadFunnels(preserveSelection = false) {
         await store.dispatch('funnels/getContacts', {
           funnelId: previousFunnelId,
         });
+        // Verifica se a lista filtrada ficou vazia e recarrega se necessário
+        await checkAndReloadIfEmpty();
         return;
       }
     }
@@ -146,6 +556,8 @@ async function reloadFunnels(preserveSelection = false) {
       await store.dispatch('funnels/getContacts', {
         funnelId: funnel.id,
       });
+      // Verifica se a lista filtrada ficou vazia e recarrega se necessário
+      await checkAndReloadIfEmpty();
     }
   } catch (err) {
     error.value =
@@ -235,15 +647,6 @@ const handleCreateAction = ({ action }) => {
   }
 };
 
-const loadContacts = async (page = 1) => {
-  try {
-    currentPage.value = page;
-    await store.dispatch('contacts/get', { page });
-  } catch {
-    // Error is handled by the store
-  }
-};
-
 const handleFunnelSelect = async () => {
   const funnel = currentFunnel.value;
   if (!funnel) return;
@@ -251,6 +654,8 @@ const handleFunnelSelect = async () => {
     selectedFunnelId.value = funnel.id;
     columnsOrder.value = (funnel.columns || []).map(col => col.id);
     await store.dispatch('funnels/getContacts', { funnelId: funnel.id });
+    // Verifica se a lista filtrada ficou vazia e recarrega se necessário
+    await checkAndReloadIfEmpty();
   } catch {
     // Erro silencioso - a UI já mostra feedback através do store
   }
@@ -292,6 +697,9 @@ const handleAddContact = async ({ contactId, funnelId }) => {
       columnId: firstColumnId,
     });
     useAlert(t('KANBAN.ADD_CONTACT.SUCCESS'));
+
+    // Recarrega a página atual de contatos para preencher com novos contatos
+    await loadContactsWithSearchOrFilter(currentPage.value);
   } catch {
     useAlert(t('KANBAN.ADD_CONTACT.ERROR'));
   }
@@ -409,10 +817,27 @@ const handleContactMoved = async () => {
     await store.dispatch('funnels/getContacts', {
       funnelId: currentFunnel.value.id,
     });
+    // Verifica se a lista filtrada ficou vazia e recarrega se necessário
+    await checkAndReloadIfEmpty();
   }
 };
 
 const handleAddContactFromSidebar = async ({ contactId, columnId }) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'KanbanView.vue:418',
+      message: 'handleAddContactFromSidebar ENTRY',
+      data: { contactId, columnId, currentPage: currentPage.value },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A',
+    }),
+  }).catch(() => {});
+  // #endregion
   try {
     const funnel = currentFunnel.value;
     if (!funnel) return;
@@ -423,6 +848,45 @@ const handleAddContactFromSidebar = async ({ contactId, columnId }) => {
       columnId,
     });
     useAlert(t('KANBAN.ADD_CONTACT.SUCCESS'));
+
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:430',
+        message: 'BEFORE loadContactsWithSearchOrFilter',
+        data: {
+          currentPage: currentPage.value,
+          appliedFiltersLength: appliedFilters.value.length,
+          searchQuery: searchQuery.value,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    // Recarrega a página atual de contatos para preencher com novos contatos
+    await loadContactsWithSearchOrFilter(currentPage.value);
+
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/6c136b09-360a-40c9-94a2-a23d5ee38d17', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'KanbanView.vue:434',
+        message: 'AFTER loadContactsWithSearchOrFilter',
+        data: { currentPage: currentPage.value },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+    // #endregion
   } catch {
     useAlert(t('KANBAN.ADD_CONTACT.ERROR'));
   }
@@ -504,64 +968,6 @@ const handleClickOutside = event => {
     if (!button && !dropdown) {
       showCreateDropdown.value = false;
     }
-  }
-};
-
-const loadContactsWithSearchOrFilter = async (page = 1) => {
-  currentPage.value = page;
-
-  const validFilters = appliedFilters.value.filter(f => {
-    const hasValue =
-      f.values !== null &&
-      f.values !== undefined &&
-      f.values !== '' &&
-      (!Array.isArray(f.values) || f.values.length > 0);
-    return (
-      hasValue || ['is_present', 'is_not_present'].includes(f.filterOperator)
-    );
-  });
-
-  if (validFilters.length > 0) {
-    const filtersForQuery = validFilters.map(f => {
-      let processedValues = f.values;
-
-      if (f.attributeKey === 'team_id') {
-        if (
-          typeof f.values === 'object' &&
-          f.values !== null &&
-          !Array.isArray(f.values)
-        ) {
-          processedValues = [f.values.id || f.values];
-        } else if (Array.isArray(f.values)) {
-          processedValues = f.values.map(v =>
-            typeof v === 'object' && v !== null ? v.id || v : v
-          );
-        } else {
-          processedValues = [f.values];
-        }
-      }
-
-      return {
-        attribute_key: f.attributeKey,
-        filter_operator: f.filterOperator,
-        values: processedValues,
-        query_operator: f.queryOperator || 'and',
-      };
-    });
-
-    const queryPayload = filterQueryGenerator(filtersForQuery);
-    await store.dispatch('contacts/filter', {
-      page,
-      queryPayload,
-    });
-  } else if (searchQuery.value) {
-    await store.dispatch('contacts/search', {
-      search: encodeURIComponent(searchQuery.value),
-      page,
-      sortAttr: 'name',
-    });
-  } else {
-    await loadContacts(page);
   }
 };
 

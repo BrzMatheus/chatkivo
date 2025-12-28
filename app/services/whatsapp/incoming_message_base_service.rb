@@ -24,9 +24,29 @@ class Whatsapp::IncomingMessageBaseService
     return if unprocessable_message_type?(message_type)
 
     # Multiple webhook event can be received against the same message due to misconfigurations in the Meta
-    # business manager account. While we have not found the core reason yet, the following line ensure that
-    # there are no duplicate messages created.
-    return if find_message_by_source_id(@processed_params[:messages].first[:id]) || message_under_process?
+    # business manager account. While we have not found the core reason yet, we need to ensure that
+    # duplicate messages are moved to the correct conversation instead of being ignored.
+    existing_message = find_message_by_source_id(@processed_params[:messages].first[:id])
+
+    if existing_message
+      # Mensagem duplicada encontrada - garantir que está na conversa correta
+      set_contact
+      return unless @contact
+
+      ActiveRecord::Base.transaction do
+        set_conversation
+
+        # Se a mensagem está em uma conversa diferente, movê-la para a conversa correta
+        if existing_message.conversation_id != @conversation.id
+          Rails.logger.info "Movendo mensagem duplicada #{existing_message.id} (source_id: #{existing_message.source_id}) da conversa #{existing_message.conversation_id} para conversa #{@conversation.id}"
+          existing_message.update!(conversation_id: @conversation.id)
+        end
+      end
+      return
+    end
+
+    # Se a mensagem está sendo processada, aguardar
+    return if message_under_process?
 
     cache_message_source_id_in_redis
     set_contact
