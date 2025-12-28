@@ -205,10 +205,15 @@ class Telegram::ImportHistoryService
       }
     )
 
-    # Salvar sem validação para evitar problemas com timestamps
+    # Definir timestamp original antes de salvar
+    message.created_at = timestamp
+    message.updated_at = timestamp
+
+    # Salvar sem validação
     message.save!(validate: false)
 
-    # Preservar timestamp original usando update_columns para evitar callbacks
+    # Garantir que o timestamp foi preservado usando update_columns (ignora callbacks)
+    # Isso é necessário porque o Rails pode sobrescrever created_at/updated_at durante save
     message.update_columns(created_at: timestamp, updated_at: timestamp)
 
     @messages_count += 1
@@ -258,17 +263,33 @@ class Telegram::ImportHistoryService
     # Preferir date_unixtime, depois date
     timestamp = message_data['date_unixtime'] || message_data['date']
 
-    if timestamp.is_a?(Numeric)
-      Time.at(timestamp).utc
-    elsif timestamp.is_a?(String)
-      begin
-        Time.parse(timestamp).utc
-      rescue StandardError
-        Time.current.utc
+    return Time.current.utc if timestamp.nil?
+
+    # Se for número, usar diretamente
+    return Time.at(timestamp).utc if timestamp.is_a?(Numeric)
+
+    # Se for string, tentar converter para número primeiro (timestamp unix)
+    if timestamp.is_a?(String)
+      # Tentar converter string numérica para número (timestamp unix)
+      if timestamp.match?(/^\d+$/)
+        begin
+          return Time.at(timestamp.to_i).utc
+        rescue StandardError
+          # Se falhar, continuar para tentar Time.parse
+        end
       end
-    else
-      Time.current.utc
+
+      # Se não for numérico, tentar parsear como data ISO8601 ou formato comum
+      begin
+        return Time.parse(timestamp).utc
+      rescue StandardError
+        Rails.logger.warn "Telegram import: Não foi possível parsear timestamp: #{timestamp.inspect}"
+        return Time.current.utc
+      end
     end
+
+    # Fallback
+    Time.current.utc
   end
 
   def has_attachments?(message_data)
