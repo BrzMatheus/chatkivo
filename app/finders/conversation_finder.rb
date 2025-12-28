@@ -135,10 +135,10 @@ class ConversationFinder
     return unless params[:q]
 
     allowed_message_types = [Message.message_types[:incoming], Message.message_types[:outgoing]]
-    @conversations = conversations.joins(:messages).where('messages.content ILIKE :search', search: "%#{params[:q]}%")
-                                  .where(messages: { message_type: allowed_message_types }).includes(:messages)
-                                  .where('messages.content ILIKE :search', search: "%#{params[:q]}%")
-                                  .where(messages: { message_type: allowed_message_types })
+    @conversations = @conversations.joins(:messages).where('messages.content ILIKE :search', search: "%#{params[:q]}%")
+                                   .where(messages: { message_type: allowed_message_types }).includes(:messages)
+                                   .where('messages.content ILIKE :search', search: "%#{params[:q]}%")
+                                   .where(messages: { message_type: allowed_message_types })
   end
 
   def filter_by_status
@@ -167,23 +167,11 @@ class ConversationFinder
   end
 
   def set_count_for_all_conversations
-    # Otimização: usar uma única query com GROUP BY para obter todas as contagens
-    # em vez de 3 queries COUNT separadas
-    base_scope = @conversations
-
-    # Contagem total
-    all_count = base_scope.count
-
-    # Contagem de não atribuídas
-    unassigned_count = base_scope.unassigned.count
-
-    # Contagem minhas
-    mine_count = base_scope.assigned_to(current_user).count
-
-    [mine_count, unassigned_count, all_count]
-  rescue StandardError => e
-    Rails.logger.error "[ConversationFinder#set_count_for_all_conversations] Error: #{e.message}"
-    [0, 0, 0]
+    [
+      @conversations.assigned_to(current_user).count,
+      @conversations.unassigned.count,
+      @conversations.count
+    ]
   end
 
   def current_page
@@ -191,15 +179,8 @@ class ConversationFinder
   end
 
   def conversations_base_query
-    # Otimização: eager loading para evitar N+1 queries
-    # Nota: mensagens são carregadas de forma otimizada no jbuilder
     @conversations.includes(
-      :inbox,
-      { assignee: { avatar_attachment: [:blob] } },
-      { contact: { avatar_attachment: [:blob] } },
-      :team,
-      :contact_inbox,
-      :assignee_agent_bot
+      :taggings, :inbox, { assignee: { avatar_attachment: [:blob] } }, { contact: { avatar_attachment: [:blob] } }, :team, :contact_inbox
     )
   end
 
@@ -210,7 +191,9 @@ class ConversationFinder
     @conversations = @conversations.send(sort_by, sort_order)
 
     if params[:updated_within].present?
-      @conversations.where('conversations.updated_at > ?', Time.zone.now - params[:updated_within].to_i.seconds)
+      @conversations.where('conversations.updated_at > ?',
+                           Time.zone.now - params[:updated_within].to_i.seconds).page(current_page).per(ENV.fetch('CONVERSATION_RESULTS_PER_PAGE',
+                                                                                                                  '25').to_i)
     else
       @conversations.page(current_page).per(ENV.fetch('CONVERSATION_RESULTS_PER_PAGE', '25').to_i)
     end

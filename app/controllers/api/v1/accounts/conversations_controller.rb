@@ -12,11 +12,6 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     result = conversation_finder.perform
     @conversations = result[:conversations]
     @conversations_count = result[:count]
-  rescue StandardError => e
-    Rails.logger.error "[ConversationsController#index] Error: #{e.message}"
-    Rails.logger.error "[ConversationsController#index] Backtrace: #{e.backtrace.first(10).join("\n")}"
-    Rails.logger.error "[ConversationsController#index] Params: #{params.to_unsafe_h}"
-    render json: { error: e.message, error_class: e.class.name }, status: :internal_server_error
   end
 
   def meta

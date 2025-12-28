@@ -2,28 +2,6 @@
 # Currently the file there is used only for search endpoint.
 # Everywhere else we use conversation builder in partials folder
 
-# Otimização: Carregar a última mensagem uma única vez para evitar N+1 queries
-# Isso evita múltiplas queries por conversa na lista
-last_message = begin
-  conversation.messages
-              .where(account_id: conversation.account_id)
-              .includes(attachments: { file_attachment: [:blob] })
-              .order(created_at: :desc)
-              .first
-rescue StandardError
-  nil
-end
-
-last_non_activity = begin
-  conversation.messages
-              .where(account_id: conversation.account_id)
-              .non_activity_messages
-              .order(created_at: :desc)
-              .first
-rescue StandardError
-  nil
-end
-
 json.meta do
   json.sender do
     json.partial! 'api/v1/models/contact', formats: [:json], resource: conversation.contact
@@ -49,10 +27,13 @@ json.meta do
 end
 
 json.id conversation.display_id
-if last_message.blank?
+if conversation.messages.where(account_id: conversation.account_id).last.blank?
   json.messages []
 else
-  json.messages [last_message.try(:push_event_data)]
+  json.messages [
+    conversation.messages.where(account_id: conversation.account_id)
+                .includes([{ attachments: [{ file_attachment: [:blob] }] }]).last.try(:push_event_data)
+  ]
 end
 
 json.account_id conversation.account_id
@@ -72,9 +53,8 @@ json.created_at conversation.created_at.to_i
 json.updated_at conversation.updated_at.to_f
 json.timestamp conversation.last_activity_at.to_i
 json.first_reply_created_at conversation.first_reply_created_at.to_i
-# Otimização: usar contagem direta via método existente que já limita a 10
-json.unread_count conversation.unread_incoming_messages.size
-json.last_non_activity_message last_non_activity.try(:push_event_data)
+json.unread_count conversation.unread_incoming_messages.count
+json.last_non_activity_message conversation.messages.where(account_id: conversation.account_id).non_activity_messages.first.try(:push_event_data)
 json.last_activity_at conversation.last_activity_at.to_i
 json.priority conversation.priority
 json.waiting_since conversation.waiting_since.to_i.to_i
