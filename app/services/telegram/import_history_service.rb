@@ -8,10 +8,6 @@ class Telegram::ImportHistoryService
 
     json_data = parse_json_file
 
-    # Extrair o user_id do proprietário da exportação
-    @owner_user_id = json_data.dig('personal_information', 'user_id')&.to_s
-    Rails.logger.info "Telegram import: owner_user_id=#{@owner_user_id.inspect}"
-
     process_chats(json_data)
 
     {
@@ -71,7 +67,7 @@ class Telegram::ImportHistoryService
 
     # Importar mensagens em lotes
     messages.each_slice(BATCH_SIZE) do |message_batch|
-      process_messages_batch(conversation, message_batch, contact_inbox.contact)
+      process_messages_batch(conversation, message_batch, contact_inbox.contact, chat_id)
     end
   end
 
@@ -174,15 +170,15 @@ class Telegram::ImportHistoryService
     conversation
   end
 
-  def process_messages_batch(conversation, messages_batch, contact)
+  def process_messages_batch(conversation, messages_batch, contact, chat_id)
     messages_batch.each do |msg_data|
       next unless msg_data['type'] == 'message'
 
-      create_message_if_not_exists(conversation, msg_data, contact)
+      create_message_if_not_exists(conversation, msg_data, contact, chat_id)
     end
   end
 
-  def create_message_if_not_exists(conversation, msg_data, contact)
+  def create_message_if_not_exists(conversation, msg_data, contact, chat_id)
     message_id = extract_message_id(msg_data)
     return if message_id.blank?
 
@@ -190,7 +186,7 @@ class Telegram::ImportHistoryService
     return if conversation.messages.exists?(source_id: message_id.to_s)
 
     content = extract_content(msg_data)
-    is_outgoing = extract_is_outgoing(msg_data, contact)
+    is_outgoing = extract_is_outgoing(msg_data, chat_id)
     timestamp = extract_timestamp(msg_data)
 
     message = conversation.messages.build(
@@ -246,16 +242,15 @@ class Telegram::ImportHistoryService
     end
   end
 
-  def extract_is_outgoing(message_data, _contact)
-    # O formato do Telegram Desktop não usa campo 'out'
-    # Mensagens enviadas têm from_id igual ao user_id do proprietário
-    # O from_id tem formato "userXXXXX", extrair apenas o número
+  def extract_is_outgoing(message_data, chat_id)
+    # Extrair from_id da mensagem (formato "userXXXXX")
     from_id = message_data['from_id']&.to_s&.gsub('user', '')
 
-    # Se from_id == owner_user_id, é mensagem enviada (outgoing)
-    is_outgoing = from_id.present? && @owner_user_id.present? && from_id == @owner_user_id
+    # Se from_id == chat_id, é mensagem RECEBIDA do contato
+    # Se from_id != chat_id, é mensagem ENVIADA pelo usuário que exportou
+    is_outgoing = from_id.present? && chat_id.present? && from_id != chat_id.to_s
 
-    Rails.logger.info "Telegram import message type: from_id=#{from_id.inspect}, owner_user_id=#{@owner_user_id.inspect}, is_outgoing=#{is_outgoing}, message_id=#{message_data['id']}"
+    Rails.logger.info "Telegram import message type: from_id=#{from_id.inspect}, chat_id=#{chat_id.inspect}, is_outgoing=#{is_outgoing}, message_id=#{message_data['id']}"
     is_outgoing
   end
 
