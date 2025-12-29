@@ -64,8 +64,13 @@ class Telegram::IncomingMessageService
       clear_message_source_id_from_redis
     end
 
-    # Sincronizar outras conversas do inbox quando enviar mensagem (fora da transação para não bloquear)
-    sync_all_inbox_conversations if business_message_outgoing?
+    # Sincronizar outras conversas do inbox quando enviar mensagem (assíncrono)
+    return unless business_message_outgoing? && telegram_params_business_connection_id.present?
+
+    Telegram::SyncInboxConversationsJob.perform_later(
+      inbox.id,
+      telegram_params_business_connection_id
+    )
   end
 
   private
@@ -158,10 +163,12 @@ class Telegram::IncomingMessageService
       updates['business_connection_id'] = telegram_params_business_connection_id
     end
 
-    # Sincronizar chat_id
-    if telegram_params_chat_id.present? &&
-       @conversation.additional_attributes['chat_id'] != telegram_params_chat_id
-      updates['chat_id'] = telegram_params_chat_id
+    # Sincronizar chat_id (garantir que seja string para consistência)
+    chat_id_value = telegram_params_chat_id.to_s if telegram_params_chat_id.present?
+    if chat_id_value.present? &&
+       @conversation.additional_attributes['chat_id'] != chat_id_value
+      updates['chat_id'] = chat_id_value
+      Rails.logger.info "Telegram: Atualizando chat_id da conversa #{@conversation.id} de '#{@conversation.additional_attributes['chat_id']}' para '#{chat_id_value}'"
     end
 
     return unless updates.present?
@@ -169,46 +176,6 @@ class Telegram::IncomingMessageService
     @conversation.additional_attributes.merge!(updates)
     @conversation.save!
     Rails.logger.info "Telegram: Sincronizado conversation #{@conversation.id}: #{updates.inspect}"
-  end
-
-  def sync_all_inbox_conversations
-    return unless business_message_outgoing?
-    return unless telegram_params_business_connection_id.present?
-
-    begin
-      biz_conn_id = telegram_params_business_connection_id
-
-      # Buscar todas as conversas do mesmo inbox que não têm business_connection_id
-      conversations_to_sync = inbox.conversations
-                                   .where("additional_attributes->>'business_connection_id' IS NULL OR additional_attributes->>'business_connection_id' = ''")
-                                   .where.not(id: @conversation.id) # Excluir a conversa atual que já foi sincronizada
-
-      return if conversations_to_sync.empty?
-
-      Rails.logger.info "Telegram: Sincronizando #{conversations_to_sync.count} conversas do inbox #{inbox.id} com business_connection_id #{biz_conn_id}"
-
-      updated_count = 0
-      conversations_to_sync.find_each do |conversation|
-        conversation.additional_attributes ||= {}
-
-        # Atualizar apenas se ainda não tiver business_connection_id
-        if conversation.additional_attributes['business_connection_id'].blank?
-          conversation.additional_attributes['business_connection_id'] = biz_conn_id
-          conversation.save!
-          updated_count += 1
-          Rails.logger.info "Telegram: Conversa #{conversation.id} sincronizada com business_connection_id"
-        end
-      rescue StandardError => e
-        Rails.logger.error "Telegram: Erro ao sincronizar conversa #{conversation.id}: #{e.message}"
-        # Continua com as outras conversas mesmo se uma falhar
-      end
-
-      Rails.logger.info "Telegram: Sincronização concluída. #{updated_count} conversas atualizadas com business_connection_id"
-    rescue StandardError => e
-      Rails.logger.error "Telegram: Erro na sincronização de conversas do inbox #{inbox.id}: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-      # Não relança o erro para não bloquear o processamento da mensagem
-    end
   end
 
   def contact_attributes

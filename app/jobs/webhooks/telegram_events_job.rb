@@ -35,10 +35,18 @@ class Webhooks::TelegramEventsJob < ApplicationJob
   def process_event_params(channel, params)
     return unless params[:telegram]
 
+    # Ignorar mensagens deletadas - não precisam ser processadas
+    if params.dig(:telegram, :deleted_business_messages).present? || params.dig(:telegram, :deleted_message).present?
+      Rails.logger.info "Telegram: Ignorando mensagens deletadas - update_id: #{params[:telegram][:update_id]}"
+      return
+    end
+
     if params.dig(:telegram, :edited_message).present? || params.dig(:telegram, :edited_business_message).present?
       Telegram::UpdateMessageService.new(inbox: channel.inbox, params: params['telegram'].with_indifferent_access).perform
-    else
+    elsif params.dig(:telegram, :message).present? || params.dig(:telegram, :business_message).present?
       Telegram::IncomingMessageService.new(inbox: channel.inbox, params: params['telegram'].with_indifferent_access).perform
+    else
+      Rails.logger.warn "Telegram: Tipo de evento não reconhecido - update_id: #{params[:telegram][:update_id]}, params: #{params[:telegram].keys.inspect}"
     end
   end
 end
