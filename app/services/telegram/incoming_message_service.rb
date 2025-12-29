@@ -63,14 +63,6 @@ class Telegram::IncomingMessageService
       @message.save!
       clear_message_source_id_from_redis
     end
-
-    # Sincronizar outras conversas do inbox quando enviar mensagem (assíncrono)
-    return unless business_message_outgoing? && telegram_params_business_connection_id.present?
-
-    Telegram::SyncInboxConversationsJob.perform_later(
-      inbox.id,
-      telegram_params_business_connection_id
-    )
   end
 
   private
@@ -163,12 +155,10 @@ class Telegram::IncomingMessageService
       updates['business_connection_id'] = telegram_params_business_connection_id
     end
 
-    # Sincronizar chat_id (garantir que seja string para consistência)
-    chat_id_value = telegram_params_chat_id.to_s if telegram_params_chat_id.present?
-    if chat_id_value.present? &&
-       @conversation.additional_attributes['chat_id'] != chat_id_value
-      updates['chat_id'] = chat_id_value
-      Rails.logger.info "Telegram: Atualizando chat_id da conversa #{@conversation.id} de '#{@conversation.additional_attributes['chat_id']}' para '#{chat_id_value}'"
+    # Sincronizar chat_id
+    if telegram_params_chat_id.present? &&
+       @conversation.additional_attributes['chat_id'] != telegram_params_chat_id
+      updates['chat_id'] = telegram_params_chat_id
     end
 
     return unless updates.present?

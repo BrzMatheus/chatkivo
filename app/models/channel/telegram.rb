@@ -168,12 +168,9 @@ class Channel::Telegram < ApplicationRecord
     business_body = {}
     business_body[:business_connection_id] = business_connection_id if business_connection_id
 
-    # Converter chat_id para número se possível (Telegram aceita ambos, mas números são mais confiáveis)
-    chat_id_param = chat_id.to_i.to_s == chat_id.to_s ? chat_id.to_i : chat_id
-
     HTTParty.post("#{telegram_api_url}/sendMessage",
                   body: {
-                    chat_id: chat_id_param,
+                    chat_id: chat_id,
                     text: text_payload,
                     reply_markup: reply_markup,
                     parse_mode: 'HTML',
