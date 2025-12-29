@@ -444,10 +444,6 @@ function updateImgToolbarOnDelete() {
   }
 }
 
-function isEnterToSendEnabled() {
-  return isEditorHotKeyEnabled('enter');
-}
-
 function isCmdPlusEnterToSendEnabled() {
   return isEditorHotKeyEnabled('cmd_enter');
 }
@@ -511,11 +507,8 @@ function onFileChange() {
 }
 
 function handleLineBreakWhenEnterToSendEnabled(event) {
-  if (
-    hasPressedEnterAndNotCmdOrShift(event) &&
-    isEnterToSendEnabled() &&
-    !props.overrideLineBreaks
-  ) {
+  // Sempre prevenir quebra de linha com Enter (sem Shift)
+  if (hasPressedEnterAndNotCmdOrShift(event) && !props.overrideLineBreaks) {
     event.preventDefault();
   }
 }
@@ -578,9 +571,8 @@ function handleLineBreakWhenCmdAndEnterToSendEnabled(event) {
 }
 
 function onKeydown(event) {
-  if (isEnterToSendEnabled()) {
-    handleLineBreakWhenEnterToSendEnabled(event);
-  }
+  // Sempre prevenir quebra de linha com Enter (sem Shift)
+  handleLineBreakWhenEnterToSendEnabled(event);
   if (isCmdPlusEnterToSendEnabled()) {
     handleLineBreakWhenCmdAndEnterToSendEnabled(event);
   }

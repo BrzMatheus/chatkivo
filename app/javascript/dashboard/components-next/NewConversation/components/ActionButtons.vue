@@ -139,11 +139,8 @@ const sendButtonLabel = computed(() => {
 const keyboardEvents = {
   Enter: {
     action: () => {
-      if (
-        isEditorHotKeyEnabled('enter') &&
-        isRegularMessageMode.value &&
-        !props.isDropdownActive
-      ) {
+      // Sempre permitir Enter enviar mensagem (sem verificar configuração)
+      if (isRegularMessageMode.value && !props.isDropdownActive) {
         emit('sendMessage');
       }
     },

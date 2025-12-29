@@ -55,6 +55,9 @@ class Telegram::ImportHistoryService
     messages = chat_data['messages'] || []
     return if messages.empty?
 
+    # Validar se há pelo menos uma mensagem válida (não apenas service messages)
+    return unless has_valid_messages?(messages)
+
     # Criar ou encontrar contato e contact_inbox
     contact_inbox = find_or_create_contact_inbox(chat_id, chat_data, messages.first)
     return unless contact_inbox
@@ -73,6 +76,10 @@ class Telegram::ImportHistoryService
 
   def extract_chat_id(chat_data)
     chat_data['id']&.to_s
+  end
+
+  def has_valid_messages?(messages)
+    messages.any? { |msg| msg['type'] == 'message' }
   end
 
   def find_or_create_contact_inbox(chat_id, chat_data, first_message)

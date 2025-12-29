@@ -153,6 +153,18 @@ export default {
     onFocus() {
       this.$emit('focus');
     },
+    onKeydown(event) {
+      // Prevenir quebra de linha com Enter (sem Shift)
+      // Shift+Enter ainda permite quebra de linha
+      if (
+        event.key === 'Enter' &&
+        !event.shiftKey &&
+        !event.metaKey &&
+        !event.ctrlKey
+      ) {
+        event.preventDefault();
+      }
+    },
     focus() {
       if (this.$refs.textarea) this.$refs.textarea.focus();
     },
@@ -169,6 +181,7 @@ export default {
     @input="onInput"
     @focus="onFocus"
     @keyup="onKeyup"
+    @keydown="onKeydown"
     @blur="onBlur"
   />
 </template>

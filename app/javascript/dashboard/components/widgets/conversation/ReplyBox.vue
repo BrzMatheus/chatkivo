@@ -679,7 +679,15 @@ export default {
         },
         Enter: {
           action: e => {
-            if (this.isAValidEvent('enter')) {
+            // Sempre permitir Enter enviar mensagem (sem verificar configuração)
+            if (
+              !this.showUserMentions &&
+              !this.showMentions &&
+              !this.showCannedMenu &&
+              !this.showVariablesMenu &&
+              this.isFocused &&
+              !e.shiftKey
+            ) {
               this.onSendReply();
               e.preventDefault();
             }
