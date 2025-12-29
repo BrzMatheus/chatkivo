@@ -1,26 +1,22 @@
 # Telegram Attachment APIs: ref: https://core.telegram.org/bots/api#inputfile
 
-# Media attachments like photos, videos can be clubbed together and sent as a media group
-# Audio can be clubbed together and send as a media group, but can't be mixed with other types
-# Documents are sent individually
+# All attachments are sent individually using multipart upload to avoid URL accessibility issues.
+# This ensures files are always delivered regardless of Active Storage configuration.
 
-# We are using `HTTP URL` to send media attachments, telegram will directly download the media from the URL and send it to the user.
-# But for documents, we need to send the file as a multipart request. as telegram only support pdf and zip for the download from the URL option.
-
-# ref: `In sendDocument, sending by URL will currently only work for GIF, PDF and ZIP files.`
+# ref: `https://core.telegram.org/bots/api#sendphoto`
+# ref: `https://core.telegram.org/bots/api#sendvideo`
+# ref: `https://core.telegram.org/bots/api#sendaudio`
 # ref: `https://core.telegram.org/bots/api#senddocument`
-# ref: `https://core.telegram.org/bots/api#sendmediaGroup
 
 # The service will terminate if any of the attachment requests fail when the message has multiple attachments
-# We will create multiple messages in telegram if the message has multiple attachments (if its documents or mixed media).
 class Telegram::SendAttachmentsService
   pattr_initialize [:message!]
 
   def perform
     attachment_message_id = nil
 
-    group_attachments_by_type.each do |type, attachments|
-      attachment_message_id = process_attachments_by_type(type, attachments)
+    message.attachments.each do |attachment|
+      attachment_message_id = send_attachment(attachment)
       break if attachment_message_id.nil?
     end
 
@@ -29,68 +25,94 @@ class Telegram::SendAttachmentsService
 
   private
 
-  def process_attachments_by_type(type, attachments)
-    response = send_attachments(type, attachments)
+  def send_attachment(attachment)
+    response = send_attachment_by_type(attachment)
     return extract_attachment_message_id(response) if handle_response(response)
 
     nil
   end
 
-  def send_attachments(type, attachments)
-    if [:media, :audio].include?(type)
-      media_group_request(channel.chat_id(message), attachments, channel.reply_to_message_id(message))
-    else
-      send_individual_attachments(attachments)
+  def send_attachment_by_type(attachment)
+    type = attachment_type(attachment[:file_type])
+    chat_id = channel.chat_id(message)
+    reply_to_message_id = channel.reply_to_message_id(message)
+
+    temp_file_path = save_attachment_to_tempfile(attachment)
+    begin
+      response = send_file_by_type(type, chat_id, temp_file_path, reply_to_message_id)
+    ensure
+      File.delete(temp_file_path) if File.exist?(temp_file_path)
     end
-  end
-
-  def group_attachments_by_type
-    attachments_by_type = { media: [], audio: [], document: [] }
-
-    message.attachments.each do |attachment|
-      type = attachment_type(attachment[:file_type])
-      attachment_data = { type: type, media: attachment.download_url, attachment: attachment }
-      case type
-      when 'document'
-        attachments_by_type[:document] << attachment_data
-      when 'audio'
-        attachments_by_type[:audio] << attachment_data
-      when 'photo', 'video'
-        attachments_by_type[:media] << attachment_data
-      end
-    end
-
-    attachments_by_type.reject { |_, v| v.empty? }
+    response
   end
 
   def attachment_type(file_type)
     { 'audio' => 'audio', 'image' => 'photo', 'file' => 'document', 'video' => 'video' }[file_type] || 'document'
   end
 
-  def media_group_request(chat_id, attachments, reply_to_message_id)
-    HTTParty.post("#{channel.telegram_api_url}/sendMediaGroup",
-                  body: {
-                    chat_id: chat_id,
-                    **business_connection_body,
-                    media: attachments.map { |hash| hash.except(:attachment) }.to_json,
-                    reply_to_message_id: reply_to_message_id
-                  })
-  end
-
-  def send_individual_attachments(attachments)
-    response = nil
-    attachments.map do |attachment|
-      response = document_request(channel.chat_id(message), attachment, channel.reply_to_message_id(message))
-      break unless handle_response(response)
+  def send_file_by_type(type, chat_id, file_path, reply_to_message_id)
+    case type
+    when 'photo'
+      send_photo(chat_id, file_path, reply_to_message_id)
+    when 'video'
+      send_video(chat_id, file_path, reply_to_message_id)
+    when 'audio'
+      send_audio(chat_id, file_path, reply_to_message_id)
+    else
+      send_document(chat_id, file_path, reply_to_message_id)
     end
-    response
   end
 
-  def document_request(chat_id, attachment, reply_to_message_id)
-    temp_file_path = save_attachment_to_tempfile(attachment[:attachment])
-    response = send_file(chat_id, temp_file_path, reply_to_message_id)
-    File.delete(temp_file_path)
-    response
+  def send_photo(chat_id, file_path, reply_to_message_id)
+    File.open(file_path, 'rb') do |file|
+      HTTParty.post("#{channel.telegram_api_url}/sendPhoto",
+                    body: {
+                      chat_id: chat_id,
+                      **business_connection_body,
+                      photo: file,
+                      reply_to_message_id: reply_to_message_id
+                    },
+                    multipart: true)
+    end
+  end
+
+  def send_video(chat_id, file_path, reply_to_message_id)
+    File.open(file_path, 'rb') do |file|
+      HTTParty.post("#{channel.telegram_api_url}/sendVideo",
+                    body: {
+                      chat_id: chat_id,
+                      **business_connection_body,
+                      video: file,
+                      reply_to_message_id: reply_to_message_id
+                    },
+                    multipart: true)
+    end
+  end
+
+  def send_audio(chat_id, file_path, reply_to_message_id)
+    File.open(file_path, 'rb') do |file|
+      HTTParty.post("#{channel.telegram_api_url}/sendAudio",
+                    body: {
+                      chat_id: chat_id,
+                      **business_connection_body,
+                      audio: file,
+                      reply_to_message_id: reply_to_message_id
+                    },
+                    multipart: true)
+    end
+  end
+
+  def send_document(chat_id, file_path, reply_to_message_id)
+    File.open(file_path, 'rb') do |file|
+      HTTParty.post("#{channel.telegram_api_url}/sendDocument",
+                    body: {
+                      chat_id: chat_id,
+                      **business_connection_body,
+                      document: file,
+                      reply_to_message_id: reply_to_message_id
+                    },
+                    multipart: true)
+    end
   end
 
   # Telegram picks up the file name from original field name, so we need to save the file with the original name.
@@ -102,19 +124,6 @@ class Telegram::SendAttachmentsService
     temp_file_path = File.join(temp_dir, attachment.file.filename.to_s)
     File.write(temp_file_path, raw_data, mode: 'wb')
     temp_file_path
-  end
-
-  def send_file(chat_id, file_path, reply_to_message_id)
-    File.open(file_path, 'rb') do |file|
-      HTTParty.post("#{channel.telegram_api_url}/sendDocument",
-                    body: {
-                      chat_id: chat_id,
-                      **business_connection_body,
-                      document: file,
-                      reply_to_message_id: reply_to_message_id
-                    },
-                    multipart: true)
-    end
   end
 
   def handle_response(response)
