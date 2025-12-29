@@ -191,12 +191,10 @@ class ConversationFinder
     @conversations = @conversations.send(sort_by, sort_order)
 
     if params[:updated_within].present?
-      @conversations.where('conversations.updated_at > ?',
-                           Time.zone.now - params[:updated_within].to_i.seconds).page(current_page).per(ENV.fetch('CONVERSATION_RESULTS_PER_PAGE',
-                                                                                                                  '25').to_i)
-    else
-      @conversations.page(current_page).per(ENV.fetch('CONVERSATION_RESULTS_PER_PAGE', '25').to_i)
+      @conversations = @conversations.where('conversations.updated_at > ?', Time.zone.now - params[:updated_within].to_i.seconds)
     end
+
+    @conversations.page(current_page).per(ENV.fetch('CONVERSATION_RESULTS_PER_PAGE', '25').to_i)
   end
 end
 ConversationFinder.prepend_mod_with('ConversationFinder')
