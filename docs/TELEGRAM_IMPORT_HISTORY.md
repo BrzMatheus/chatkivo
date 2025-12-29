@@ -52,6 +52,21 @@ O sistema identifica corretamente se uma mensagem foi enviada ou recebida compar
 - **Mensagem RECEBIDA (incoming):** Quando `from_id` da mensagem corresponde ao `chat.id` (mensagem enviada pelo contato)
 - **Mensagem ENVIADA (outgoing):** Quando `from_id` da mensagem é diferente do `chat.id` (mensagem enviada pelo usuário que exportou os dados)
 
+### 6. Filtro de Conversas Vazias
+
+O sistema filtra automaticamente conversas que contêm apenas mensagens de serviço (service messages), evitando criar conversas vazias no Chatwoot.
+
+**Comportamento:**
+- Conversas com apenas mensagens de serviço (ex: `joined_telegram`, `clear_history`, etc.) são ignoradas completamente
+- Não são criados contatos, contact_inboxes ou conversas para essas conversas
+- Conversas com pelo menos uma mensagem válida (tipo `"message"`) continuam sendo importadas normalmente
+- Mensagens de serviço em conversas com mensagens válidas continuam sendo ignoradas durante o processamento
+
+**Exemplos de mensagens de serviço ignoradas:**
+- `joined_telegram`: Notificação de que o contato entrou no Telegram
+- `clear_history`: Notificação de que o histórico foi limpo
+- Outras mensagens de sistema do Telegram
+
 ## Estrutura de Arquivos
 
 ### Backend
@@ -162,19 +177,24 @@ O serviço espera o formato padrão de exportação do Telegram:
 
 Para cada chat no JSON:
 
-1. **Criar/Buscar Contato:**
+1. **Validação de Mensagens Válidas:**
+   - Verifica se há pelo menos uma mensagem válida (tipo `"message"`)
+   - Se a conversa contém apenas mensagens de serviço, ela é ignorada completamente
+   - Não são criados contatos, contact_inboxes ou conversas para conversas vazias
+
+2. **Criar/Buscar Contato:**
    - Busca por `identifier: "telegram_#{chat_id}"`
    - Se não existir, cria novo contato com nome e atributos
 
-2. **Criar/Buscar Contact Inbox:**
+3. **Criar/Buscar Contact Inbox:**
    - Busca por `source_id: chat_id`
    - Cria se não existir, vinculando contato ao inbox
 
-3. **Criar/Buscar Conversa:**
+4. **Criar/Buscar Conversa:**
    - Usa `find_or_create_by` com account, inbox, contact_inbox
    - Respeita `lock_to_single_conversation` do inbox
 
-4. **Importar Mensagens:**
+5. **Importar Mensagens:**
    - Para cada mensagem, verifica duplicata por `source_id`
    - Extrai timestamp do campo `date_unixtime` (ou `date` como fallback)
    - Determina `message_type` comparando `from_id` com `chat.id`:
@@ -229,13 +249,14 @@ Para cada chat no JSON:
 - ✅ Mensagens de texto
 - ✅ Mensagens com formatação (arrays de entidades)
 - ⚠️ Fotos/Arquivos: Referências são logadas mas arquivos não são baixados
-- ⚠️ Mensagens de serviço: Podem ser ignoradas (códigos de login, etc.)
+- ⚠️ Mensagens de serviço: Ignoradas automaticamente (conversas com apenas mensagens de serviço não são importadas)
 
 ### Limitações Conhecidas
 
 1. **Anexos:** Arquivos e fotos referenciados no JSON não são baixados automaticamente (apenas referência é registrada)
 2. **Grupos:** Apenas chats pessoais (`personal_chat`) são processados
 3. **Tamanho:** Arquivos muito grandes (>50MB) são rejeitados no upload
+4. **Conversas Vazias:** Conversas que contêm apenas mensagens de serviço são automaticamente ignoradas e não são importadas
 
 ## Como Usar
 
@@ -391,6 +412,13 @@ DataImport.where(data_type: 'telegram_history')
 - Se `from_id != chat.id` → mensagem é **enviada** (outgoing)
 - Verifique os logs para confirmar a comparação: `Rails.logger.info "Telegram import message type: from_id=..., chat_id=..., is_outgoing=..."`
 
+### Conversas vazias sendo importadas
+
+- O sistema agora filtra automaticamente conversas que contêm apenas mensagens de serviço
+- Se uma conversa foi importada mas não tem mensagens, verifique se ela contém apenas mensagens de serviço no JSON
+- Conversas com pelo menos uma mensagem válida (tipo `"message"`) são importadas normalmente
+- Conversas completamente vazias ou com apenas mensagens de serviço são ignoradas antes de criar qualquer recurso
+
 ## Melhorias Futuras
 
 Possíveis melhorias para versões futuras:
@@ -415,10 +443,15 @@ Para problemas ou dúvidas:
 ---
 
 **Última atualização:** Janeiro 2025  
-**Versão:** 1.1  
+**Versão:** 1.2  
 **Autor:** Equipe de Desenvolvimento Chatwoot
 
 ### Changelog
+
+**v1.2 (Janeiro 2025)**
+- ✅ Adicionado filtro de conversas vazias: conversas com apenas mensagens de serviço são ignoradas automaticamente
+- ✅ Prevenção de criação de conversas vazias no Chatwoot
+- ✅ Validação de mensagens válidas antes de criar contatos e conversas
 
 **v1.1 (Janeiro 2025)**
 - ✅ Corrigida preservação de timestamps: mensagens agora mantêm datas/horas originais do Telegram
