@@ -9,8 +9,14 @@ class Conversations::PermissionFilterService
 
   def perform
     return conversations if user_role == 'administrator'
+    return conversations if account_user.nil?
 
     apply_conversation_filters
+  rescue StandardError => e
+    Rails.logger.error "PermissionFilterService error: #{e.message}"
+    Rails.logger.error "  User: #{user&.id}, Account: #{account&.id}, AccountUser: #{account_user&.id}"
+    Rails.logger.error "  Backtrace: #{e.backtrace&.first(5)&.join("\n")}"
+    conversations
   end
 
   private
@@ -33,7 +39,12 @@ class Conversations::PermissionFilterService
   end
 
   def accessible_conversations
-    conversations.where(inbox: user.inboxes.where(account_id: account.id))
+    return conversations if account.nil?
+
+    user_inboxes = user.inboxes.where(account_id: account.id)
+    return conversations.none if user_inboxes.blank?
+
+    conversations.where(inbox: user_inboxes)
   end
 
   def filter_by_team(base_conversations)

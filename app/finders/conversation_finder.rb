@@ -31,9 +31,20 @@ class ConversationFinder
 
   def initialize(current_user, params)
     @current_user = current_user
-    @current_account = current_user.account
-    @is_admin = current_account.account_users.find_by(user_id: current_user.id)&.administrator?
+    @current_account = Current.account
     @params = params
+
+    # Fallback para current_user.account se Current.account não estiver definido
+    @current_account ||= current_user.account
+
+    # Validação de segurança
+    if @current_account.nil?
+      Rails.logger.error "ConversationFinder: current_account is nil for user_id=#{current_user&.id}"
+      raise StandardError, 'Account not found for current user'
+    end
+
+    @is_admin = Current.account_user&.administrator? ||
+                @current_account.account_users.find_by(user_id: current_user.id)&.administrator?
   end
 
   def perform
