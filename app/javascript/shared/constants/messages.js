@@ -92,7 +92,7 @@ export const CSAT_DISPLAY_TYPES = {
 export const AUDIO_FORMATS = {
   WEBM: 'audio/webm',
   OGG: 'audio/ogg',
-  MP3: 'audio/mp3',
+  MP3: 'audio/mpeg',
   WAV: 'audio/wav',
 };
 

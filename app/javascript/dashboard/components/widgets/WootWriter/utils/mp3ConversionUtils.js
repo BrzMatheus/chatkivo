@@ -92,7 +92,7 @@ export const encodeToMP3 = (channels, sampleRate, samples, bitrate = 128) => {
     outputBuffer.push(new Int8Array(remainingData));
   }
 
-  return new Blob(outputBuffer, { type: 'audio/mp3' });
+  return new Blob(outputBuffer, { type: 'audio/mpeg' });
 };
 
 /**
@@ -137,7 +137,7 @@ export const convertAudio = async (inputBlob, outputFormat, bitrate = 128) => {
   let audio;
   if (outputFormat === 'audio/wav') {
     audio = await convertToWav(inputBlob);
-  } else if (outputFormat === 'audio/mp3') {
+  } else if (outputFormat === 'audio/mpeg') {
     audio = await convertToMp3(inputBlob, bitrate);
   } else {
     throw new Error('Unsupported output format');
