@@ -297,7 +297,6 @@ class Message < ApplicationRecord
     reopen_conversation
     set_conversation_activity
     dispatch_create_events
-    auto_assign_conversation
     send_reply
     execute_message_template_hooks
     update_contact_activity
@@ -305,30 +304,6 @@ class Message < ApplicationRecord
 
   def update_contact_activity
     sender.update(last_activity_at: DateTime.now) if sender.is_a?(Contact)
-  end
-
-  def auto_assign_conversation
-    # Atribui automaticamente a conversa ao agente quando ele envia uma mensagem
-    # Apenas se for uma resposta humana e a conversa não estiver atribuída
-    return unless human_response?
-    return if private
-
-    # Recarregar a conversa para garantir que temos o estado mais recente
-    conversation.reload
-    return if conversation.assignee_id.present?
-
-    # Usar update_columns para evitar callbacks que possam causar duplicação
-    conversation.update_columns(assignee_id: sender.id, assignee_agent_bot_id: nil)
-
-    # Disparar evento manualmente para manter a consistência
-    Rails.configuration.dispatcher.dispatch(
-      Events::Types::ASSIGNEE_CHANGED,
-      Time.zone.now,
-      conversation: conversation,
-      notifiable_assignee_change: false,
-      changed_attributes: { assignee_id: [nil, sender.id] },
-      performed_by: Current.executed_by
-    )
   end
 
   def update_waiting_since
