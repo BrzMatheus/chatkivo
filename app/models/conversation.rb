@@ -222,10 +222,19 @@ class Conversation < ApplicationRecord
 
   def handle_resolved_status_change
     # When conversation is resolved, clear waiting_since using update_column to avoid callbacks
+    # and remove assignment so it appears in "all" conversations without an assigned agent
     return unless saved_change_to_status? && status == 'resolved'
 
     # rubocop:disable Rails/SkipsModelValidations
     update_column(:waiting_since, nil)
+    # Remove assignment when conversation is resolved
+    return unless assignee_id.present? || assignee_agent_bot_id.present?
+
+    previous_assignee_id = assignee_id
+    update_columns(assignee_id: nil, assignee_agent_bot_id: nil)
+    # Dispatch event manually since update_columns doesn't trigger callbacks
+    dispatcher_dispatch(ASSIGNEE_CHANGED, { assignee_id: [previous_assignee_id, nil] })
+
     # rubocop:enable Rails/SkipsModelValidations
   end
 

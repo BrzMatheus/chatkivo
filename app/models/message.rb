@@ -297,6 +297,7 @@ class Message < ApplicationRecord
     reopen_conversation
     set_conversation_activity
     dispatch_create_events
+    auto_assign_conversation
     send_reply
     execute_message_template_hooks
     update_contact_activity
@@ -304,6 +305,16 @@ class Message < ApplicationRecord
 
   def update_contact_activity
     sender.update(last_activity_at: DateTime.now) if sender.is_a?(Contact)
+  end
+
+  def auto_assign_conversation
+    # Atribui automaticamente a conversa ao agente quando ele envia uma mensagem
+    # Apenas se for uma resposta humana e a conversa não estiver atribuída
+    return unless human_response?
+    return if private
+    return if conversation.assignee_id.present?
+
+    conversation.update!(assignee: sender)
   end
 
   def update_waiting_since
