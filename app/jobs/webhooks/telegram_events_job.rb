@@ -33,12 +33,22 @@ class Webhooks::TelegramEventsJob < ApplicationJob
   end
 
   def process_event_params(channel, params)
-    return unless params[:telegram]
+    unless params[:telegram]
+      Rails.logger.warn "[Telegram] Job ignorado - params[:telegram] ausente: #{params.keys.inspect}"
+      return
+    end
 
-    if params.dig(:telegram, :edited_message).present? || params.dig(:telegram, :edited_business_message).present?
-      Telegram::UpdateMessageService.new(inbox: channel.inbox, params: params['telegram'].with_indifferent_access).perform
+    telegram_params = params['telegram'].with_indifferent_access
+    Rails.logger.info "[Telegram] Processando evento: inbox_id=#{channel.inbox.id}, " \
+                      "message_id=#{telegram_params.dig(:message, :message_id) || telegram_params.dig(:business_message, :message_id)}, " \
+                      "has_message=#{telegram_params[:message].present?}, " \
+                      "has_business_message=#{telegram_params[:business_message].present?}, " \
+                      "has_edited=#{telegram_params[:edited_message].present? || telegram_params[:edited_business_message].present?}"
+
+    if telegram_params[:edited_message].present? || telegram_params[:edited_business_message].present?
+      Telegram::UpdateMessageService.new(inbox: channel.inbox, params: telegram_params).perform
     else
-      Telegram::IncomingMessageService.new(inbox: channel.inbox, params: params['telegram'].with_indifferent_access).perform
+      Telegram::IncomingMessageService.new(inbox: channel.inbox, params: telegram_params).perform
     end
   end
 end

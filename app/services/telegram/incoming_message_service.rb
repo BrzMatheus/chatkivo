@@ -8,18 +8,45 @@ class Telegram::IncomingMessageService
   pattr_initialize [:inbox!, :params!]
 
   def perform
+    # Log inicial para diagnóstico
+    Rails.logger.info '[Telegram] IncomingMessageService.perform iniciado: ' \
+                      "inbox_id=#{inbox.id}, " \
+                      "has_message=#{params[:message].present?}, " \
+                      "has_business_message=#{params[:business_message].present?}, " \
+                      "from_id=#{params.dig(:message, :from, :id) || params.dig(:business_message, :from, :id)}, " \
+                      "chat_id=#{params.dig(:message, :chat, :id) || params.dig(:business_message, :chat, :id)}"
+
     # chatwoot doesn't support group conversations at the moment
     transform_business_message!
-    return unless private_message?
+
+    # Log após transformação
+    Rails.logger.info '[Telegram] Após transform_business_message!: ' \
+                      "has_message=#{params[:message].present?}, " \
+                      "chat_type=#{params.dig(:message, :chat, :type)}, " \
+                      "from_id=#{params.dig(:message, :from, :id)}, " \
+                      "chat_id=#{params.dig(:message, :chat, :id)}"
+
+    unless private_message?
+      Rails.logger.warn '[Telegram] Mensagem ignorada - não é privada: ' \
+                        "chat_type=#{params.dig(:message, :chat, :type)}, " \
+                        "callback_query=#{params[:callback_query].present?}"
+      return
+    end
 
     # Verificar se já existe uma mensagem com o mesmo source_id (mensagem duplicada)
     message_id = telegram_params_message_id.to_s
     existing_message = find_message_by_source_id(message_id)
 
     if existing_message
+      Rails.logger.info "[Telegram] Mensagem duplicada encontrada: source_id=#{message_id}, " \
+                        "existing_message_id=#{existing_message.id}, " \
+                        "existing_conversation_id=#{existing_message.conversation_id}"
       # Mensagem duplicada encontrada - garantir que está na conversa correta
       set_contact
-      return unless @contact
+      unless @contact
+        Rails.logger.warn '[Telegram] Mensagem duplicada ignorada - contato não encontrado'
+        return
+      end
 
       ActiveRecord::Base.transaction do
         set_conversation
@@ -34,12 +61,23 @@ class Telegram::IncomingMessageService
     end
 
     # Se a mensagem está sendo processada, aguardar
-    return if message_under_process?
+    if message_under_process?
+      Rails.logger.warn "[Telegram] Mensagem ignorada - já está sendo processada: source_id=#{message_id}"
+      return
+    end
 
     cache_message_source_id_in_redis
     set_contact
     update_contact_avatar
     set_conversation
+
+    # Log antes de criar mensagem
+    Rails.logger.info '[Telegram] Criando mensagem: ' \
+                      "source_id=#{message_id}, " \
+                      "conversation_id=#{@conversation.id}, " \
+                      "message_type=#{message_type}, " \
+                      "is_business_outgoing=#{business_message_outgoing?}, " \
+                      "content_preview=#{telegram_params_message_content.to_s[0..50]}"
 
     ActiveRecord::Base.transaction do
       # TODO: Since the recent Telegram Business update, we need to explicitly mark messages as read using an additional request.
@@ -62,6 +100,12 @@ class Telegram::IncomingMessageService
       process_message_attachments if message_params?
       @message.save!
       clear_message_source_id_from_redis
+
+      Rails.logger.info '[Telegram] Mensagem criada com sucesso: ' \
+                        "message_id=#{@message.id}, " \
+                        "source_id=#{message_id}, " \
+                        "conversation_id=#{@conversation.id}, " \
+                        "message_type=#{@message.message_type}"
     end
   end
 
@@ -301,6 +345,16 @@ class Telegram::IncomingMessageService
   end
 
   def transform_business_message!
-    params[:message] = params[:business_message] if params[:business_message] && !params[:message]
+    return unless params[:business_message].present?
+    return if params[:message].present?
+
+    Rails.logger.debug do
+      '[Telegram] Transformando business_message para message: ' \
+        "message_id=#{params.dig(:business_message, :message_id)}, " \
+        "from_id=#{params.dig(:business_message, :from, :id)}, " \
+        "chat_id=#{params.dig(:business_message, :chat, :id)}"
+    end
+
+    params[:message] = params[:business_message]
   end
 end

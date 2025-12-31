@@ -1,6 +1,12 @@
 class SendReplyJob < ApplicationJob
   queue_as :high
 
+  # Retry para quando chat_id do Telegram não está disponível ainda
+  # Aguarda progressivamente: 5s, 10s, 20s (3 tentativas)
+  retry_on Telegram::SendOnTelegramService::ChatIdNotAvailableError,
+           wait: :polynomially_longer,
+           attempts: 3
+
   CHANNEL_SERVICES = {
     'Channel::TwitterProfile' => ::Twitter::SendOnTwitterService,
     'Channel::TwilioSms' => ::Twilio::SendOnTwilioService,

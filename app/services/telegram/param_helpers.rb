@@ -3,7 +3,10 @@ module Telegram::ParamHelpers
   def private_message?
     return true if callback_query_params?
 
-    params.dig(:message, :chat, :type) == 'private'
+    # Business messages são sempre conversas privadas (1-1)
+    # Verificar tanto em :message quanto em :business_message para maior robustez
+    chat_type = params.dig(:message, :chat, :type) || params.dig(:business_message, :chat, :type)
+    chat_type == 'private'
   end
 
   def telegram_params_content_attributes
