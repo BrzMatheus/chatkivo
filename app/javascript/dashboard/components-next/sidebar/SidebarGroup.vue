@@ -135,7 +135,7 @@ onMounted(async () => {
     :permissions="resolvePermissions(to)"
     :feature-flag="resolveFeatureFlag(to)"
     as="li"
-    class="grid gap-1 text-sm cursor-pointer select-none"
+    class="grid gap-1 text-sm cursor-pointer select-none ltr:pr-2 rtl:pl-2 min-w-0"
   >
     <SidebarGroupHeader
       :icon
@@ -152,7 +152,7 @@ onMounted(async () => {
     <ul
       v-if="hasChildren"
       v-show="isExpanded || hasActiveChild"
-      class="grid m-0 list-none sidebar-group-children"
+      class="grid m-0 list-none sidebar-group-children min-w-0"
     >
       <template v-for="child in children" :key="child.name">
         <SidebarSubGroup

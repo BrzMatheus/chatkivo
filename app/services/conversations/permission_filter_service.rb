@@ -24,6 +24,36 @@ class Conversations::PermissionFilterService
   def apply_conversation_filters
     base_conversations = accessible_conversations
 
+    if flexible_filters_active?
+      apply_flexible_filters(base_conversations)
+    else
+      apply_legacy_filters(base_conversations)
+    end
+  end
+
+  def flexible_filters_active?
+    account_user.visible_team_ids.present? || account_user.filter_assigned_only || account_user.filter_unassigned_only
+  end
+
+  def apply_flexible_filters(base_conversations)
+    filtered = base_conversations
+
+    # Filtro de Times
+    filtered = filtered.where(team_id: account_user.visible_team_ids) if account_user.visible_team_ids.present?
+
+    # Filtro de Atribuição (combinado)
+    if account_user.filter_assigned_only && account_user.filter_unassigned_only
+      filtered = filtered.where('assignee_id IS NULL OR assignee_id = ?', user.id)
+    elsif account_user.filter_assigned_only
+      filtered = filtered.where(assignee_id: user.id)
+    elsif account_user.filter_unassigned_only
+      filtered = filtered.where(assignee_id: nil)
+    end
+
+    filtered
+  end
+
+  def apply_legacy_filters(base_conversations)
     case account_user&.conversation_filter_mode
     when 'team_conversations_only'
       filter_by_team(base_conversations)

@@ -34,6 +34,8 @@ class AccountUser < ApplicationRecord
 
   enum role: { agent: 0, administrator: 1 }
   enum availability: { online: 0, offline: 1, busy: 2 }
+
+  # conversation_filter_mode is deprecated in favor of visible_team_ids, filter_assigned_only, filter_unassigned_only
   enum conversation_filter_mode: {
     all_conversations: 0,         # Ver todas conversas (padrão atual)
     team_conversations_only: 1,   # Ver apenas conversas do time
@@ -41,6 +43,8 @@ class AccountUser < ApplicationRecord
     unassigned_conversations_only: 3, # Ver apenas conversas sem agente atribuído
     team_unassigned_or_mine: 4    # Ver conversas do time que estão sem agente OU atribuídas a mim
   }
+
+  validates :visible_team_ids, presence: true, if: -> { visible_team_ids.nil? }
 
   accepts_nested_attributes_for :account
 

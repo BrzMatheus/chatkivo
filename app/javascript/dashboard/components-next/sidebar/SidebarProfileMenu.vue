@@ -135,7 +135,7 @@ const allowedMenuItems = computed(() => {
           class="flex-shrink-0"
           rounded-full
         />
-        <div class="min-w-0">
+        <div class="min-w-0 flex-1 w-0">
           <div class="text-sm font-medium leading-4 truncate text-n-slate-12">
             {{ currentUser.available_name }}
           </div>

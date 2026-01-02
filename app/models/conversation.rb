@@ -115,6 +115,7 @@ class Conversation < ApplicationRecord
   has_many :reporting_events, dependent: :destroy_async
 
   before_save :ensure_snooze_until_reset
+  before_save :unassign_on_resolve
   before_create :determine_conversation_status
   before_create :ensure_waiting_since
 
@@ -227,6 +228,14 @@ class Conversation < ApplicationRecord
     # rubocop:disable Rails/SkipsModelValidations
     update_column(:waiting_since, nil)
     # rubocop:enable Rails/SkipsModelValidations
+  end
+
+  def unassign_on_resolve
+    return unless status_changed? && resolved?
+
+    self.assignee_id = nil
+    self.team_id = nil
+    self.assignee_agent_bot_id = nil
   end
 
   def ensure_snooze_until_reset

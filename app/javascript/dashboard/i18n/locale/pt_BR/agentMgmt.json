@@ -87,7 +87,18 @@
           "TEAM_ONLY": "Apenas Conversas do Time",
           "ASSIGNED_ONLY": "Apenas Conversas Atribuídas a Mim",
           "UNASSIGNED_ONLY": "Apenas Conversas Não Atribuídas",
-          "TEAM_UNASSIGNED_OR_MINE": "Conversas do Time (Não Atribuídas ou Minhas)"
+          "TEAM_UNASSIGNED_OR_MINE": "Conversas do Time (Não Atribuídas ou Minhas)",
+          "TABS": {
+            "ASSIGNMENTS": "Atribuições",
+            "SECTORS": "Setores",
+            "FUNNELS": "Funis",
+            "FILTERS": "Filtros"
+          },
+          "FILTERS_LIST": {
+            "ONLY_MINE": "Conversas somente deste atendente",
+            "ONLY_UNASSIGNED": "Conversas sem atendentes vinculado"
+          },
+          "ALL_TEAMS": "Todos os times"
         },
         "SUBMIT": "Editar agente"
       },

@@ -133,6 +133,7 @@ class Message < ApplicationRecord
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
 
   after_create_commit :execute_after_create_commit_callbacks
+  after_create :auto_assign_on_response
 
   after_update_commit :dispatch_update_event
   after_commit :reindex_for_search, if: :should_index?, on: [:create, :update]
@@ -374,6 +375,17 @@ class Message < ApplicationRecord
 
   def reopened_by_contact?
     incoming? && !private? && Current.user.class != sender.class && sender.instance_of?(Contact)
+  end
+
+  def auto_assign_on_response
+    return unless human_response?
+    return if private?
+    return if conversation.assignee_id == sender_id
+
+    Conversations::AssignmentService.new(
+      conversation: conversation,
+      assignee_id: sender_id
+    ).perform
   end
 
   def execute_message_template_hooks

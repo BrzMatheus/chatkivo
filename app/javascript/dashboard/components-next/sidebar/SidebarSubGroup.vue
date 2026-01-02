@@ -69,15 +69,15 @@ useEventListener(scrollableContainer, 'scroll', () => {
 <template>
   <div v-if="hasAccessibleItems && parentExpanded" class="my-1">
     <div
-      class="flex items-center gap-2 px-2 py-1.5 rounded-lg h-8 min-w-0 cursor-pointer select-none text-n-slate-11 hover:bg-n-alpha-2"
+      class="flex items-center gap-2 px-2 py-1.5 rounded-lg h-8 w-full min-w-0 cursor-pointer select-none text-n-slate-11 hover:bg-n-alpha-2"
       role="button"
       @click="toggleExpanded"
     >
-      <div v-if="icon" class="flex items-center gap-2">
+      <div v-if="icon" class="flex items-center gap-2 flex-shrink-0">
         <Icon v-if="icon" :icon="icon" class="size-4" />
       </div>
-      <div class="flex items-center gap-1.5 flex-grow min-w-0">
-        <span class="text-sm font-medium leading-5 truncate">
+      <div class="flex items-center gap-1.5 flex-grow min-w-0 w-0">
+        <span class="text-sm font-medium leading-5 truncate flex-1">
           {{ label }}
         </span>
       </div>

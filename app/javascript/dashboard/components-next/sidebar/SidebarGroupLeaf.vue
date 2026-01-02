@@ -25,13 +25,13 @@ const shouldRenderComponent = computed(() => {
     :permissions="resolvePermissions(to)"
     :feature-flag="resolveFeatureFlag(to)"
     as="li"
-    class="py-0.5 ltr:pl-3 rtl:pr-3 rtl:mr-3 ltr:ml-3 relative text-n-slate-11 child-item before:bg-n-slate-4 after:bg-transparent after:border-n-slate-4 before:left-0 rtl:before:right-0"
+    class="py-0.5 ltr:pl-3 ltr:pr-2 rtl:pr-3 rtl:pl-2 rtl:mr-3 ltr:ml-3 relative text-n-slate-11 child-item before:bg-n-slate-4 after:bg-transparent after:border-n-slate-4 before:left-0 rtl:before:right-0 min-w-0 block"
   >
     <component
       :is="to ? 'router-link' : 'div'"
       :to="to"
       :title="label"
-      class="flex h-8 items-center gap-2 px-2 py-1 rounded-lg max-w-[9.438rem] hover:bg-gradient-to-r from-transparent via-n-slate-3/70 to-n-slate-3/70 group"
+      class="flex h-8 items-center gap-2 px-2 py-1 rounded-lg w-full min-w-0 hover:bg-gradient-to-r from-transparent via-n-slate-3/70 to-n-slate-3/70 group"
       :class="{
         'text-n-blue-text bg-n-alpha-2 active': active,
       }"
@@ -44,8 +44,8 @@ const shouldRenderComponent = computed(() => {
         :active
       />
       <template v-else>
-        <Icon v-if="icon" :icon="icon" class="size-4 inline-block" />
-        <div class="flex-1 truncate min-w-0">{{ label }}</div>
+        <Icon v-if="icon" :icon="icon" class="size-4 flex-shrink-0" />
+        <div class="flex-1 truncate min-w-0 w-0">{{ label }}</div>
       </template>
     </component>
   </Policy>

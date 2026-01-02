@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_05_120000) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_01_000001) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -53,6 +53,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_05_120000) do
     t.bigint "custom_role_id"
     t.bigint "agent_capacity_policy_id"
     t.integer "conversation_filter_mode", default: 0, null: false
+    t.integer "visible_team_ids", default: [], array: true
+    t.boolean "filter_assigned_only", default: false
+    t.boolean "filter_unassigned_only", default: false
     t.index ["account_id", "user_id"], name: "uniq_user_id_per_account_id", unique: true
     t.index ["account_id"], name: "index_account_users_on_account_id"
     t.index ["agent_capacity_policy_id"], name: "index_account_users_on_agent_capacity_policy_id"
@@ -495,6 +498,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_05_120000) do
     t.string "bot_token", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "additional_attributes", default: {}
     t.index ["bot_token"], name: "index_channel_telegram_on_bot_token", unique: true
   end
 

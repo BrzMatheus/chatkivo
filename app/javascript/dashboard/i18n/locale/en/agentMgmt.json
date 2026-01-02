@@ -87,7 +87,18 @@
           "TEAM_ONLY": "Only Team Conversations",
           "ASSIGNED_ONLY": "Only Assigned Conversations",
           "UNASSIGNED_ONLY": "Only Unassigned Conversations",
-          "TEAM_UNASSIGNED_OR_MINE": "Team Conversations (Unassigned or Mine)"
+          "TEAM_UNASSIGNED_OR_MINE": "Team Conversations (Unassigned or Mine)",
+          "TABS": {
+            "ASSIGNMENTS": "Assignments",
+            "SECTORS": "Sectors",
+            "FUNNELS": "Funnels",
+            "FILTERS": "Filters"
+          },
+          "FILTERS_LIST": {
+            "ONLY_MINE": "Conversations only of this agent",
+            "ONLY_UNASSIGNED": "Conversations with no agent linked"
+          },
+          "ALL_TEAMS": "All teams"
         },
         "SUBMIT": "Edit Agent"
       },

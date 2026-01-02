@@ -51,6 +51,7 @@ const findCustomRole = agent =>
 
 const getAgentRoleName = agent => {
   if (!agent.custom_role_id) {
+    // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
     return t(`AGENT_MGMT.AGENT_TYPES.${agent.role.toUpperCase()}`);
   }
   const customRole = findCustomRole(agent);
@@ -206,6 +207,7 @@ const confirmDeletion = () => {
                         class="font-normal"
                       >
                         {{
+                          // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
                           $t(
                             `CUSTOM_ROLE.PERMISSIONS.${permission.toUpperCase()}`
                           )
@@ -267,6 +269,9 @@ const confirmDeletion = () => {
         :availability="currentAgent.availability_status"
         :custom-role-id="currentAgent.custom_role_id"
         :conversation-filter-mode="currentAgent.conversation_filter_mode"
+        :visible-team-ids="currentAgent.visible_team_ids || []"
+        :filter-assigned-only="currentAgent.filter_assigned_only || false"
+        :filter-unassigned-only="currentAgent.filter_unassigned_only || false"
         @close="hideEditPopup"
       />
     </woot-modal>

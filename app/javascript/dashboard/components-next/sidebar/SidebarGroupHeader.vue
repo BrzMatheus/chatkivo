@@ -26,7 +26,7 @@ const count = computed(() =>
 <template>
   <component
     :is="to ? 'router-link' : 'div'"
-    class="flex items-center gap-2 px-2 py-1.5 rounded-lg h-8 min-w-0"
+    class="flex items-center gap-2 px-2 py-1.5 rounded-lg h-8 w-full min-w-0"
     role="button"
     draggable="false"
     :to="to"
@@ -38,15 +38,15 @@ const count = computed(() =>
     }"
     @click.stop="emit('toggle')"
   >
-    <div v-if="icon" class="relative flex items-center gap-2">
+    <div v-if="icon" class="relative flex-shrink-0 flex items-center gap-2">
       <Icon v-if="icon" :icon="icon" class="size-4" />
       <span
         v-if="showBadge"
         class="size-2 -top-px ltr:-right-px rtl:-left-px bg-n-brand absolute rounded-full border border-n-solid-2"
       />
     </div>
-    <div class="flex items-center gap-1.5 flex-grow min-w-0">
-      <span class="text-sm font-medium leading-5 truncate">
+    <div class="flex items-center gap-1.5 flex-grow min-w-0 w-0">
+      <span class="text-sm font-medium leading-5 truncate flex-1">
         {{ label }}
       </span>
       <span

@@ -42,6 +42,18 @@ const props = defineProps({
     type: String,
     default: 'all_conversations',
   },
+  visibleTeamIds: {
+    type: Array,
+    default: () => [],
+  },
+  filterAssignedOnly: {
+    type: Boolean,
+    default: false,
+  },
+  filterUnassignedOnly: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['close']);
@@ -55,6 +67,10 @@ const agentName = ref(props.name);
 const agentAvailability = ref(props.availability);
 const selectedRoleId = ref(props.customRoleId || props.type);
 const conversationFilterMode = ref(props.conversationFilterMode);
+const visibleTeamIds = ref([...(props.visibleTeamIds || [])]);
+const filterAssignedOnly = ref(props.filterAssignedOnly || false);
+const filterUnassignedOnly = ref(props.filterUnassignedOnly || false);
+const activeTab = ref('sectors');
 const agentCredentials = ref({ email: props.email });
 
 const rules = {
@@ -75,6 +91,7 @@ const pageTitle = computed(
 
 const uiFlags = useMapGetter('agents/getUIFlags');
 const getCustomRoles = useMapGetter('customRole/getCustomRoles');
+const teamsList = useMapGetter('teams/getTeams');
 
 const roles = computed(() => {
   const defaultRoles = [
@@ -122,31 +139,6 @@ const availabilityStatuses = computed(() =>
   }))
 );
 
-const conversationFilterOptions = computed(() => [
-  {
-    value: 'all_conversations',
-    label: t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.ALL'),
-  },
-  {
-    value: 'team_conversations_only',
-    label: t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.TEAM_ONLY'),
-  },
-  {
-    value: 'assigned_conversations_only',
-    label: t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.ASSIGNED_ONLY'),
-  },
-  {
-    value: 'unassigned_conversations_only',
-    label: t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.UNASSIGNED_ONLY'),
-  },
-  {
-    value: 'team_unassigned_or_mine',
-    label: t(
-      'AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.TEAM_UNASSIGNED_OR_MINE'
-    ),
-  },
-]);
-
 const editAgent = async () => {
   v$.value.$touch();
   if (v$.value.$invalid) return;
@@ -157,7 +149,25 @@ const editAgent = async () => {
       name: agentName.value,
       availability: agentAvailability.value,
       conversation_filter_mode: conversationFilterMode.value,
+      visible_team_ids: visibleTeamIds.value,
+      filter_assigned_only: filterAssignedOnly.value,
+      filter_unassigned_only: filterUnassignedOnly.value,
     };
+
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6fdfb35c-58c4-4ff2-86a0-0cff0720f807', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'EditAgent.vue:182',
+        message: 'Frontend Payload',
+        data: { payload },
+        timestamp: Date.now(),
+        sessionId: 'debug-filters',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
+    // #endregion
 
     if (selectedRole.value.name.startsWith('custom_')) {
       payload.custom_role_id = selectedRole.value.id;
@@ -235,19 +245,87 @@ const resetPassword = async () => {
         </label>
       </div>
 
-      <div class="w-full">
-        <label>
-          {{ $t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.LABEL') }}
-          <select v-model="conversationFilterMode">
-            <option
-              v-for="option in conversationFilterOptions"
-              :key="option.value"
-              :value="option.value"
+      <div class="w-full mt-4">
+        <nav class="flex border-b border-n-weak mb-4 overflow-x-auto">
+          <button
+            v-for="tab in ['sectors', 'funnels', 'filters']"
+            :key="tab"
+            type="button"
+            class="px-4 py-2 text-sm font-medium border-b-2 transition-colors duration-200 whitespace-nowrap"
+            :class="
+              activeTab === tab
+                ? 'border-n-brand text-n-brand'
+                : 'border-transparent text-n-slate-11 hover:text-n-slate-12'
+            "
+            @click="activeTab = tab"
+          >
+            <!-- eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys -->
+            {{
+              $t(
+                `AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.TABS.${tab.toUpperCase()}`
+              )
+            }}
+          </button>
+        </nav>
+
+        <div v-if="activeTab === 'sectors'" class="py-2 flex flex-col gap-2">
+          <label class="flex items-center gap-2 mb-2 cursor-pointer">
+            <input
+              type="checkbox"
+              :checked="visibleTeamIds.length === 0"
+              @change="visibleTeamIds = []"
+            />
+            <span class="text-sm">
+              {{ $t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.ALL_TEAMS') }}
+            </span>
+          </label>
+          <div
+            class="h-[200px] overflow-y-auto border border-n-weak rounded p-2"
+          >
+            <label
+              v-for="team in teamsList"
+              :key="team.id"
+              class="flex items-center gap-2 py-1 cursor-pointer hover:bg-n-slate-3 rounded px-2"
             >
-              {{ option.label }}
-            </option>
-          </select>
-        </label>
+              <input
+                v-model="visibleTeamIds"
+                type="checkbox"
+                :value="team.id"
+                :disabled="visibleTeamIds.length === 0 && false"
+              />
+              <span class="text-sm uppercase">{{ team.name }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div v-if="activeTab === 'filters'" class="py-2 flex flex-col gap-4">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input v-model="filterAssignedOnly" type="checkbox" />
+            <span class="text-sm">
+              {{
+                $t(
+                  'AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.FILTERS_LIST.ONLY_MINE'
+                )
+              }}
+            </span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input v-model="filterUnassignedOnly" type="checkbox" />
+            <span class="text-sm">
+              {{
+                $t(
+                  'AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.FILTERS_LIST.ONLY_UNASSIGNED'
+                )
+              }}
+            </span>
+          </label>
+        </div>
+
+        <div v-if="activeTab === 'funnels'" class="py-2">
+          <p class="text-sm text-n-slate-11 italic text-center py-4">
+            {{ $t('AGENT_MGMT.SEARCH.NO_RESULTS') }}
+          </p>
+        </div>
       </div>
 
       <div class="flex flex-row justify-start w-full gap-2 px-0 py-2">

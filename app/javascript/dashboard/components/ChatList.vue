@@ -108,6 +108,7 @@ const searchQuery = ref('');
 const advancedFilterTypes = ref(
   advancedFilterOptions.map(filter => ({
     ...filter,
+    // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
     attributeName: t(`FILTER.ATTRIBUTES.${filter.attributeI18nKey}`),
   }))
 );
@@ -205,6 +206,7 @@ const assigneeTabItems = computed(() => {
     item => item.permissions
   ).map(({ key, count: countKey }) => ({
     key,
+    // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
     name: t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
     count: conversationStats.value[countKey] || 0,
   }));
@@ -640,6 +642,13 @@ function updateAssigneeTab(selectedTab) {
     emitter.emit('clearSearchInput');
     searchQuery.value = '';
     activeAssigneeTab.value = selectedTab;
+
+    if (selectedTab === wootConstants.ASSIGNEE_TYPE.ALL) {
+      activeStatus.value = wootConstants.STATUS_TYPE.ALL;
+    } else {
+      activeStatus.value = wootConstants.STATUS_TYPE.OPEN;
+    }
+
     if (!currentPage.value) {
       fetchConversations();
     }

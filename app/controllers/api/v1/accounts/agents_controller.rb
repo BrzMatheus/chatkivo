@@ -24,7 +24,15 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
 
   def update
     @agent.update!(agent_params.slice(:name).compact)
-    @agent.current_account_user.update!(agent_params.slice(*account_user_attributes).compact)
+
+    # Extract account user params explicitly instead of using slice with complex keys
+    account_user_params = agent_params.slice(:role, :availability, :auto_offline, :conversation_filter_mode, :filter_assigned_only,
+                                             :filter_unassigned_only)
+    account_user_params[:visible_team_ids] = agent_params[:visible_team_ids] if agent_params.key?(:visible_team_ids)
+
+    update_success = @agent.current_account_user.update(account_user_params.compact)
+
+    render :update if update_success
   end
 
   def destroy
@@ -68,11 +76,29 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
   end
 
   def account_user_attributes
-    [:role, :availability, :auto_offline, :conversation_filter_mode]
+    [
+      :role,
+      :availability,
+      :auto_offline,
+      :conversation_filter_mode,
+      :filter_assigned_only,
+      :filter_unassigned_only,
+      { visible_team_ids: [] }
+    ]
   end
 
   def allowed_agent_params
-    [:name, :email, :role, :availability, :auto_offline, :conversation_filter_mode]
+    [
+      :name,
+      :email,
+      :role,
+      :availability,
+      :auto_offline,
+      :conversation_filter_mode,
+      :filter_assigned_only,
+      :filter_unassigned_only,
+      { visible_team_ids: [] }
+    ]
   end
 
   def agent_params

@@ -170,6 +170,7 @@ const sidebarStyle = computed(() => {
   return {
     width: `${sidebarWidth.value}px`,
     flexBasis: `${sidebarWidth.value}px`,
+    maxWidth: `${sidebarWidth.value}px`,
   };
 });
 
@@ -592,6 +593,8 @@ const menuItems = computed(() => {
     },
   ];
 });
+
+// #endregion
 </script>
 
 <template>
@@ -600,7 +603,7 @@ const menuItems = computed(() => {
       closeMobileSidebar,
       { ignore: ['#mobile-sidebar-launcher'] },
     ]"
-    class="bg-n-solid-2 rtl:border-l ltr:border-r border-n-weak flex flex-col text-sm pb-1 fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 transition-transform duration-200 ease-in-out md:static w-[200px] basis-[200px] md:flex-shrink-0 md:ltr:translate-x-0 md:rtl:-translate-x-0"
+    class="bg-n-solid-2 rtl:border-l ltr:border-r border-n-weak flex flex-col text-sm pb-1 fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 transition-transform duration-200 ease-in-out md:static w-[200px] basis-[200px] md:ltr:translate-x-0 md:rtl:-translate-x-0"
     :class="[
       {
         'shadow-lg md:shadow-none': isMobileSidebarOpen,
@@ -617,7 +620,9 @@ const menuItems = computed(() => {
       <div class="absolute inset-y-0 ltr:-right-1 rtl:-left-1 w-3" />
     </div>
     <section class="grid gap-2 mt-2 mb-4">
-      <div class="flex gap-2 items-center px-2 min-w-0">
+      <div
+        class="flex gap-2 items-center ltr:pl-2 ltr:pr-4 rtl:pr-2 rtl:pl-4 min-w-0"
+      >
         <div class="grid flex-shrink-0 place-content-center">
           <Logo variant="sidebar" class="h-5 w-auto ml-2" />
         </div>
@@ -627,13 +632,13 @@ const menuItems = computed(() => {
           @show-create-account-modal="emit('showCreateAccountModal')"
         />
       </div>
-      <div class="flex gap-2 px-2">
+      <div class="flex gap-2 ltr:pl-2 ltr:pr-4 rtl:pr-2 rtl:pl-4">
         <RouterLink
           :to="{ name: 'search' }"
-          class="flex gap-2 items-center px-2 py-1 w-full h-7 rounded-lg outline outline-1 outline-n-weak bg-n-solid-3 dark:bg-n-black/30"
+          class="flex gap-2 items-center px-2 py-1 w-full h-7 rounded-lg outline outline-1 outline-n-weak bg-n-solid-3 dark:bg-n-black/30 min-w-0"
         >
           <span class="flex-shrink-0 i-lucide-search size-4 text-n-slate-11" />
-          <span class="flex-grow text-left">
+          <span class="flex-grow text-left truncate w-0">
             {{ t('COMBOBOX.SEARCH_PLACEHOLDER') }}
           </span>
           <span
@@ -655,8 +660,10 @@ const menuItems = computed(() => {
         </ComposeConversation>
       </div>
     </section>
-    <nav class="grid overflow-y-scroll flex-grow gap-2 px-2 pb-5 no-scrollbar">
-      <ul class="flex flex-col gap-1.5 m-0 list-none">
+    <nav
+      class="grid overflow-y-scroll flex-grow gap-2 px-2 pb-5 no-scrollbar min-w-0"
+    >
+      <ul class="flex flex-col gap-1.5 m-0 list-none min-w-0">
         <SidebarGroup
           v-for="item in menuItems"
           :key="item.name"
