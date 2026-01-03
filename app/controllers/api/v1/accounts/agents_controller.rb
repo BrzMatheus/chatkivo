@@ -9,16 +9,6 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
   end
 
   def create
-    # #region agent log
-    begin
-      File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
-        f.puts({ location: 'app/controllers/api/v1/accounts/agents_controller.rb:11', message: 'Entrando no AgentsController#create',
-                 data: { params: params.to_unsafe_h, account_id: Current.account&.id }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' }.to_json)
-      end
-    rescue StandardError
-      nil
-    end
-    # #endregion
     builder = AgentBuilder.new(
       email: new_agent_params['email'],
       name: new_agent_params['name'],
@@ -134,19 +124,7 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
   end
 
   def available_agent_count
-    # #region agent log
-    count = agents.count
-    max_limit = Current.account.usage_limits[:agents]
-    begin
-      File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
-        f.puts({ location: 'app/controllers/api/v1/accounts/agents_controller.rb:125', message: 'Calculando available_agent_count',
-                 data: { current_count: count, max_limit: max_limit }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' }.to_json)
-      end
-    rescue StandardError
-      nil
-    end
-    # #endregion
-    max_limit - count
+    Current.account.usage_limits[:agents] - agents.count
   end
 
   def can_add_agent?

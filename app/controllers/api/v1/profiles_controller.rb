@@ -29,55 +29,13 @@ class Api::V1::ProfilesController < Api::BaseController
   end
 
   def set_active_account
-    # #region agent log
-    begin
-      File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
-        f.puts({ location: 'app/controllers/api/v1/profiles_controller.rb:31', message: 'Iniciando set_active_account',
-                 data: { account_id: profile_params[:account_id], user_id: @user.id }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run2', hypothesisId: 'H3' }.to_json)
-      end
-    rescue StandardError
-      nil
-    end
-    # #endregion
     account_user = @user.account_users.find_by(account_id: profile_params[:account_id])
-    # #region agent log
-    begin
-      File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
-        f.puts({ location: 'app/controllers/api/v1/profiles_controller.rb:35', message: 'AccountUser encontrado',
-                 data: { account_user_id: account_user&.id }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run2', hypothesisId: 'H3' }.to_json)
-      end
-    rescue StandardError
-      nil
-    end
-    # #endregion
     if account_user
       account_user.update(active_at: Time.now.utc)
       head :ok
     else
-      # #region agent log
-      begin
-        File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
-          f.puts({ location: 'app/controllers/api/v1/profiles_controller.rb:41', message: 'AccountUser NÃO encontrado para set_active_account',
-                   data: { account_id: profile_params[:account_id] }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run2', hypothesisId: 'H3' }.to_json)
-        end
-      rescue StandardError
-        nil
-      end
-      # #endregion
       render_unauthorized('You are not authorized to access this account')
     end
-  rescue StandardError => e
-    # #region agent log
-    begin
-      File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
-        f.puts({ location: 'app/controllers/api/v1/profiles_controller.rb:46', message: 'Erro em set_active_account',
-                 data: { error: e.message, backtrace: e.backtrace[0..5] }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run2', hypothesisId: 'H3' }.to_json)
-      end
-    rescue StandardError
-      nil
-    end
-    # #endregion
-    raise e
   end
 
   def resend_confirmation
