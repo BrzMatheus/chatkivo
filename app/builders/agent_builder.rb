@@ -14,8 +14,28 @@ class AgentBuilder
   # Creates a user and account user in a transaction.
   # @return [User] the created user.
   def perform
+    # #region agent log
+    begin
+      File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
+        f.puts({ location: 'app/builders/agent_builder.rb:16', message: 'Iniciando AgentBuilder#perform',
+                 data: { email: email, role: role, account_id: account&.id }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' }.to_json)
+      end
+    rescue StandardError
+      nil
+    end
+    # #endregion
     ActiveRecord::Base.transaction do
       @user = find_or_create_user
+      # #region agent log
+      begin
+        File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
+          f.puts({ location: 'app/builders/agent_builder.rb:20', message: 'Usuário encontrado ou criado',
+                   data: { user_id: @user&.id, persisted: @user&.persisted? }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' }.to_json)
+        end
+      rescue StandardError
+        nil
+      end
+      # #endregion
       create_account_user
     end
     @user
@@ -41,6 +61,16 @@ class AgentBuilder
 
   # Creates an account user linking the user to the current account.
   def create_account_user
+    # #region agent log
+    begin
+      File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
+        f.puts({ location: 'app/builders/agent_builder.rb:45', message: 'Tentando criar AccountUser', data: { user_id: @user&.id, account_id: account&.id },
+                 timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' }.to_json)
+      end
+    rescue StandardError
+      nil
+    end
+    # #endregion
     @user.account_users.create!({
       account_id: account.id,
       inviter_id: inviter.id
