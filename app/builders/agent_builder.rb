@@ -41,9 +41,8 @@ class AgentBuilder
 
   # Creates an account user linking the user to the current account.
   def create_account_user
-    AccountUser.create!({
+    @user.account_users.create!({
       account_id: account.id,
-      user_id: @user.id,
       inviter_id: inviter.id
     }.merge({
       role: role,
