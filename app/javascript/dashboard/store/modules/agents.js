@@ -58,6 +58,28 @@ export const actions = {
       commit(types.default.ADD_AGENT, response.data);
       commit(types.default.SET_AGENT_CREATING_STATUS, false);
     } catch (error) {
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7245/ingest/6fdfb35c-58c4-4ff2-86a0-0cff0720f807',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'agents.js:61',
+            message: 'Erro ao criar agente (Frontend Store)',
+            data: {
+              error: error.message,
+              status: error.response?.status,
+              responseData: error.response?.data,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run3',
+            hypothesisId: 'H4',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       commit(types.default.SET_AGENT_CREATING_STATUS, false);
       throw error;
     }

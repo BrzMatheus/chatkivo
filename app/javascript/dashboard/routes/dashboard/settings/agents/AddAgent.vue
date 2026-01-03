@@ -65,6 +65,27 @@ const addAgent = async () => {
   v$.value.$touch();
   if (v$.value.$invalid) return;
 
+  // #region agent log
+  fetch('http://127.0.0.1:7245/ingest/6fdfb35c-58c4-4ff2-86a0-0cff0720f807', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'AddAgent.vue:68',
+      message: 'Tentando adicionar agente (Frontend)',
+      data: {
+        name: agentName.value,
+        email: agentEmail.value,
+        role: selectedRole.value.name,
+        accountId: store.getters.getCurrentAccountId,
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run3',
+      hypothesisId: 'H4',
+    }),
+  }).catch(() => {});
+  // #endregion
+
   try {
     const payload = {
       name: agentName.value,

@@ -219,7 +219,29 @@ export const actions = {
     try {
       await authAPI.setActiveAccount({ accountId });
     } catch (error) {
-      // Ignore error
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7245/ingest/6fdfb35c-58c4-4ff2-86a0-0cff0720f807',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'auth.js:223',
+            message: 'Erro em setActiveAccount (Frontend Store)',
+            data: {
+              accountId,
+              error: error.message,
+              status: error.response?.status,
+              responseData: error.response?.data,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run3',
+            hypothesisId: 'H4',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
     }
   },
 
