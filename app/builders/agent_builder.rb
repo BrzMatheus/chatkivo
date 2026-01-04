@@ -16,6 +16,16 @@ class AgentBuilder
   def perform
     ActiveRecord::Base.transaction do
       @user = find_or_create_user
+      # #region agent log
+      begin
+        File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
+          f.puts({ location: 'app/builders/agent_builder.rb:19', message: 'Status do usuário após find_or_create',
+                   data: { user_id: @user.id, email: @user.email, confirmed: @user.confirmed?, created_now: @user.previously_new_record? }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run4', hypothesisId: 'H13' }.to_json)
+        end
+      rescue StandardError
+        nil
+      end
+      # #endregion
       create_account_user
     end
     @user

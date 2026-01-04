@@ -123,6 +123,16 @@ class User < ApplicationRecord
   end
 
   def send_devise_notification(notification, *)
+    # #region agent log
+    begin
+      File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
+        f.puts({ location: 'app/models/user.rb:126', message: 'Devise disparando notificação',
+                 data: { notification: notification, user_id: id, email: email }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run4', hypothesisId: 'H14' }.to_json)
+      end
+    rescue StandardError
+      nil
+    end
+    # #endregion
     devise_mailer.with(account: Current.account).send(notification, self, *).deliver_later
   end
 
