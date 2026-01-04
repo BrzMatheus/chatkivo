@@ -44,7 +44,7 @@ class AccountUser < ApplicationRecord
     team_unassigned_or_mine: 4    # Ver conversas do time que estão sem agente OU atribuídas a mim
   }
 
-  validates :visible_team_ids, presence: true, if: -> { visible_team_ids.nil? }
+  validates :visible_team_ids, presence: true, if: -> { respond_to?(:visible_team_ids) && visible_team_ids.nil? }
 
   accepts_nested_attributes_for :account
 
