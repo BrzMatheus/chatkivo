@@ -92,13 +92,23 @@
             "ASSIGNMENTS": "Assignments",
             "SECTORS": "Sectors",
             "FUNNELS": "Funnels",
-            "FILTERS": "Filters"
+            "FILTERS": "Filters",
+            "INBOXES": "Inboxes"
           },
           "FILTERS_LIST": {
             "ONLY_MINE": "Conversations only of this agent",
             "ONLY_UNASSIGNED": "Conversations with no agent linked"
           },
-          "ALL_TEAMS": "All teams"
+          "ALL_TEAMS": "All teams",
+          "INBOXES": {
+            "TITLE": "Agent Inboxes",
+            "DESCRIPTION": "Select the inboxes this agent will have access to",
+            "LOADING": "Loading inboxes...",
+            "NO_INBOXES": "No inboxes available",
+            "SELECT_ALL": "Select all",
+            "DESELECT_ALL": "Deselect all",
+            "SEARCH_PLACEHOLDER": "Search inbox..."
+          }
         },
         "SUBMIT": "Edit Agent"
       },

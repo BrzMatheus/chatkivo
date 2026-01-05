@@ -1,13 +1,18 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
-import { useStore, useMapGetter } from 'dashboard/composables/store';
+import {
+  useStore,
+  useMapGetter,
+  useStoreGetters,
+} from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Auth from '../../../../api/auth';
 import wootConstants from 'dashboard/constants/globals';
+import InboxMembersAPI from '../../../../api/inboxMembers';
 
 const props = defineProps({
   id: {
@@ -61,6 +66,7 @@ const emit = defineEmits(['close']);
 const { AVAILABILITY_STATUS_KEYS } = wootConstants;
 
 const store = useStore();
+const getters = useStoreGetters();
 const { t } = useI18n();
 
 const agentName = ref(props.name);
@@ -72,6 +78,26 @@ const filterAssignedOnly = ref(props.filterAssignedOnly || false);
 const filterUnassignedOnly = ref(props.filterUnassignedOnly || false);
 const activeTab = ref('sectors');
 const agentCredentials = ref({ email: props.email });
+
+const tabs = computed(() => [
+  {
+    id: 'sectors',
+    label: t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.TABS.SECTORS'),
+  },
+  {
+    id: 'filters',
+    label: t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.TABS.FILTERS'),
+  },
+  {
+    id: 'inboxes',
+    label: t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.TABS.INBOXES'),
+  },
+]);
+
+// Inbox management
+const selectedInboxIds = ref([]);
+const isLoadingInboxes = ref(false);
+const initialInboxIds = ref([]);
 
 const rules = {
   agentName: { required, minLength: minLength(1) },
@@ -92,6 +118,17 @@ const pageTitle = computed(
 const uiFlags = useMapGetter('agents/getUIFlags');
 const getCustomRoles = useMapGetter('customRole/getCustomRoles');
 const teamsList = useMapGetter('teams/getTeams');
+const inboxesList = computed(() => getters['inboxes/getInboxes'].value || []);
+
+// Check if inboxes have changed from initial state
+const inboxesHaveChanged = computed(() => {
+  if (selectedInboxIds.value.length !== initialInboxIds.value.length) {
+    return true;
+  }
+  const sortedSelected = [...selectedInboxIds.value].sort();
+  const sortedInitial = [...initialInboxIds.value].sort();
+  return !sortedSelected.every((id, index) => id === sortedInitial[index]);
+});
 
 const roles = computed(() => {
   const defaultRoles = [
@@ -139,6 +176,124 @@ const availabilityStatuses = computed(() =>
   }))
 );
 
+// Toggle inbox selection
+const toggleInbox = inboxId => {
+  const index = selectedInboxIds.value.indexOf(inboxId);
+  if (index === -1) {
+    selectedInboxIds.value.push(inboxId);
+  } else {
+    selectedInboxIds.value.splice(index, 1);
+  }
+};
+
+// Select all inboxes
+const selectAllInboxes = () => {
+  selectedInboxIds.value = inboxesList.value.map(inbox => inbox.id);
+};
+
+// Deselect all inboxes
+const deselectAllInboxes = () => {
+  selectedInboxIds.value = [];
+};
+
+// Fetch inboxes where the agent is a member
+const fetchAgentInboxes = async () => {
+  isLoadingInboxes.value = true;
+
+  try {
+    if (inboxesList.value.length === 0) {
+      await store.dispatch('inboxes/get');
+    }
+
+    const inboxIds = [];
+    await Promise.all(
+      inboxesList.value.map(async inbox => {
+        try {
+          const response = await InboxMembersAPI.show(inbox.id);
+          const members = response.data?.payload || [];
+          if (members.some(member => member.id === props.id)) {
+            inboxIds.push(inbox.id);
+          }
+        } catch (err) {
+          // Silently ignore errors for individual inboxes
+        }
+      })
+    );
+
+    selectedInboxIds.value = [...inboxIds];
+    initialInboxIds.value = [...inboxIds];
+  } catch (error) {
+    // Error is handled silently
+  } finally {
+    isLoadingInboxes.value = false;
+  }
+};
+
+// Update inbox membership for the agent
+const updateAgentInboxes = async (showAlert = true) => {
+  if (!inboxesHaveChanged.value) return;
+
+  try {
+    // Find inboxes to add and remove
+    const inboxesToAdd = selectedInboxIds.value.filter(
+      id => !initialInboxIds.value.includes(id)
+    );
+    const inboxesToRemove = initialInboxIds.value.filter(
+      id => !selectedInboxIds.value.includes(id)
+    );
+
+    // Process additions - add agent to new inboxes
+    await Promise.all(
+      inboxesToAdd.map(async inboxId => {
+        try {
+          const response = await InboxMembersAPI.show(inboxId);
+          const currentMembers = response.data?.payload || [];
+          const memberIds = currentMembers.map(m => m.id);
+
+          if (!memberIds.includes(props.id)) {
+            memberIds.push(props.id);
+            await InboxMembersAPI.update({ inboxId, agentList: memberIds });
+          }
+        } catch (error) {
+          // Error is handled silently
+        }
+      })
+    );
+
+    // Process removals - remove agent from inboxes
+    await Promise.all(
+      inboxesToRemove.map(async inboxId => {
+        try {
+          const response = await InboxMembersAPI.show(inboxId);
+          const currentMembers = response.data?.payload || [];
+          const memberIds = currentMembers
+            .map(m => m.id)
+            .filter(id => id !== props.id);
+
+          await InboxMembersAPI.update({ inboxId, agentList: memberIds });
+        } catch (error) {
+          // Error is handled silently
+        }
+      })
+    );
+
+    // Update initial state to reflect current state
+    initialInboxIds.value = [...selectedInboxIds.value];
+
+    // Refresh the inboxes in the global store to ensure UI sync
+    await store.dispatch('inboxes/get');
+
+    if (showAlert) {
+      useAlert(t('AGENT_MGMT.EDIT.API.SUCCESS_MESSAGE'));
+    }
+  } catch (error) {
+    if (showAlert) {
+      useAlert(t('AGENT_MGMT.EDIT.API.ERROR_MESSAGE'));
+    }
+    throw error;
+  }
+};
+
 const editAgent = async () => {
   v$.value.$touch();
   if (v$.value.$invalid) return;
@@ -154,21 +309,6 @@ const editAgent = async () => {
       filter_unassigned_only: filterUnassignedOnly.value,
     };
 
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6fdfb35c-58c4-4ff2-86a0-0cff0720f807', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditAgent.vue:182',
-        message: 'Frontend Payload',
-        data: { payload },
-        timestamp: Date.now(),
-        sessionId: 'debug-filters',
-        hypothesisId: 'H1',
-      }),
-    }).catch(() => {});
-    // #endregion
-
     if (selectedRole.value.name.startsWith('custom_')) {
       payload.custom_role_id = selectedRole.value.id;
     } else {
@@ -177,6 +317,12 @@ const editAgent = async () => {
     }
 
     await store.dispatch('agents/update', payload);
+
+    // Also update inbox memberships if changed
+    if (inboxesHaveChanged.value) {
+      await updateAgentInboxes(false); // false = don't show separate alert
+    }
+
     useAlert(t('AGENT_MGMT.EDIT.API.SUCCESS_MESSAGE'));
     emit('close');
   } catch (error) {
@@ -192,6 +338,22 @@ const resetPassword = async () => {
     useAlert(t('AGENT_MGMT.EDIT.PASSWORD_RESET.ERROR_MESSAGE'));
   }
 };
+
+// Load inboxes when tab is changed to 'inboxes'
+watch(activeTab, newTab => {
+  if (
+    newTab === 'inboxes' &&
+    initialInboxIds.value.length === 0 &&
+    !isLoadingInboxes.value
+  ) {
+    fetchAgentInboxes();
+  }
+});
+
+// Also load if starting on inboxes tab
+onMounted(() => {
+  store.dispatch('inboxes/get');
+});
 </script>
 
 <template>
@@ -248,23 +410,18 @@ const resetPassword = async () => {
       <div class="w-full mt-4">
         <nav class="flex border-b border-n-weak mb-4 overflow-x-auto">
           <button
-            v-for="tab in ['sectors', 'funnels', 'filters']"
-            :key="tab"
+            v-for="tab in tabs"
+            :key="tab.id"
             type="button"
             class="px-4 py-2 text-sm font-medium border-b-2 transition-colors duration-200 whitespace-nowrap"
             :class="
-              activeTab === tab
+              activeTab === tab.id
                 ? 'border-n-brand text-n-brand'
                 : 'border-transparent text-n-slate-11 hover:text-n-slate-12'
             "
-            @click="activeTab = tab"
+            @click="activeTab = tab.id"
           >
-            <!-- eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys -->
-            {{
-              $t(
-                `AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.TABS.${tab.toUpperCase()}`
-              )
-            }}
+            {{ tab.label }}
           </button>
         </nav>
 
@@ -321,10 +478,82 @@ const resetPassword = async () => {
           </label>
         </div>
 
-        <div v-if="activeTab === 'funnels'" class="py-2">
-          <p class="text-sm text-n-slate-11 italic text-center py-4">
-            {{ $t('AGENT_MGMT.SEARCH.NO_RESULTS') }}
+        <div v-if="activeTab === 'inboxes'" class="py-2 flex flex-col gap-2">
+          <p class="text-sm text-n-slate-11 mb-2">
+            {{
+              $t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.INBOXES.DESCRIPTION')
+            }}
           </p>
+
+          <div
+            v-if="isLoadingInboxes"
+            class="flex items-center justify-center py-8"
+          >
+            <span class="text-sm text-n-slate-11">
+              {{
+                $t('AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.INBOXES.LOADING')
+              }}
+            </span>
+          </div>
+
+          <template v-else>
+            <div class="flex items-center gap-4 mb-2">
+              <button
+                type="button"
+                class="text-sm text-n-brand hover:underline"
+                @click="selectAllInboxes"
+              >
+                {{
+                  $t(
+                    'AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.INBOXES.SELECT_ALL'
+                  )
+                }}
+              </button>
+              <button
+                type="button"
+                class="text-sm text-n-brand hover:underline"
+                @click="deselectAllInboxes"
+              >
+                {{
+                  $t(
+                    'AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.INBOXES.DESELECT_ALL'
+                  )
+                }}
+              </button>
+            </div>
+
+            <div
+              v-if="inboxesList.length === 0"
+              class="py-4 text-center text-sm text-n-slate-11"
+            >
+              {{
+                $t(
+                  'AGENT_MGMT.EDIT.FORM.CONVERSATION_FILTER.INBOXES.NO_INBOXES'
+                )
+              }}
+            </div>
+
+            <div
+              v-else
+              class="h-[200px] overflow-y-auto border border-n-weak rounded p-2"
+            >
+              <label
+                v-for="inbox in inboxesList"
+                :key="inbox.id"
+                class="flex items-center gap-2 py-1 cursor-pointer hover:bg-n-slate-3 rounded px-2"
+              >
+                <input
+                  type="checkbox"
+                  :checked="selectedInboxIds.includes(inbox.id)"
+                  @change="toggleInbox(inbox.id)"
+                />
+                <span class="text-sm">{{ inbox.name }}</span>
+                <span class="text-xs text-n-slate-10 ml-auto">
+                  {{ inbox.channel_type }}
+                </span>
+              </label>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -351,7 +580,7 @@ const resetPassword = async () => {
           <Button
             type="submit"
             :label="$t('AGENT_MGMT.EDIT.FORM.SUBMIT')"
-            :disabled="v$.$invalid || uiFlags.isUpdating"
+            :disabled="v$.$invalid || uiFlags.isUpdating || isLoadingInboxes"
             :is-loading="uiFlags.isUpdating"
           />
         </div>

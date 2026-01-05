@@ -90,15 +90,25 @@
           "TEAM_UNASSIGNED_OR_MINE": "Conversas do Time (Não Atribuídas ou Minhas)",
           "TABS": {
             "ASSIGNMENTS": "Atribuições",
-            "SECTORS": "Setores",
+            "SECTORS": "Times",
             "FUNNELS": "Funis",
-            "FILTERS": "Filtros"
+            "FILTERS": "Filtros",
+            "INBOXES": "Caixas de Entrada"
           },
           "FILTERS_LIST": {
             "ONLY_MINE": "Conversas somente deste atendente",
             "ONLY_UNASSIGNED": "Conversas sem atendentes vinculado"
           },
-          "ALL_TEAMS": "Todos os times"
+          "ALL_TEAMS": "Todos os times",
+          "INBOXES": {
+            "TITLE": "Caixas de Entrada do Agente",
+            "DESCRIPTION": "Selecione as caixas de entrada que este agente terá acesso",
+            "LOADING": "Carregando caixas de entrada...",
+            "NO_INBOXES": "Nenhuma caixa de entrada disponível",
+            "SELECT_ALL": "Selecionar todas",
+            "DESELECT_ALL": "Desmarcar todas",
+            "SEARCH_PLACEHOLDER": "Buscar caixa de entrada..."
+          }
         },
         "SUBMIT": "Editar agente"
       },
