@@ -30,16 +30,6 @@ class ApplicationMailer < ActionMailer::Base
   end
 
   def send_mail_with_liquid(*args)
-    # #region agent log
-    begin
-      File.open('/home/mathe/chatwoot-src/.cursor/debug.log', 'a') do |f|
-        f.puts({ location: 'app/mailers/application_mailer.rb:33', message: 'Interceptando envio de e-mail',
-                 data: { to: args[0][:to], subject: args[0][:subject] }, timestamp: Time.now.to_i * 1000, sessionId: 'debug-session', runId: 'run4', hypothesisId: 'H14' }.to_json)
-      end
-    rescue StandardError
-      nil
-    end
-    # #endregion
     Rails.logger.info "Email sent to #{args[0][:to]} with subject #{args[0][:subject]}"
     mail(*args) do |format|
       # explored sending a multipart email containing both text type and html

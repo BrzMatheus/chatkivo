@@ -530,6 +530,14 @@ const actions = {
     commit(types.SET_CHAT_LIST_FILTERS, data);
   },
 
+  setListLoadingStatus({ commit }) {
+    commit(types.SET_LIST_LOADING_STATUS);
+  },
+
+  clearListLoadingStatus({ commit }) {
+    commit(types.CLEAR_LIST_LOADING_STATUS);
+  },
+
   updateChatListFilters({ commit }, data) {
     commit(types.UPDATE_CHAT_LIST_FILTERS, data);
   },

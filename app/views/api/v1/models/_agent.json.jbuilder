@@ -15,4 +15,4 @@ json.custom_role_id resource.current_account_user&.custom_role_id if ChatwootApp
 json.conversation_filter_mode resource.current_account_user&.conversation_filter_mode
 json.filter_assigned_only resource.current_account_user&.filter_assigned_only
 json.filter_unassigned_only resource.current_account_user&.filter_unassigned_only
-json.visible_team_ids resource.current_account_user&.try(:visible_team_ids) || []
+json.visible_team_ids resource.current_account_user&.visible_team_ids || []

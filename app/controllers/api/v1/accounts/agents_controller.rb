@@ -28,10 +28,7 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
     # Extract account user params explicitly instead of using slice with complex keys
     account_user_params = agent_params.slice(:role, :availability, :auto_offline, :conversation_filter_mode, :filter_assigned_only,
                                              :filter_unassigned_only)
-    if agent_params.key?(:visible_team_ids) && @agent.current_account_user.respond_to?(:visible_team_ids)
-      account_user_params[:visible_team_ids] =
-        agent_params[:visible_team_ids]
-    end
+    account_user_params[:visible_team_ids] = agent_params[:visible_team_ids] if agent_params.key?(:visible_team_ids)
 
     update_success = @agent.current_account_user.update(account_user_params.compact)
 

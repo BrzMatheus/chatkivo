@@ -147,8 +147,6 @@ class ConversationFinder
 
     allowed_message_types = [Message.message_types[:incoming], Message.message_types[:outgoing]]
     @conversations = @conversations.joins(:messages).where('messages.content ILIKE :search', search: "%#{params[:q]}%")
-                                   .where(messages: { message_type: allowed_message_types }).includes(:messages)
-                                   .where('messages.content ILIKE :search', search: "%#{params[:q]}%")
                                    .where(messages: { message_type: allowed_message_types })
   end
 
@@ -191,7 +189,7 @@ class ConversationFinder
 
   def conversations_base_query
     @conversations.includes(
-      :taggings, :inbox, { assignee: { avatar_attachment: [:blob] } }, { contact: { avatar_attachment: [:blob] } }, :team, :contact_inbox
+      :taggings, :inbox, { assignee: { avatar_attachment: [:blob] } }, { contact: { avatar_attachment: [:blob] } }, :team, :contact_inbox, :last_message, :last_non_activity_message
     )
   end
 
