@@ -30,6 +30,7 @@ json.id conversation.display_id
 if conversation.last_message.blank?
   json.messages []
 else
+  # Passar explicitamente a conversa para o push_event_data para evitar queries circulares
   json.messages [conversation.last_message.push_event_data]
 end
 

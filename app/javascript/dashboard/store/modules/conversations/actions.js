@@ -190,11 +190,14 @@ const actions = {
   async setActiveChat({ commit, dispatch }, { data, after }) {
     commit(types.SET_CURRENT_CHAT_WINDOW, data);
     commit(types.CLEAR_ALL_MESSAGES_LOADED);
-    if (data.dataFetched === undefined) {
+    // Forçar o carregamento de mensagens se a conversa tiver apenas 1 mensagem (que veio da lista)
+    if (data.dataFetched === undefined || data.messages?.length <= 1) {
       try {
+        const before =
+          data.messages?.length > 0 ? data.messages[0].id : undefined;
         await dispatch('fetchPreviousMessages', {
           after,
-          before: data.messages[0].id,
+          before,
           conversationId: data.id,
         });
         data.dataFetched = true;

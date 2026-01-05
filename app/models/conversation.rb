@@ -107,8 +107,10 @@ class Conversation < ApplicationRecord
   belongs_to :campaign, optional: true
 
   has_many :messages, dependent: :destroy_async, autosave: true
-  has_one :last_message, -> { order(id: :desc) }, class_name: 'Message', dependent: nil
-  has_one :last_non_activity_message, -> { where.not(message_type: :activity).order(id: :desc) }, class_name: 'Message', dependent: nil
+  has_one :last_message, -> { unscope(:order).order(id: :desc) }, class_name: 'Message', dependent: nil
+  has_one :last_non_activity_message, lambda {
+    unscope(:order).where.not(message_type: :activity).order(id: :desc)
+  }, class_name: 'Message', dependent: nil
   has_one :csat_survey_response, dependent: :destroy_async
   has_many :conversation_participants, dependent: :destroy_async
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
