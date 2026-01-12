@@ -1,4 +1,7 @@
 module ConversationReplyMailerHelper
+  DEFAULT_SMTP_OPEN_TIMEOUT = 60
+  DEFAULT_SMTP_READ_TIMEOUT = 120
+
   def prepare_mail(cc_bcc_enabled)
     @options = {
       to: to_emails,
@@ -57,6 +60,19 @@ module ConversationReplyMailerHelper
 
   private
 
+  def smtp_timeout_from_env(key, default_value)
+    value = ENV.fetch(key, nil)
+    value.present? ? value.to_i : default_value
+  end
+
+  def smtp_open_timeout
+    smtp_timeout_from_env('SMTP_OPEN_TIMEOUT', DEFAULT_SMTP_OPEN_TIMEOUT)
+  end
+
+  def smtp_read_timeout
+    smtp_timeout_from_env('SMTP_READ_TIMEOUT', DEFAULT_SMTP_READ_TIMEOUT)
+  end
+
   def oauth_smtp_settings
     return unless @inbox.email? && @channel.imap_enabled
     return unless oauth_provider_domain
@@ -80,8 +96,8 @@ module ConversationReplyMailerHelper
       tls: false,
       enable_starttls_auto: true,
       openssl_verify_mode: 'none',
-      open_timeout: 15,
-      read_timeout: 15,
+      open_timeout: smtp_open_timeout,
+      read_timeout: smtp_read_timeout,
       authentication: 'xoauth2'
     }
   end
@@ -98,7 +114,9 @@ module ConversationReplyMailerHelper
       tls: @channel.smtp_enable_ssl_tls,
       enable_starttls_auto: @channel.smtp_enable_starttls_auto,
       openssl_verify_mode: @channel.smtp_openssl_verify_mode,
-      authentication: @channel.smtp_authentication
+      authentication: @channel.smtp_authentication,
+      open_timeout: smtp_open_timeout,
+      read_timeout: smtp_read_timeout
     }
 
     @options[:delivery_method] = :smtp
