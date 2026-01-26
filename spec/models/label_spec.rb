@@ -16,20 +16,20 @@ RSpec.describe Label do
       expect(label.valid?).to be false
     end
 
-    it 'would not allow space' do
-      label = FactoryBot.build(:label, title: 'heeloo _12')
-      expect(label.valid?).to be false
-    end
-
     it 'allows foreign charactes' do
       label = FactoryBot.build(:label, title: '学中文_12')
       expect(label.valid?).to be true
     end
 
-    it 'converts uppercase letters to lowercase' do
+    it 'allows spaces between words' do
+      label = FactoryBot.build(:label, title: 'Hello World')
+      expect(label.valid?).to be true
+    end
+
+    it 'preserves uppercase letters' do
       label = FactoryBot.build(:label, title: 'Hello_World')
       expect(label.valid?).to be true
-      expect(label.title).to eq 'hello_world'
+      expect(label.title).to eq 'Hello_World'
     end
 
     it 'validates uniqueness of label name for account' do

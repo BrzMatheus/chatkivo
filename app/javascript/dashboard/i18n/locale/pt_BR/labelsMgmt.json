@@ -22,7 +22,7 @@
         "PLACEHOLDER": "Nome da etiqueta",
         "REQUIRED_ERROR": "O nome da etiqueta é obrigatório",
         "MINIMUM_LENGTH_ERROR": "Tamanho mínimo 2 é necessário",
-        "VALID_ERROR": "Somente Letras, Números, Hífen e Sublinhado são permitidos"
+        "VALID_ERROR": "Somente Letras, Números, Espaços, Hífen e Sublinhado são permitidos"
       },
       "DESCRIPTION": {
         "LABEL": "Descrição",

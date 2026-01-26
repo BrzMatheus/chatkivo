@@ -62,7 +62,7 @@ export default {
           id: this.selectedResponse.id,
           color: this.color,
           description: this.description,
-          title: this.title.toLowerCase(),
+          title: this.title,
           show_on_sidebar: this.showOnSidebar,
         })
         .then(() => {
@@ -131,14 +131,3 @@ export default {
     </form>
   </div>
 </template>
-
-<style lang="scss" scoped>
-// Label API supports only lowercase letters
-.label-name--input {
-  ::v-deep {
-    input {
-      @apply lowercase;
-    }
-  }
-}
-</style>

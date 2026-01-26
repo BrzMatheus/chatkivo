@@ -41,7 +41,7 @@ export default {
   },
   mounted() {
     this.color = getRandomColor();
-    this.title = this.prefillTitle.toLowerCase();
+    this.title = this.prefillTitle;
   },
   methods: {
     onClose() {
@@ -52,7 +52,7 @@ export default {
         await this.$store.dispatch('labels/create', {
           color: this.color,
           description: this.description,
-          title: this.title.toLowerCase(),
+          title: this.title,
           show_on_sidebar: this.showOnSidebar,
         });
         useAlert(this.$t('LABEL_MGMT.ADD.API.SUCCESS_MESSAGE'));
@@ -128,14 +128,3 @@ export default {
     </form>
   </div>
 </template>
-
-<style lang="scss" scoped>
-// Label API supports only lowercase letters
-.label-name--input {
-  ::v-deep {
-    input {
-      @apply lowercase;
-    }
-  }
-}
-</style>

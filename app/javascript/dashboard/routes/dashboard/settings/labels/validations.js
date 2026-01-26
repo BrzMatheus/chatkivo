@@ -1,6 +1,12 @@
 import { required, minLength } from '@vuelidate/validators';
 
-export const validLabelCharacters = (str = '') => !!str && !str.includes(' ');
+const LABEL_TITLE_REGEX = /^[\p{L}\p{N}][\p{L}\p{N}_\- ]*[\p{L}\p{N}_-]?$/u;
+
+export const validLabelCharacters = (str = '') => {
+  if (!str) return false;
+  if (str !== str.trim()) return false;
+  return LABEL_TITLE_REGEX.test(str);
+};
 
 export const getLabelTitleErrorMessage = validation => {
   let errorMessage = '';

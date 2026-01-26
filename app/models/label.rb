@@ -30,10 +30,6 @@ class Label < ApplicationRecord
   after_update_commit :update_associated_models
   default_scope { order(:title) }
 
-  before_validation do
-    self.title = title.downcase if attribute_present?('title')
-  end
-
   def conversations
     account.conversations.tagged_with(title)
   end
