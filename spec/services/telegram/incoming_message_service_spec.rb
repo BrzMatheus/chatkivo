@@ -142,6 +142,46 @@ describe Telegram::IncomingMessageService do
           expect(message.sender).to be_nil
         end
       end
+
+      context 'when business metadata changes for an existing conversation' do
+        let!(:contact) { create(:contact, account: telegram_channel.account) }
+        let!(:contact_inbox) { create(:contact_inbox, inbox: telegram_channel.inbox, contact: contact, source_id: '23') }
+        let!(:conversation) do
+          create(
+            :conversation,
+            account: telegram_channel.account,
+            inbox: telegram_channel.inbox,
+            contact: contact,
+            contact_inbox: contact_inbox,
+            additional_attributes: {
+              'chat_id' => 23,
+              'business_connection_id' => 'old-business-connection-id'
+            }
+          )
+        end
+
+        let(:business_message_params) do
+          message_params.merge(
+            'business_connection_id' => 'new-business-connection-id',
+            'message_thread_id' => 789,
+            'direct_messages_topic' => { 'topic_id' => 456 }
+          )
+        end
+
+        it 'updates conversation metadata and channel-level business connection cache' do
+          subject
+
+          expect(conversation.reload.additional_attributes).to include(
+            'chat_id' => 23,
+            'business_connection_id' => 'new-business-connection-id',
+            'message_thread_id' => 789,
+            'direct_messages_topic_id' => 456
+          )
+          expect(telegram_channel.reload.additional_attributes).to include(
+            'business_connection_id' => 'new-business-connection-id'
+          )
+        end
+      end
     end
 
     context 'when valid audio messages params' do

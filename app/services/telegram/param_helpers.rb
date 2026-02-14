@@ -81,6 +81,24 @@ module Telegram::ParamHelpers
     end
   end
 
+  def telegram_params_message_thread_id
+    if callback_query_params?
+      params.dig(:callback_query, :message, :message_thread_id)
+    else
+      telegram_params_base_object[:message_thread_id]
+    end
+  end
+
+  def telegram_params_direct_messages_topic_id
+    direct_messages_topic = if callback_query_params?
+                              params.dig(:callback_query, :message, :direct_messages_topic)
+                            else
+                              telegram_params_base_object[:direct_messages_topic]
+                            end
+
+    direct_messages_topic&.[](:topic_id)
+  end
+
   def telegram_params_business_connection_id
     if callback_query_params?
       params[:callback_query][:message][:business_connection_id]

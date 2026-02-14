@@ -22,6 +22,7 @@ class Telegram::SendOnTelegramService < Base::SendOnChannelService
     chat_id_value = conversation.additional_attributes&.dig('chat_id')
 
     return if chat_id_value.present?
+    return if sync_chat_id_from_contact_inbox!
 
     # Se chat_id não está disponível, pode ser porque a conversa foi criada
     # mas ainda não recebeu a primeira mensagem do cliente via Telegram Business
@@ -33,9 +34,22 @@ class Telegram::SendOnTelegramService < Base::SendOnChannelService
     chat_id_value = conversation.additional_attributes&.dig('chat_id')
 
     return if chat_id_value.present?
+    return if sync_chat_id_from_contact_inbox!
 
     # Se ainda não está disponível, lançar exceção para retry
     raise ChatIdNotAvailableError, "chat_id não disponível para conversa #{conversation.id}"
+  end
+
+  def sync_chat_id_from_contact_inbox!
+    source_chat_id = conversation.contact_inbox&.source_id
+    return false if source_chat_id.blank?
+
+    conversation.additional_attributes ||= {}
+    return false if conversation.additional_attributes['chat_id'].to_s == source_chat_id.to_s
+
+    conversation.additional_attributes['chat_id'] = source_chat_id.to_s
+    conversation.save!
+    true
   end
 
   def inbox

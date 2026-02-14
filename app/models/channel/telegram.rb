@@ -76,7 +76,18 @@ class Channel::Telegram < ApplicationRecord
   end
 
   def business_connection_id(message)
-    message.conversation.additional_attributes&.[]('business_connection_id')
+    channel_business_connection_id = additional_attributes&.[]('business_connection_id')
+    conversation_business_connection_id = message.conversation.additional_attributes&.[]('business_connection_id')
+
+    channel_business_connection_id.presence || conversation_business_connection_id
+  end
+
+  def message_thread_id(message)
+    message.conversation.additional_attributes&.[]('message_thread_id')
+  end
+
+  def direct_messages_topic_id(message)
+    message.conversation.additional_attributes&.[]('direct_messages_topic_id')
   end
 
   def reply_to_message_id(message)
@@ -107,8 +118,13 @@ class Channel::Telegram < ApplicationRecord
   def send_message(message)
     chat_id_value = chat_id(message)
     biz_conn_id = business_connection_id(message)
+    message_thread_id_value = message_thread_id(message)
+    direct_messages_topic_id_value = direct_messages_topic_id(message)
 
-    Rails.logger.info "Telegram send_message: message_id=#{message.id}, conversation_id=#{message.conversation_id}, chat_id=#{chat_id_value.inspect}, business_connection_id=#{biz_conn_id.inspect}, content=#{message.outgoing_content[0..50]}"
+    Rails.logger.info "Telegram send_message: message_id=#{message.id}, conversation_id=#{message.conversation_id}, " \
+                      "chat_id=#{chat_id_value.inspect}, business_connection_id=#{biz_conn_id.inspect}, " \
+                      "message_thread_id=#{message_thread_id_value.inspect}, direct_messages_topic_id=#{direct_messages_topic_id_value.inspect}, " \
+                      "content=#{message.outgoing_content[0..50]}"
 
     if chat_id_value.blank?
       Rails.logger.error "Telegram send_message: chat_id vazio para conversa #{message.conversation_id}, additional_attributes=#{message.conversation.additional_attributes.inspect}"
@@ -124,7 +140,9 @@ class Channel::Telegram < ApplicationRecord
       message.outgoing_content,
       reply_markup(message),
       reply_to_message_id(message),
-      business_connection_id: biz_conn_id
+      business_connection_id: biz_conn_id,
+      message_thread_id: message_thread_id_value,
+      direct_messages_topic_id: direct_messages_topic_id_value
     )
     process_error(message, response)
     message_id = response.parsed_response['result']['message_id'] if response.success?
@@ -163,11 +181,14 @@ class Channel::Telegram < ApplicationRecord
     stripped_html.gsub('&lt;br&gt;', "\n")
   end
 
-  def message_request(chat_id, text, reply_markup = nil, reply_to_message_id = nil, business_connection_id: nil)
+  def message_request(chat_id, text, reply_markup = nil, reply_to_message_id = nil, business_connection_id: nil,
+                      message_thread_id: nil, direct_messages_topic_id: nil)
     text_payload = convert_markdown_to_telegram_html(text)
 
-    business_body = {}
-    business_body[:business_connection_id] = business_connection_id if business_connection_id
+    optional_body = {}
+    optional_body[:business_connection_id] = business_connection_id if business_connection_id
+    optional_body[:message_thread_id] = message_thread_id if message_thread_id
+    optional_body[:direct_messages_topic_id] = direct_messages_topic_id if direct_messages_topic_id
 
     HTTParty.post("#{telegram_api_url}/sendMessage",
                   body: {
@@ -176,6 +197,6 @@ class Channel::Telegram < ApplicationRecord
                     reply_markup: reply_markup,
                     parse_mode: 'HTML',
                     reply_to_message_id: reply_to_message_id
-                  }.merge(business_body))
+                  }.merge(optional_body))
   end
 end

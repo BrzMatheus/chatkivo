@@ -61,4 +61,28 @@ RSpec.describe Webhooks::TelegramEventsJob do
       described_class.perform_now(params.with_indifferent_access)
     end
   end
+
+  context 'when business connection params' do
+    let!(:params) do
+      {
+        :bot_token => telegram_channel.bot_token,
+        'telegram' => {
+          business_connection: {
+            id: 'new-business-connection-id'
+          }
+        }
+      }
+    end
+
+    it 'syncs business_connection_id on channel and skips message processors' do
+      expect(Telegram::IncomingMessageService).not_to receive(:new)
+      expect(Telegram::UpdateMessageService).not_to receive(:new)
+
+      described_class.perform_now(params.with_indifferent_access)
+
+      expect(telegram_channel.reload.additional_attributes).to include(
+        'business_connection_id' => 'new-business-connection-id'
+      )
+    end
+  end
 end

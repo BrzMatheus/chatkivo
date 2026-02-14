@@ -69,6 +69,7 @@ class Telegram::SendAttachmentsService
                     body: {
                       chat_id: chat_id,
                       **business_connection_body,
+                      **topic_body,
                       photo: file,
                       reply_to_message_id: reply_to_message_id
                     },
@@ -82,6 +83,7 @@ class Telegram::SendAttachmentsService
                     body: {
                       chat_id: chat_id,
                       **business_connection_body,
+                      **topic_body,
                       video: file,
                       reply_to_message_id: reply_to_message_id
                     },
@@ -95,6 +97,7 @@ class Telegram::SendAttachmentsService
                     body: {
                       chat_id: chat_id,
                       **business_connection_body,
+                      **topic_body,
                       audio: file,
                       reply_to_message_id: reply_to_message_id
                     },
@@ -108,6 +111,7 @@ class Telegram::SendAttachmentsService
                     body: {
                       chat_id: chat_id,
                       **business_connection_body,
+                      **topic_body,
                       document: file,
                       reply_to_message_id: reply_to_message_id
                     },
@@ -151,9 +155,24 @@ class Telegram::SendAttachmentsService
     @business_connection_id ||= channel.business_connection_id(message)
   end
 
+  def message_thread_id
+    @message_thread_id ||= channel.message_thread_id(message)
+  end
+
+  def direct_messages_topic_id
+    @direct_messages_topic_id ||= channel.direct_messages_topic_id(message)
+  end
+
   def business_connection_body
     body = {}
     body[:business_connection_id] = business_connection_id if business_connection_id
+    body
+  end
+
+  def topic_body
+    body = {}
+    body[:message_thread_id] = message_thread_id if message_thread_id
+    body[:direct_messages_topic_id] = direct_messages_topic_id if direct_messages_topic_id
     body
   end
 end

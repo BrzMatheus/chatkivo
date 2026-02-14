@@ -70,6 +70,7 @@ class Telegram::IncomingMessageService
     set_contact
     update_contact_avatar
     set_conversation
+    sync_channel_business_connection_id!
 
     # Log antes de criar mensagem
     Rails.logger.info '[Telegram] Criando mensagem: ' \
@@ -195,7 +196,7 @@ class Telegram::IncomingMessageService
 
     # Sincronizar business_connection_id
     if telegram_params_business_connection_id.present? &&
-       @conversation.additional_attributes['business_connection_id'].blank?
+       @conversation.additional_attributes['business_connection_id'] != telegram_params_business_connection_id
       updates['business_connection_id'] = telegram_params_business_connection_id
     end
 
@@ -205,11 +206,34 @@ class Telegram::IncomingMessageService
       updates['chat_id'] = telegram_params_chat_id
     end
 
+    if telegram_params_message_thread_id.present? &&
+       @conversation.additional_attributes['message_thread_id'] != telegram_params_message_thread_id
+      updates['message_thread_id'] = telegram_params_message_thread_id
+    end
+
+    if telegram_params_direct_messages_topic_id.present? &&
+       @conversation.additional_attributes['direct_messages_topic_id'] != telegram_params_direct_messages_topic_id
+      updates['direct_messages_topic_id'] = telegram_params_direct_messages_topic_id
+    end
+
     return unless updates.present?
 
     @conversation.additional_attributes.merge!(updates)
     @conversation.save!
     Rails.logger.info "Telegram: Sincronizado conversation #{@conversation.id}: #{updates.inspect}"
+  end
+
+  def sync_channel_business_connection_id!
+    return if telegram_params_business_connection_id.blank?
+
+    channel = inbox.channel
+    channel_attributes = channel.additional_attributes || {}
+    return if channel_attributes['business_connection_id'] == telegram_params_business_connection_id
+
+    channel.update_columns(
+      additional_attributes: channel_attributes.merge('business_connection_id' => telegram_params_business_connection_id),
+      updated_at: Time.current
+    )
   end
 
   def contact_attributes
@@ -233,7 +257,9 @@ class Telegram::IncomingMessageService
   def conversation_additional_attributes
     {
       chat_id: telegram_params_chat_id,
-      business_connection_id: telegram_params_business_connection_id
+      business_connection_id: telegram_params_business_connection_id,
+      message_thread_id: telegram_params_message_thread_id,
+      direct_messages_topic_id: telegram_params_direct_messages_topic_id
     }
   end
 

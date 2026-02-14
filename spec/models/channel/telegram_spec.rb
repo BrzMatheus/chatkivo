@@ -132,6 +132,47 @@ RSpec.describe Channel::Telegram do
       expect(telegram_channel.send_message_on_telegram(message)).to eq('telegram_123')
     end
 
+    it 'prefers channel-level business_connection_id over stale conversation value' do
+      telegram_channel.update_column(:additional_attributes, { 'business_connection_id' => 'new-business-connection-id' })
+      additional_attributes = { 'chat_id' => '123', 'business_connection_id' => 'old-business-connection-id' }
+      message = create(:message, message_type: :outgoing, content: 'test',
+                                 conversation: create(:conversation, inbox: telegram_channel.inbox, additional_attributes: additional_attributes))
+
+      stub_request(:post, "https://api.telegram.org/bot#{telegram_channel.bot_token}/sendMessage")
+        .with(
+          body: 'chat_id=123&text=test&reply_markup=&parse_mode=HTML&reply_to_message_id=&business_connection_id=new-business-connection-id'
+        )
+        .to_return(
+          status: 200,
+          body: { result: { message_id: 'telegram_123' } }.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      expect(telegram_channel.send_message_on_telegram(message)).to eq('telegram_123')
+    end
+
+    it 'sends message with thread and direct message topic identifiers' do
+      additional_attributes = {
+        'chat_id' => '123',
+        'message_thread_id' => 111,
+        'direct_messages_topic_id' => 222
+      }
+      message = create(:message, message_type: :outgoing, content: 'test',
+                                 conversation: create(:conversation, inbox: telegram_channel.inbox, additional_attributes: additional_attributes))
+
+      stub_request(:post, "https://api.telegram.org/bot#{telegram_channel.bot_token}/sendMessage")
+        .with(
+          body: 'chat_id=123&text=test&reply_markup=&parse_mode=HTML&reply_to_message_id=&message_thread_id=111&direct_messages_topic_id=222'
+        )
+        .to_return(
+          status: 200,
+          body: { result: { message_id: 'telegram_123' } }.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      expect(telegram_channel.send_message_on_telegram(message)).to eq('telegram_123')
+    end
+
     it 'send text message failed' do
       message = create(:message, message_type: :outgoing, content: 'test',
                                  conversation: create(:conversation, inbox: telegram_channel.inbox, additional_attributes: { 'chat_id' => '123' }))

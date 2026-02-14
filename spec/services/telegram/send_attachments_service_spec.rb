@@ -71,6 +71,34 @@ RSpec.describe Telegram::SendAttachmentsService do
       end
     end
 
+    context 'when conversation has topic identifiers' do
+      before do
+        allow(channel).to receive(:message_thread_id).and_return(789)
+        allow(channel).to receive(:direct_messages_topic_id).and_return(456)
+      end
+
+      it 'sends attachments with message_thread_id and direct_messages_topic_id' do
+        attach_files(message)
+        service.perform
+
+        expect(a_request(:post, "#{telegram_api_url}/sendPhoto")
+          .with { |req| req.body =~ /message_thread_id.+789/m && req.body =~ /direct_messages_topic_id.+456/m })
+          .to have_been_made.once
+
+        expect(a_request(:post, "#{telegram_api_url}/sendVideo")
+          .with { |req| req.body =~ /message_thread_id.+789/m && req.body =~ /direct_messages_topic_id.+456/m })
+          .to have_been_made.once
+
+        expect(a_request(:post, "#{telegram_api_url}/sendAudio")
+          .with { |req| req.body =~ /message_thread_id.+789/m && req.body =~ /direct_messages_topic_id.+456/m })
+          .to have_been_made.once
+
+        expect(a_request(:post, "#{telegram_api_url}/sendDocument")
+          .with { |req| req.body =~ /message_thread_id.+789/m && req.body =~ /direct_messages_topic_id.+456/m })
+          .to have_been_made.once
+      end
+    end
+
     context 'when all attachments are photo and video' do
       before do
         2.times { attach_file_to_message(message, 'image', 'sample.png', 'image/png') }

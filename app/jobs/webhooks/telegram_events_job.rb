@@ -43,12 +43,33 @@ class Webhooks::TelegramEventsJob < ApplicationJob
                       "message_id=#{telegram_params.dig(:message, :message_id) || telegram_params.dig(:business_message, :message_id)}, " \
                       "has_message=#{telegram_params[:message].present?}, " \
                       "has_business_message=#{telegram_params[:business_message].present?}, " \
+                      "has_business_connection=#{telegram_params[:business_connection].present?}, " \
                       "has_edited=#{telegram_params[:edited_message].present? || telegram_params[:edited_business_message].present?}"
+
+    if telegram_params[:business_connection].present?
+      sync_channel_business_connection_id(channel, telegram_params[:business_connection])
+      return
+    end
 
     if telegram_params[:edited_message].present? || telegram_params[:edited_business_message].present?
       Telegram::UpdateMessageService.new(inbox: channel.inbox, params: telegram_params).perform
     else
       Telegram::IncomingMessageService.new(inbox: channel.inbox, params: telegram_params).perform
     end
+  end
+
+  def sync_channel_business_connection_id(channel, business_connection_params)
+    business_connection_id = business_connection_params[:id]
+    return if business_connection_id.blank?
+
+    channel_attributes = channel.additional_attributes || {}
+    return if channel_attributes['business_connection_id'] == business_connection_id
+
+    channel.update_columns(
+      additional_attributes: channel_attributes.merge('business_connection_id' => business_connection_id),
+      updated_at: Time.current
+    )
+
+    Rails.logger.info "[Telegram] Atualizado business_connection_id no canal #{channel.id}: #{business_connection_id}"
   end
 end
