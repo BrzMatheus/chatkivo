@@ -234,6 +234,42 @@ RSpec.describe Message do
       expect(conversation.first_reply_created_at).to be_nil
       expect(conversation.waiting_since).to eq conversation.created_at
     end
+
+    it 'updates first reply for sender-less outgoing message on telegram inbox' do
+      telegram_channel = create(:channel_telegram, account: conversation.account)
+      telegram_conversation = create(:conversation, account: conversation.account, inbox: telegram_channel.inbox)
+
+      expect(telegram_conversation.first_reply_created_at).to be_nil
+      expect(telegram_conversation.waiting_since).to be_within(1.second).of(telegram_conversation.created_at)
+
+      outgoing_message = create(
+        :message,
+        :bot_message,
+        conversation: telegram_conversation,
+        inbox: telegram_conversation.inbox,
+        account: telegram_conversation.account
+      )
+
+      expect(outgoing_message.sender).to be_nil
+      expect(telegram_conversation.first_reply_created_at).to eq outgoing_message.created_at
+      expect(telegram_conversation.waiting_since).to be_nil
+    end
+
+    it 'does not update first reply for sender-less outgoing message on non-whatsapp-and-telegram inbox' do
+      expect(conversation.first_reply_created_at).to be_nil
+      expect(conversation.waiting_since).to eq conversation.created_at
+
+      create(
+        :message,
+        :bot_message,
+        conversation: conversation,
+        inbox: conversation.inbox,
+        account: conversation.account
+      )
+
+      expect(conversation.first_reply_created_at).to be_nil
+      expect(conversation.waiting_since).to eq conversation.created_at
+    end
   end
 
   describe '#reopen_conversation' do
@@ -290,6 +326,28 @@ RSpec.describe Message do
       message.save!
 
       expect(conversation.waiting_since).not_to be_nil
+    end
+
+    it 'resets waiting_since for sender-less outgoing message on whatsapp inbox' do
+      whatsapp_channel = create(
+        :channel_whatsapp,
+        account: conversation.account,
+        validate_provider_config: false,
+        sync_templates: false
+      )
+      whatsapp_conversation = create(:conversation, account: conversation.account, inbox: whatsapp_channel.inbox)
+
+      external_message = build(
+        :message,
+        :bot_message,
+        conversation: whatsapp_conversation,
+        inbox: whatsapp_conversation.inbox,
+        account: whatsapp_conversation.account
+      )
+      external_message.save!
+
+      expect(external_message.sender).to be_nil
+      expect(whatsapp_conversation.reload.waiting_since).to be_nil
     end
 
     it 'does not overwrite the previous value if there are newer messages' do

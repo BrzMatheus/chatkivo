@@ -209,7 +209,7 @@ class Message < ApplicationRecord
   end
 
   def valid_first_reply?
-    return false unless human_response? && !private?
+    return false unless reply_message? && !private?
     return false if conversation.first_reply_created_at.present?
     return false if conversation.messages.outgoing
                                 .where.not(sender_type: ['AgentBot', 'Captain::Assistant'])
@@ -308,7 +308,7 @@ class Message < ApplicationRecord
   end
 
   def update_waiting_since
-    if human_response? && !private && conversation.waiting_since.present?
+    if reply_message? && !private && conversation.waiting_since.present?
       Rails.configuration.dispatcher.dispatch(
         REPLY_CREATED, Time.zone.now, waiting_since: conversation.waiting_since, message: self
       )
@@ -325,6 +325,18 @@ class Message < ApplicationRecord
       content_attributes['automation_rule_id'].blank? &&
       additional_attributes['campaign_id'].blank? &&
       sender.is_a?(User)
+  end
+
+  def reply_message?
+    human_response? || external_channel_outgoing_response?
+  end
+
+  def external_channel_outgoing_response?
+    outgoing? &&
+      sender.blank? &&
+      (inbox&.telegram? || inbox&.whatsapp?) &&
+      content_attributes['automation_rule_id'].blank? &&
+      additional_attributes['campaign_id'].blank?
   end
 
   def dispatch_create_events
