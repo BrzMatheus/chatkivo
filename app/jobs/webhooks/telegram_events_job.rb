@@ -62,13 +62,7 @@ class Webhooks::TelegramEventsJob < ApplicationJob
     business_connection_id = business_connection_params[:id]
     return if business_connection_id.blank?
 
-    channel_attributes = channel.additional_attributes || {}
-    return if channel_attributes['business_connection_id'] == business_connection_id
-
-    channel.update_columns(
-      additional_attributes: channel_attributes.merge('business_connection_id' => business_connection_id),
-      updated_at: Time.current
-    )
+    return unless channel.persist_business_connection_id!(business_connection_id)
 
     Rails.logger.info "[Telegram] Atualizado business_connection_id no canal #{channel.id}: #{business_connection_id}"
   end

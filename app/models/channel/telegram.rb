@@ -76,10 +76,27 @@ class Channel::Telegram < ApplicationRecord
   end
 
   def business_connection_id(message)
-    channel_business_connection_id = additional_attributes&.[]('business_connection_id')
+    channel_business_connection_id = telegram_channel_additional_attributes['business_connection_id']
     conversation_business_connection_id = message.conversation.additional_attributes&.[]('business_connection_id')
 
     channel_business_connection_id.presence || conversation_business_connection_id
+  end
+
+  def persist_business_connection_id!(business_connection_id)
+    return false if business_connection_id.blank?
+    return false unless telegram_channel_supports_additional_attributes?
+
+    channel_attributes = telegram_channel_additional_attributes
+    return false if channel_attributes['business_connection_id'] == business_connection_id
+
+    update_columns(
+      additional_attributes: channel_attributes.merge('business_connection_id' => business_connection_id),
+      updated_at: Time.current
+    )
+    true
+  rescue StandardError => e
+    Rails.logger.warn "[Telegram] Failed to persist business_connection_id on channel #{id}: #{e.message}"
+    false
   end
 
   def message_thread_id(message)
@@ -95,6 +112,21 @@ class Channel::Telegram < ApplicationRecord
   end
 
   private
+
+  def telegram_channel_supports_additional_attributes?
+    has_attribute?(:additional_attributes)
+  rescue StandardError
+    false
+  end
+
+  def telegram_channel_additional_attributes
+    return {} unless telegram_channel_supports_additional_attributes?
+
+    value = self[:additional_attributes]
+    value.is_a?(Hash) ? value : {}
+  rescue StandardError
+    {}
+  end
 
   def ensure_valid_bot_token
     response = HTTParty.get("#{telegram_api_url}/getMe")

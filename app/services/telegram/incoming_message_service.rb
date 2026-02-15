@@ -227,13 +227,7 @@ class Telegram::IncomingMessageService
     return if telegram_params_business_connection_id.blank?
 
     channel = inbox.channel
-    channel_attributes = channel.additional_attributes || {}
-    return if channel_attributes['business_connection_id'] == telegram_params_business_connection_id
-
-    channel.update_columns(
-      additional_attributes: channel_attributes.merge('business_connection_id' => telegram_params_business_connection_id),
-      updated_at: Time.current
-    )
+    channel.persist_business_connection_id!(telegram_params_business_connection_id)
   end
 
   def contact_attributes
