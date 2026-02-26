@@ -50,7 +50,7 @@ module EvolutionMessageDiagnostics
   def timeline!(account_id:, conversation_display_id:, limit: 100)
     conversation = Conversation.find_by!(account_id: account_id, display_id: conversation_display_id)
 
-    rows = Message.includes(:sender, :inbox, conversation: :contact_inbox)
+    rows = Message.preload(:sender, :inbox, conversation: :contact_inbox)
                   .where(conversation_id: conversation.id)
                   .reorder('messages.created_at DESC')
                   .limit(limit)
@@ -73,7 +73,7 @@ module EvolutionMessageDiagnostics
 
   def base_scope(account_id:, hours:, inbox_id:, conversation_display_id:)
     scope = Message.joins(:inbox)
-                   .includes(:sender, :inbox, conversation: :contact_inbox)
+                   .preload(:sender, :inbox, conversation: :contact_inbox)
                    .where(messages: { account_id: account_id })
                    .where(inboxes: { channel_type: CHANNEL_TYPE })
                    .where('messages.created_at >= ?', hours.hours.ago)
