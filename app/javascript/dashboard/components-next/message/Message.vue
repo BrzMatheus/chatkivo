@@ -415,11 +415,21 @@ function handleReplyTo() {
   emitter.emit(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, props);
 }
 
+const isExternalChannelOutgoingMessage = computed(() => {
+  return (
+    props.messageType === MESSAGE_TYPES.OUTGOING &&
+    !props.sender &&
+    Boolean(props.sourceId)
+  );
+});
+
 const avatarInfo = computed(() => {
   // If no sender, return bot info
   if (!props.sender) {
     return {
-      name: t('CONVERSATION.BOT'),
+      name: isExternalChannelOutgoingMessage.value
+        ? t('CONVERSATION.CHANNEL_EXTERNAL')
+        : t('CONVERSATION.BOT'),
       src: '',
     };
   }

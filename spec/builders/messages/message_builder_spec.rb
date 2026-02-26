@@ -288,4 +288,93 @@ describe Messages::MessageBuilder do
       end
     end
   end
+
+  describe 'external channel echo message detection' do
+    let(:params) do
+      ActionController::Parameters.new({
+                                         content: 'test',
+                                         source_id: 'external-message-id-1'
+                                       })
+    end
+
+    context 'when message is outgoing on whatsapp inbox with source_id' do
+      let(:whatsapp_channel) do
+        create(:channel_whatsapp, account: account, validate_provider_config: false, sync_templates: false)
+      end
+      let(:conversation) { create(:conversation, inbox: whatsapp_channel.inbox, account: account) }
+
+      it 'creates a sender-less outgoing message' do
+        message = message_builder
+
+        expect(message.sender).to be_nil
+        expect(message.sender_id).to be_nil
+        expect(message.sender_type).to be_nil
+      end
+    end
+
+    context 'when message is outgoing on telegram inbox with source_id' do
+      let(:telegram_channel) { create(:channel_telegram, account: account) }
+      let(:conversation) { create(:conversation, inbox: telegram_channel.inbox, account: account) }
+
+      it 'creates a sender-less outgoing message' do
+        message = message_builder
+
+        expect(message.sender).to be_nil
+        expect(message.sender_id).to be_nil
+        expect(message.sender_type).to be_nil
+      end
+    end
+
+    context 'when message is outgoing on a non whatsapp/telegram inbox' do
+      it 'keeps the authenticated user as sender' do
+        message = message_builder
+
+        expect(message.sender).to eq(user)
+      end
+    end
+
+    context 'when sender_type is explicitly provided as AgentBot' do
+      let(:agent_bot) { create(:agent_bot) }
+      let(:whatsapp_channel) do
+        create(:channel_whatsapp, account: account, validate_provider_config: false, sync_templates: false)
+      end
+      let(:conversation) { create(:conversation, inbox: whatsapp_channel.inbox, account: account) }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           source_id: 'external-message-id-1',
+                                           sender_type: 'AgentBot',
+                                           sender_id: agent_bot.id
+                                         })
+      end
+
+      it 'uses the explicit agent bot sender' do
+        message = message_builder
+
+        expect(message.sender).to eq(agent_bot)
+        expect(message.sender_type).to eq('AgentBot')
+      end
+    end
+
+    context 'when message is private' do
+      let(:whatsapp_channel) do
+        create(:channel_whatsapp, account: account, validate_provider_config: false, sync_templates: false)
+      end
+      let(:conversation) { create(:conversation, inbox: whatsapp_channel.inbox, account: account) }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           source_id: 'external-message-id-1',
+                                           private: true
+                                         })
+      end
+
+      it 'keeps the authenticated user as sender' do
+        message = message_builder
+
+        expect(message.sender).to eq(user)
+        expect(message.sender_type).to eq('User')
+      end
+    end
+  end
 end

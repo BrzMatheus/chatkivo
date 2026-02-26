@@ -104,7 +104,10 @@ class Messages::MessageBuilder
   end
 
   def sender
-    message_type == 'outgoing' ? (message_sender || @user) : @conversation.contact
+    return @conversation.contact unless message_type == 'outgoing'
+    return if external_channel_echo_message?
+
+    message_sender || @user
   end
 
   def external_created_at
@@ -127,6 +130,15 @@ class Messages::MessageBuilder
     return if @params[:sender_type] != 'AgentBot'
 
     AgentBot.where(account_id: [nil, @conversation.account.id]).find_by(id: @params[:sender_id])
+  end
+
+  def external_channel_echo_message?
+    message_type == 'outgoing' &&
+      !@private &&
+      @params[:source_id].present? &&
+      @params[:sender_type].blank? &&
+      @user.is_a?(User) &&
+      (@conversation.inbox&.whatsapp? || @conversation.inbox&.telegram?)
   end
 
   def message_params

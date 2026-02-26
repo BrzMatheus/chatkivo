@@ -254,6 +254,7 @@
     "MESSAGE_ERROR": "Não foi possível enviar esta mensagem, por favor, tente novamente mais tarde",
     "SENT_BY": "Enviado por:",
     "BOT": "Robôs",
+    "CHANNEL_EXTERNAL": "Canal externo",
     "SEND_FAILED": "Não foi possível enviar a mensagem! Tente novamente",
     "TRY_AGAIN": "tentar novamente",
     "ASSIGNMENT": {
