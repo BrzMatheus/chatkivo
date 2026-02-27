@@ -3,6 +3,8 @@ class Messages::MessageBuilder
   include ::EmailHelper
   include ::DataHelper
 
+  EXTERNAL_API_ECHO_USER_IDS = [3].freeze
+
   attr_reader :message
 
   def initialize(user, conversation, params)
@@ -133,23 +135,34 @@ class Messages::MessageBuilder
   end
 
   def external_channel_echo_message?
-    message_type == 'outgoing' &&
-      !@private &&
-      @params[:source_id].present? &&
-      !sender_type_blocks_external_echo? &&
-      @user.is_a?(User) &&
-      (
-        @conversation.inbox&.whatsapp? ||
-        @conversation.inbox&.telegram? ||
-        (@conversation.inbox&.api? && external_whatsapp_source_id?)
-      )
+    return false unless message_type == 'outgoing'
+    return false if @private
+    return false unless @user.is_a?(User)
+    return false if sender_type_blocks_external_echo?
+
+    external_echo_in_whatsapp_or_telegram? || external_echo_in_api_inbox?
+  end
+
+  def external_echo_in_whatsapp_or_telegram?
+    @params[:source_id].present? &&
+      (@conversation.inbox&.whatsapp? || @conversation.inbox&.telegram?)
+  end
+
+  def external_echo_in_api_inbox?
+    return false unless @conversation.inbox&.api?
+
+    external_whatsapp_source_id? || external_echo_user_for_api_inbox?
+  end
+
+  def external_echo_user_for_api_inbox?
+    EXTERNAL_API_ECHO_USER_IDS.include?(@user.id)
   end
 
   def sender_type_blocks_external_echo?
     sender_type = @params[:sender_type].to_s
 
     return false if sender_type.blank?
-    return false if sender_type == 'User' && external_whatsapp_source_id?
+    return false if sender_type == 'User' && (external_whatsapp_source_id? || external_echo_user_for_api_inbox?)
 
     true
   end

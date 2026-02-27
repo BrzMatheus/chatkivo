@@ -148,6 +148,49 @@ RSpec.describe 'Conversation Messages API', type: :request do
         end
       end
 
+      context 'when api inbox uses the configured external echo user' do
+        let(:agent) { create(:user, id: 3, account: account, role: :agent) }
+        let(:api_channel) { create(:channel_api, account: account) }
+        let!(:inbox) { api_channel.inbox }
+        let!(:conversation) { create(:conversation, inbox: inbox, account: account) }
+
+        it 'creates a sender-less outgoing message without source_id' do
+          params = { content: 'external message without source id' }
+
+          post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+               params: params,
+               headers: agent.create_new_auth_token,
+               as: :json
+
+          expect(response).to have_http_status(:success)
+
+          created_message = conversation.reload.messages.last
+          expect(created_message.sender_id).to be_nil
+          expect(created_message.sender_type).to be_nil
+          expect(created_message.source_id).to be_nil
+        end
+
+        it 'creates a sender-less outgoing message when sender_type is User and source_id is missing' do
+          params = {
+            content: 'external message without source id',
+            sender_type: 'User',
+            sender_id: agent.id
+          }
+
+          post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+               params: params,
+               headers: agent.create_new_auth_token,
+               as: :json
+
+          expect(response).to have_http_status(:success)
+
+          created_message = conversation.reload.messages.last
+          expect(created_message.sender_id).to be_nil
+          expect(created_message.sender_type).to be_nil
+          expect(created_message.source_id).to be_nil
+        end
+      end
+
       context 'when api inbox' do
         let(:api_channel) { create(:channel_api, account: account) }
         let(:api_inbox) { create(:inbox, channel: api_channel, account: account) }
