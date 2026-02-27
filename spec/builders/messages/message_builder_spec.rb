@@ -325,6 +325,43 @@ describe Messages::MessageBuilder do
       end
     end
 
+    context 'when message is outgoing on api inbox with whatsapp style source_id' do
+      let(:api_channel) { create(:channel_api, account: account) }
+      let(:conversation) { create(:conversation, inbox: api_channel.inbox, account: account) }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           source_id: 'WAID:3EB02752948EF725763C87'
+                                         })
+      end
+
+      it 'creates a sender-less outgoing message' do
+        message = message_builder
+
+        expect(message.sender).to be_nil
+        expect(message.sender_id).to be_nil
+        expect(message.sender_type).to be_nil
+      end
+    end
+
+    context 'when message is outgoing on api inbox with non-whatsapp source_id' do
+      let(:api_channel) { create(:channel_api, account: account) }
+      let(:conversation) { create(:conversation, inbox: api_channel.inbox, account: account) }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           source_id: 'external-message-id-1'
+                                         })
+      end
+
+      it 'keeps the authenticated user as sender' do
+        message = message_builder
+
+        expect(message.sender).to eq(user)
+        expect(message.sender_type).to eq('User')
+      end
+    end
+
     context 'when message is outgoing on a non whatsapp/telegram inbox' do
       it 'keeps the authenticated user as sender' do
         message = message_builder

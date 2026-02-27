@@ -105,6 +105,28 @@ RSpec.describe 'Conversation Messages API', type: :request do
         end
       end
 
+      context 'when message is mirrored from an external whatsapp source on api inbox' do
+        let(:api_channel) { create(:channel_api, account: account) }
+        let!(:inbox) { api_channel.inbox }
+        let!(:conversation) { create(:conversation, inbox: inbox, account: account) }
+
+        it 'creates a sender-less outgoing message for WAID source_id' do
+          params = { content: 'external message', source_id: 'WAID:3EB02752948EF725763C87' }
+
+          post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+               params: params,
+               headers: agent.create_new_auth_token,
+               as: :json
+
+          expect(response).to have_http_status(:success)
+
+          created_message = conversation.reload.messages.last
+          expect(created_message.sender_id).to be_nil
+          expect(created_message.sender_type).to be_nil
+          expect(created_message.source_id).to eq('WAID:3EB02752948EF725763C87')
+        end
+      end
+
       context 'when api inbox' do
         let(:api_channel) { create(:channel_api, account: account) }
         let(:api_inbox) { create(:inbox, channel: api_channel, account: account) }

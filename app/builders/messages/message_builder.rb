@@ -138,7 +138,17 @@ class Messages::MessageBuilder
       @params[:source_id].present? &&
       @params[:sender_type].blank? &&
       @user.is_a?(User) &&
-      (@conversation.inbox&.whatsapp? || @conversation.inbox&.telegram?)
+      (
+        @conversation.inbox&.whatsapp? ||
+        @conversation.inbox&.telegram? ||
+        (@conversation.inbox&.api? && external_whatsapp_source_id?)
+      )
+  end
+
+  def external_whatsapp_source_id?
+    source_id = @params[:source_id].to_s
+
+    source_id.start_with?('WAID:') || source_id.downcase.start_with?('wamid.')
   end
 
   def message_params

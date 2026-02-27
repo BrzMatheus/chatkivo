@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# READ-ONLY diagnostic helper for Chatwoot + Evolution (WhatsApp) message auditing.
+# READ-ONLY diagnostic helper for Chatwoot + Evolution message auditing.
 #
 # Usage in rails console (production/staging):
 #   load Rails.root.join('script/diagnostics/evolution_message_diagnostics.rb')
@@ -15,7 +15,7 @@
 module EvolutionMessageDiagnostics
   extend self
 
-  CHANNEL_TYPE = 'Channel::Whatsapp'
+  CHANNEL_TYPES = %w[Channel::Whatsapp Channel::Telegram Channel::Api].freeze
 
   def run!(account_id:, hours: 24, inbox_id: nil, conversation_display_id: nil, limit: 200)
     scope = base_scope(
@@ -25,8 +25,8 @@ module EvolutionMessageDiagnostics
       conversation_display_id: conversation_display_id
     )
 
-    puts "\n=== Evolution / WhatsApp Message Diagnostics (READ-ONLY) ==="
-    puts "account_id=#{account_id} channel_type=#{CHANNEL_TYPE} hours=#{hours} inbox_id=#{inbox_id || '-'} " \
+    puts "\n=== Evolution Message Diagnostics (READ-ONLY) ==="
+    puts "account_id=#{account_id} channel_types=#{CHANNEL_TYPES.join(',')} hours=#{hours} inbox_id=#{inbox_id || '-'} " \
          "conversation_display_id=#{conversation_display_id || '-'}"
     puts "now=#{Time.current.iso8601}"
     puts "window_start=#{hours.hours.ago.iso8601}"
@@ -75,7 +75,7 @@ module EvolutionMessageDiagnostics
     scope = Message.joins(:inbox)
                    .preload(:sender, :inbox, conversation: :contact_inbox)
                    .where(messages: { account_id: account_id })
-                   .where(inboxes: { channel_type: CHANNEL_TYPE })
+                   .where(inboxes: { channel_type: CHANNEL_TYPES })
                    .where('messages.created_at >= ?', hours.hours.ago)
 
     scope = scope.where(messages: { inbox_id: inbox_id }) if inbox_id.present?
