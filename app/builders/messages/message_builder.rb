@@ -136,13 +136,22 @@ class Messages::MessageBuilder
     message_type == 'outgoing' &&
       !@private &&
       @params[:source_id].present? &&
-      @params[:sender_type].blank? &&
+      !sender_type_blocks_external_echo? &&
       @user.is_a?(User) &&
       (
         @conversation.inbox&.whatsapp? ||
         @conversation.inbox&.telegram? ||
         (@conversation.inbox&.api? && external_whatsapp_source_id?)
       )
+  end
+
+  def sender_type_blocks_external_echo?
+    sender_type = @params[:sender_type].to_s
+
+    return false if sender_type.blank?
+    return false if sender_type == 'User' && external_whatsapp_source_id?
+
+    true
   end
 
   def external_whatsapp_source_id?
