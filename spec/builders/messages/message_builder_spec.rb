@@ -405,6 +405,27 @@ describe Messages::MessageBuilder do
       end
     end
 
+    context 'when message is outgoing on api inbox for configured external echo user with non-User sender_type' do
+      let(:user) { create(:user, id: 3, account: account) }
+      let(:api_channel) { create(:channel_api, account: account) }
+      let(:conversation) { create(:conversation, inbox: api_channel.inbox, account: account) }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           sender_type: 'Contact',
+                                           sender_id: conversation.contact_id
+                                         })
+      end
+
+      it 'still creates a sender-less outgoing message' do
+        message = message_builder
+
+        expect(message.sender).to be_nil
+        expect(message.sender_id).to be_nil
+        expect(message.sender_type).to be_nil
+      end
+    end
+
     context 'when message is outgoing on api inbox with non-whatsapp source_id' do
       let(:api_channel) { create(:channel_api, account: account) }
       let(:conversation) { create(:conversation, inbox: api_channel.inbox, account: account) }

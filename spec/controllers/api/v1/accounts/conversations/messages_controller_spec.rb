@@ -189,6 +189,26 @@ RSpec.describe 'Conversation Messages API', type: :request do
           expect(created_message.sender_type).to be_nil
           expect(created_message.source_id).to be_nil
         end
+
+        it 'creates a sender-less outgoing message when sender_type is non-User and source_id is missing' do
+          params = {
+            content: 'external message without source id',
+            sender_type: 'Contact',
+            sender_id: conversation.contact_id
+          }
+
+          post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+               params: params,
+               headers: agent.create_new_auth_token,
+               as: :json
+
+          expect(response).to have_http_status(:success)
+
+          created_message = conversation.reload.messages.last
+          expect(created_message.sender_id).to be_nil
+          expect(created_message.sender_type).to be_nil
+          expect(created_message.source_id).to be_nil
+        end
       end
 
       context 'when api inbox' do

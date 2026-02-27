@@ -161,8 +161,13 @@ class Messages::MessageBuilder
   def sender_type_blocks_external_echo?
     sender_type = @params[:sender_type].to_s
 
+    # For API inboxes authenticated by configured external echo users,
+    # we always treat outgoing messages as external channel echoes,
+    # unless AgentBot was explicitly requested.
+    return sender_type == 'AgentBot' if external_echo_user_for_api_inbox?
+
     return false if sender_type.blank?
-    return false if sender_type == 'User' && (external_whatsapp_source_id? || external_echo_user_for_api_inbox?)
+    return false if sender_type.casecmp('User').zero? && external_whatsapp_source_id?
 
     true
   end
