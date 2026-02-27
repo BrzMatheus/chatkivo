@@ -1,4 +1,8 @@
 class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::Conversations::BaseController
+  TRANSIENT_API_FAILED_EXTERNAL_ERRORS = [
+    'timed out reading data from server'
+  ].freeze
+
   before_action :ensure_api_inbox, only: :update
 
   def index
@@ -14,7 +18,14 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def update
-    Messages::StatusUpdateService.new(message, permitted_params[:status], permitted_params[:external_error]).perform
+    if transient_api_failed_status_update?
+      Rails.logger.warn(
+        '[Api::MessagesController] Ignoring transient failed status update for API inbox message ' \
+        "message_id=#{message.id} conversation_id=#{@conversation.id} error=#{permitted_params[:external_error]}"
+      )
+    else
+      Messages::StatusUpdateService.new(message, permitted_params[:status], permitted_params[:external_error]).perform
+    end
     @message = message
   end
 
@@ -70,6 +81,15 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
   def already_translated_content_available?
     message.translations.present? && message.translations[permitted_params[:target_language]].present?
+  end
+
+  def transient_api_failed_status_update?
+    return false unless permitted_params[:status] == 'failed'
+
+    normalized_error = permitted_params[:external_error].to_s.downcase
+    TRANSIENT_API_FAILED_EXTERNAL_ERRORS.any? do |error|
+      normalized_error.include?(error)
+    end
   end
 
   # API inbox check

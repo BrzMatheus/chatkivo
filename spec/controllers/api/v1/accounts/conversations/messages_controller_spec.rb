@@ -483,6 +483,23 @@ RSpec.describe 'Conversation Messages API', type: :request do
           expect(message.reload.status).to eq('failed')
           expect(message.reload.external_error).to eq('err123')
         end
+
+        it 'ignores transient timeout errors for failed status updates' do
+          expect(Messages::StatusUpdateService).not_to receive(:new)
+
+          patch api_v1_account_conversation_message_url(
+            account_id: account.id,
+            conversation_id: conversation.display_id,
+            id: message.id
+          ),
+                params: { status: 'failed', external_error: 'Timed out reading data from server' },
+                headers: agent.create_new_auth_token,
+                as: :json
+
+          expect(response).to have_http_status(:success)
+          expect(message.reload.status).to eq('sent')
+          expect(message.reload.external_error).to be_nil
+        end
       end
     end
   end
