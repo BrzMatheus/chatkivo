@@ -307,6 +307,69 @@ RSpec.describe Message do
     end
   end
 
+  describe '#normalize_external_api_echo_sender' do
+    let(:account) { create(:account) }
+    let(:api_channel) { create(:channel_api, account: account) }
+    let(:api_conversation) { create(:conversation, account: account, inbox: api_channel.inbox) }
+    let(:agent) { create(:user, account: account) }
+
+    it 'clears sender for outgoing api messages from configured external echo users' do
+      stub_const("#{described_class}::EXTERNAL_API_ECHO_SENDER_USER_IDS", [agent.id])
+
+      message = create(
+        :message,
+        account: account,
+        inbox: api_conversation.inbox,
+        conversation: api_conversation,
+        message_type: :outgoing,
+        private: false,
+        sender: agent
+      )
+
+      expect(message.reload.sender).to be_nil
+      expect(message.sender_type).to be_nil
+      expect(message.sender_id).to be_nil
+    end
+
+    it 'keeps sender for non-configured users on api inbox' do
+      stub_const("#{described_class}::EXTERNAL_API_ECHO_SENDER_USER_IDS", [agent.id + 999_999])
+
+      message = create(
+        :message,
+        account: account,
+        inbox: api_conversation.inbox,
+        conversation: api_conversation,
+        message_type: :outgoing,
+        private: false,
+        sender: agent
+      )
+
+      expect(message.reload.sender).to eq(agent)
+      expect(message.sender_type).to eq('User')
+      expect(message.sender_id).to eq(agent.id)
+    end
+
+    it 'keeps sender on non-api inbox even for configured users' do
+      stub_const("#{described_class}::EXTERNAL_API_ECHO_SENDER_USER_IDS", [agent.id])
+      inbox = create(:inbox, account: account)
+      conversation = create(:conversation, account: account, inbox: inbox)
+
+      message = create(
+        :message,
+        account: account,
+        inbox: inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        private: false,
+        sender: agent
+      )
+
+      expect(message.reload.sender).to eq(agent)
+      expect(message.sender_type).to eq('User')
+      expect(message.sender_id).to eq(agent.id)
+    end
+  end
+
   describe '#waiting since' do
     let(:conversation) { create(:conversation) }
     let(:agent) { create(:user, account: conversation.account) }

@@ -44,6 +44,7 @@ class Message < ApplicationRecord
   include MessageFilterHelpers
   include Liquidable
   NUMBER_OF_PERMITTED_ATTACHMENTS = 15
+  EXTERNAL_API_ECHO_SENDER_USER_IDS = [3].freeze
 
   TEMPLATE_PARAMS_SCHEMA = {
     'type': 'object',
@@ -64,6 +65,7 @@ class Message < ApplicationRecord
 
   before_validation :ensure_content_type
   before_validation :prevent_message_flooding
+  before_validation :normalize_external_api_echo_sender
   before_save :ensure_processed_message_content
   before_save :ensure_in_reply_to
 
@@ -291,6 +293,16 @@ class Message < ApplicationRecord
 
   def ensure_content_type
     self.content_type ||= Message.content_types[:text]
+  end
+
+  def normalize_external_api_echo_sender
+    return unless outgoing?
+    return if private?
+    return unless inbox&.api?
+    return unless sender_type == 'User'
+    return unless EXTERNAL_API_ECHO_SENDER_USER_IDS.include?(sender_id)
+
+    self.sender = nil
   end
 
   def execute_after_create_commit_callbacks
