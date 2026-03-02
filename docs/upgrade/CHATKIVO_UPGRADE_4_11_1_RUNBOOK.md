@@ -10,7 +10,7 @@
 1. Freeze pushes to the production branch configured in EasyPanel.
 2. On VPS, run backup:
    ```bash
-   ./script/upgrade/backup_chatwoot.sh \
+   bash script/upgrade/backup_chatwoot.sh \
      --compose-file docker-compose.production.yaml \
      --backup-dir /var/backups/chatkivo \
      --storage-volume <EASYPANEL_STORAGE_VOLUME_NAME>
@@ -56,7 +56,7 @@ Trigger rollback if migration fails, login/inbox is broken, or custom API contra
 1. Switch image back to previous stable tag in EasyPanel.
 2. Restore DB + storage:
    ```bash
-   ./script/upgrade/restore_chatwoot.sh \
+   bash script/upgrade/restore_chatwoot.sh \
      --compose-file docker-compose.production.yaml \
      --postgres-sql /var/backups/chatkivo/<snapshot>_postgres.sql \
      --storage-archive /var/backups/chatkivo/<snapshot>_storage.tar.gz \
