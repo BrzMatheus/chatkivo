@@ -335,12 +335,20 @@ class Message < ApplicationRecord
   end
 
   def update_waiting_since
-    if reply_message? && !private && conversation.waiting_since.present?
-      Rails.configuration.dispatcher.dispatch(
-        REPLY_CREATED, Time.zone.now, waiting_since: conversation.waiting_since, message: self
-      )
-      conversation.update(waiting_since: nil)
+    waiting_present = conversation.waiting_since.present?
+
+    if waiting_present && !private
+      if reply_message?
+        Rails.configuration.dispatcher.dispatch(
+          REPLY_CREATED, Time.zone.now, waiting_since: conversation.waiting_since, message: self
+        )
+        conversation.update(waiting_since: nil)
+      elsif bot_response?
+        conversation.update(waiting_since: nil)
+      end
     end
+
+    # Set waiting_since when customer sends a message (if currently blank)
     conversation.update(waiting_since: created_at) if incoming? && conversation.waiting_since.blank?
   end
 
@@ -364,6 +372,9 @@ class Message < ApplicationRecord
       (inbox&.telegram? || inbox&.whatsapp?) &&
       content_attributes['automation_rule_id'].blank? &&
       additional_attributes['campaign_id'].blank?
+
+  def bot_response?
+    outgoing? && sender_type.in?(['AgentBot', 'Captain::Assistant'])
   end
 
   def dispatch_create_events
