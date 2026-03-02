@@ -373,6 +373,7 @@ class Message < ApplicationRecord
       (inbox&.telegram? || inbox&.whatsapp?) &&
       content_attributes['automation_rule_id'].blank? &&
       additional_attributes['campaign_id'].blank?
+  end
 
   def bot_response?
     outgoing? && sender_type.in?(['AgentBot', 'Captain::Assistant'])
