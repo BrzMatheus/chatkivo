@@ -3,7 +3,8 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
     'timed out reading data from server'
   ].freeze
 
-  before_action :ensure_api_inbox, only: :update
+  before_action :ensure_api_inbox_for_status_update, only: :update, if: :status_update_request?
+  before_action :ensure_supported_inbox_for_content_edit, only: :update, if: :content_edit_request?
 
   def index
     @messages = message_finder.perform
@@ -18,21 +19,18 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def update
-    if transient_api_failed_status_update?
-      Rails.logger.warn(
-        '[Api::MessagesController] Ignoring transient failed status update for API inbox message ' \
-        "message_id=#{message.id} conversation_id=#{@conversation.id} error=#{permitted_params[:external_error]}"
-      )
-    else
-      Messages::StatusUpdateService.new(message, permitted_params[:status], permitted_params[:external_error]).perform
-    end
-    @message = message
+    return handle_status_update if status_update_request?
+    return handle_content_edit if content_edit_request?
+
+    render json: { error: 'Either status or content should be provided' }, status: :unprocessable_entity
   end
 
   def destroy
-    ActiveRecord::Base.transaction do
-      message.update!(content: I18n.t('conversations.messages.deleted'), content_type: :text, content_attributes: { deleted: true })
-      message.attachments.destroy_all
+    result = Messages::DeleteService.new(message: message).perform
+    if result[:success]
+      @message = message
+    else
+      render json: { error: result[:error] }, status: result[:status]
     end
   end
 
@@ -76,7 +74,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def permitted_params
-    params.permit(:id, :target_language, :status, :external_error)
+    params.permit(:id, :target_language, :status, :external_error, :content)
   end
 
   def already_translated_content_available?
@@ -92,9 +90,45 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
     end
   end
 
-  # API inbox check
-  def ensure_api_inbox
-    # Only API inboxes can update messages
-    render json: { error: 'Message status update is only allowed for API inboxes' }, status: :forbidden unless @conversation.inbox.api?
+  def status_update_request?
+    permitted_params[:status].present?
+  end
+
+  def content_edit_request?
+    params.key?(:content)
+  end
+
+  def handle_status_update
+    if transient_api_failed_status_update?
+      Rails.logger.warn(
+        '[Api::MessagesController] Ignoring transient failed status update for API inbox message ' \
+        "message_id=#{message.id} conversation_id=#{@conversation.id} error=#{permitted_params[:external_error]}"
+      )
+    else
+      Messages::StatusUpdateService.new(message, permitted_params[:status], permitted_params[:external_error]).perform
+    end
+    @message = message
+  end
+
+  def handle_content_edit
+    result = Messages::EditService.new(message: message, content: permitted_params[:content]).perform
+    if result[:success]
+      @message = message
+    else
+      render json: { error: result[:error] }, status: result[:status]
+    end
+  end
+
+  # Only API inboxes can use the status update flow
+  def ensure_api_inbox_for_status_update
+    return if @conversation.inbox.api?
+
+    render json: { error: 'Message status update is only allowed for API inboxes' }, status: :forbidden
+  end
+
+  def ensure_supported_inbox_for_content_edit
+    return if @conversation.inbox.api? || @conversation.inbox.telegram?
+
+    render json: { error: 'Message edit is only allowed for API and Telegram inboxes' }, status: :forbidden
   end
 end

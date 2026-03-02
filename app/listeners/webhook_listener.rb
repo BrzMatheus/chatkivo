@@ -38,7 +38,12 @@ class WebhookListener < BaseListener
 
     return unless message.webhook_sendable?
 
-    payload = message.webhook_data.merge(event: __method__.to_s)
+    changed_attributes = normalize_changed_attributes(event.data[:previous_changes])
+    payload = message.webhook_data.merge(
+      event: __method__.to_s,
+      changed_attributes: changed_attributes,
+      action: message_update_action(changed_attributes)
+    )
     deliver_webhook_payloads(payload, inbox)
   end
 
@@ -125,5 +130,42 @@ class WebhookListener < BaseListener
   def deliver_webhook_payloads(payload, inbox)
     deliver_account_webhooks(payload, inbox.account)
     deliver_api_inbox_webhooks(payload, inbox)
+  end
+
+  def normalize_changed_attributes(changes)
+    return [] if changes.blank?
+
+    changes.except('updated_at').map do |key, value|
+      {
+        key => {
+          previous_value: value[0],
+          current_value: value[1]
+        }
+      }
+    end
+  end
+
+  def message_update_action(changed_attributes)
+    return 'deleted' if message_deleted_update?(changed_attributes)
+    return 'edited' if changed_attribute_present?(changed_attributes, 'content')
+
+    'status_updated'
+  end
+
+  def message_deleted_update?(changed_attributes)
+    content_attributes_change = changed_attribute_value(changed_attributes, 'content_attributes')
+    return false if content_attributes_change.blank?
+
+    previous_deleted = content_attributes_change[:previous_value].to_h['deleted']
+    current_deleted = content_attributes_change[:current_value].to_h['deleted']
+    previous_deleted != true && current_deleted == true
+  end
+
+  def changed_attribute_present?(changed_attributes, attribute_key)
+    changed_attributes.any? { |attribute| attribute.key?(attribute_key) }
+  end
+
+  def changed_attribute_value(changed_attributes, attribute_key)
+    changed_attributes.find { |attribute| attribute.key?(attribute_key) }&.[](attribute_key)
   end
 end

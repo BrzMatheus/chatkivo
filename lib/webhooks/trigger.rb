@@ -1,5 +1,9 @@
 class Webhooks::Trigger
   SUPPORTED_ERROR_HANDLE_EVENTS = %w[message_created message_updated].freeze
+  TRANSIENT_API_INBOX_TIMEOUT_ERRORS = [
+    'timed out reading data from server',
+    'execution expired'
+  ].freeze
 
   def initialize(url, payload, webhook_type)
     @url = url
@@ -61,7 +65,24 @@ class Webhooks::Trigger
   end
 
   def update_message_status(error)
+    if transient_api_inbox_timeout_error?(error)
+      Rails.logger.warn(
+        '[Webhooks::Trigger] Ignoring transient API inbox timeout while updating message status ' \
+        "message_id=#{message.id} conversation_id=#{message.conversation_id} webhook_type=#{@webhook_type} " \
+        "error_class=#{error.class} error_message=#{error.message}"
+      )
+      return
+    end
+
     Messages::StatusUpdateService.new(message, 'failed', error.message).perform
+  end
+
+  def transient_api_inbox_timeout_error?(error)
+    normalized_error_message = error.message.to_s.downcase
+
+    TRANSIENT_API_INBOX_TIMEOUT_ERRORS.any? do |timeout_error|
+      normalized_error_message.include?(timeout_error)
+    end
   end
 
   def message

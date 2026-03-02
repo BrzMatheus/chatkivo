@@ -354,4 +354,64 @@ describe WebhookListener do
       end
     end
   end
+
+  describe '#message_updated' do
+    let(:event_name) { :'message.updated' }
+    let(:webhook) { create(:webhook, inbox: inbox, account: account, subscriptions: ['message_updated']) }
+
+    it 'triggers webhook with edited action and changed_attributes' do
+      event = Events::Base.new(
+        event_name,
+        Time.zone.now,
+        message: message,
+        previous_changes: {
+          'content' => ['old content', 'new content'],
+          'updated_at' => [1.second.ago, Time.zone.now]
+        }
+      )
+
+      expected_payload = message.webhook_data.merge(
+        event: 'message_updated',
+        action: 'edited',
+        changed_attributes: [
+          {
+            'content' => {
+              previous_value: 'old content',
+              current_value: 'new content'
+            }
+          }
+        ]
+      )
+
+      expect(WebhookJob).to receive(:perform_later).with(webhook.url, expected_payload).once
+      listener.message_updated(event)
+    end
+
+    it 'triggers webhook with deleted action when deleted flag changes' do
+      event = Events::Base.new(
+        event_name,
+        Time.zone.now,
+        message: message,
+        previous_changes: {
+          'content_attributes' => [{ 'deleted' => false }, { 'deleted' => true }]
+        }
+      )
+
+      expected_payload = message.webhook_data.merge(
+        event: 'message_updated',
+        action: 'deleted',
+        changed_attributes: [
+          {
+            'content_attributes' => {
+              previous_value: { 'deleted' => false },
+              current_value: { 'deleted' => true }
+            }
+          }
+        ]
+      )
+
+      expect(WebhookJob).to receive(:perform_later).with(webhook.url, expected_payload).once
+      listener.message_updated(event)
+    end
+  end
 end

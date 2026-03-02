@@ -85,4 +85,31 @@ RSpec.describe Webhooks::TelegramEventsJob do
       )
     end
   end
+
+  context 'when deleted business messages params' do
+    let!(:params) do
+      {
+        :bot_token => telegram_channel.bot_token,
+        'telegram' => {
+          deleted_business_messages: {
+            message_ids: [123]
+          }
+        }
+      }
+    end
+
+    it 'calls Telegram::DeleteMessageUpdateService' do
+      process_service = double
+      allow(Telegram::DeleteMessageUpdateService).to receive(:new).and_return(process_service)
+      allow(process_service).to receive(:perform)
+
+      expect(Telegram::DeleteMessageUpdateService).to receive(:new).with(
+        inbox: telegram_channel.inbox,
+        params: params['telegram'].with_indifferent_access
+      )
+      expect(process_service).to receive(:perform)
+
+      described_class.perform_now(params.with_indifferent_access)
+    end
+  end
 end

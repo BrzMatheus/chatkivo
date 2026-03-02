@@ -122,6 +122,7 @@ const props = defineProps({
   groupWithNext: { type: Boolean, default: false },
   inboxId: { type: Number, default: null }, // eslint-disable-line vue/no-unused-properties
   inboxSupportsReplyTo: { type: Object, default: () => ({}) },
+  inboxSupportsEditOutgoing: { type: Boolean, default: false },
   inReplyTo: { type: Object, default: null }, // eslint-disable-line vue/no-unused-properties
   isEmailInbox: { type: Boolean, default: false },
   private: { type: Boolean, default: false },
@@ -354,6 +355,7 @@ const contextMenuEnabledOptions = computed(() => {
   return {
     copy: hasText,
     delete:
+      isOutgoing &&
       (hasText || hasAttachments) &&
       !isFailedOrProcessing &&
       !isMessageDeleted.value,
@@ -364,6 +366,15 @@ const contextMenuEnabledOptions = computed(() => {
       !props.private &&
       props.inboxSupportsReplyTo.outgoing &&
       !isFailedOrProcessing,
+    edit:
+      isOutgoing &&
+      !props.private &&
+      props.inboxSupportsEditOutgoing &&
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value &&
+      hasText &&
+      !hasAttachments &&
+      props.contentType === CONTENT_TYPES.TEXT,
   };
 });
 

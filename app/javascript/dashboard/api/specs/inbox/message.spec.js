@@ -43,6 +43,16 @@ describe('#ConversationAPI', () => {
         }
       );
     });
+
+    it('#update', () => {
+      messageAPI.update(12, 99, { content: 'updated content' });
+      expect(axiosMock.patch).toHaveBeenCalledWith(
+        '/api/v1/conversations/12/messages/99',
+        {
+          content: 'updated content',
+        }
+      );
+    });
   });
   describe('#buildCreatePayload', () => {
     it('builds form payload if file is available', () => {

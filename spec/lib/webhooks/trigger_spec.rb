@@ -56,6 +56,22 @@ describe Webhooks::Trigger do
       expect { trigger.execute(url, payload, webhook_type) }.to change { message.reload.status }.from('sent').to('failed')
     end
 
+    it 'ignores transient timeout errors for message-created event in api inbox webhook' do
+      payload = { event: 'message_created', conversation: { id: conversation.id }, id: message.id }
+
+      expect(RestClient::Request).to receive(:execute)
+        .with(
+          method: :post,
+          url: url,
+          payload: payload.to_json,
+          headers: { content_type: :json, accept: :json },
+          timeout: webhook_timeout
+        ).and_raise(StandardError.new('Timed out reading data from server')).once
+
+      expect { trigger.execute(url, payload, webhook_type) }.not_to(change { message.reload.status })
+      expect(message.reload.external_error).to be_nil
+    end
+
     it 'updates message status if webhook fails for message-updated event' do
       payload = { event: 'message_updated', conversation: { id: conversation.id }, id: message.id }
 
@@ -68,6 +84,22 @@ describe Webhooks::Trigger do
           timeout: webhook_timeout
         ).and_raise(RestClient::ExceptionWithResponse.new('error', 500)).once
       expect { trigger.execute(url, payload, webhook_type) }.to change { message.reload.status }.from('sent').to('failed')
+    end
+
+    it 'ignores transient timeout errors for message-updated event in api inbox webhook' do
+      payload = { event: 'message_updated', conversation: { id: conversation.id }, id: message.id }
+
+      expect(RestClient::Request).to receive(:execute)
+        .with(
+          method: :post,
+          url: url,
+          payload: payload.to_json,
+          headers: { content_type: :json, accept: :json },
+          timeout: webhook_timeout
+        ).and_raise(StandardError.new('Timed out reading data from server')).once
+
+      expect { trigger.execute(url, payload, webhook_type) }.not_to(change { message.reload.status })
+      expect(message.reload.external_error).to be_nil
     end
 
     context 'when webhook type is agent bot' do

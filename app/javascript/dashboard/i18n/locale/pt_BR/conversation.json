@@ -62,6 +62,8 @@
     "UNSUPPORTED_MESSAGE_INSTAGRAM": "Esta mensagem não é suportada. Você pode ver esta mensagem no aplicativo do Instagram.",
     "SUCCESS_DELETE_MESSAGE": "Mensagem excluída com sucesso",
     "FAIL_DELETE_MESSSAGE": "Não foi possível excluir a mensagem! Tente novamente",
+    "SUCCESS_EDIT_MESSAGE": "Mensagem editada com sucesso",
+    "FAIL_EDIT_MESSAGE": "Não foi possível editar a mensagem! Tente novamente",
     "NO_RESPONSE": "Sem resposta",
     "RESPONSE": "Resposta",
     "RATING_TITLE": "Classificação",
@@ -265,11 +267,20 @@
     "CONTEXT_MENU": {
       "COPY": "Copiar",
       "REPLY_TO": "Responder mensagem",
+      "EDIT": "Editar",
       "DELETE": "Excluir",
       "CREATE_A_CANNED_RESPONSE": "Adicionar às respostas prontas",
       "TRANSLATE": "Traduzir",
       "COPY_PERMALINK": "Copiar link para a mensagem",
       "LINK_COPIED": "URL da mensagem copiada para a área de transferência",
+      "EDIT_VALIDATION": "A mensagem não pode ficar vazia",
+      "EDIT_MODAL": {
+        "TITLE": "Editar mensagem",
+        "MESSAGE": "Atualize esta mensagem e salve as alterações.",
+        "PLACEHOLDER": "Digite sua mensagem",
+        "SAVE": "Salvar",
+        "CANCEL": "Cancelar"
+      },
       "DELETE_CONFIRMATION": {
         "TITLE": "Você tem certeza que deseja excluir esta mensagem?",
         "MESSAGE": "Você não pode desfazer essa ação",

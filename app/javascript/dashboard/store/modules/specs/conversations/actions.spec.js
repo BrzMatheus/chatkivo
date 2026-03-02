@@ -432,10 +432,11 @@ describe('#actions', () => {
         data: dataReceived,
       });
       await actions.fetchFilteredConversations({ commit }, dataToSend);
-      expect(commit).toHaveBeenCalledTimes(2);
+      expect(commit).toHaveBeenCalledTimes(3);
       expect(commit.mock.calls).toEqual([
         ['SET_LIST_LOADING_STATUS'],
         ['SET_ALL_CONVERSATION', dataReceived.payload],
+        ['CLEAR_LIST_LOADING_STATUS'],
       ]);
     });
   });
@@ -511,6 +512,37 @@ describe('#deleteMessage', () => {
       actions.deleteMessage({ commit }, { conversationId, messageId })
     ).rejects.toThrow(Error);
     expect(commit.mock.calls).toEqual([]);
+  });
+
+  describe('#editMessage', () => {
+    it('sends correct action if API is success', async () => {
+      const [conversationId, messageId] = [1, 1];
+      axios.patch.mockResolvedValue({
+        data: { id: 1, content: 'edited' },
+      });
+
+      await actions.editMessage(
+        { commit },
+        { conversationId, messageId, content: 'edited' }
+      );
+
+      expect(commit.mock.calls).toEqual([
+        [types.ADD_MESSAGE, { id: 1, content: 'edited' }],
+      ]);
+    });
+
+    it('sends no action if API is error', async () => {
+      const [conversationId, messageId] = [1, 1];
+      axios.patch.mockRejectedValue({ message: 'Incorrect header' });
+
+      await expect(
+        actions.editMessage(
+          { commit },
+          { conversationId, messageId, content: 'edited' }
+        )
+      ).rejects.toThrow(Error);
+      expect(commit.mock.calls).toEqual([]);
+    });
   });
 
   describe('#deleteConversation', () => {

@@ -212,4 +212,107 @@ RSpec.describe Channel::Telegram do
       expect(telegram_channel.send_message_on_telegram(message)).to eq('telegram_456')
     end
   end
+
+  describe '#edit_message_on_telegram' do
+    it 'sends editMessageText with business_connection_id' do
+      conversation = create(
+        :conversation,
+        inbox: telegram_channel.inbox,
+        additional_attributes: {
+          'chat_id' => '123',
+          'business_connection_id' => 'biz-123'
+        }
+      )
+      message = create(
+        :message,
+        message_type: :outgoing,
+        content: 'old',
+        conversation: conversation,
+        source_id: '456'
+      )
+
+      stub_request(:post, "https://api.telegram.org/bot#{telegram_channel.bot_token}/editMessageText")
+        .with(
+          body: {
+            chat_id: '123',
+            message_id: '456',
+            text: 'new text',
+            parse_mode: 'HTML',
+            business_connection_id: 'biz-123'
+          }
+        )
+        .to_return(
+          status: 200,
+          body: { ok: true, result: true }.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      result = telegram_channel.edit_message_on_telegram(message, 'new text')
+      expect(result).to eq({ success: true })
+    end
+  end
+
+  describe '#delete_message_on_telegram' do
+    it 'uses deleteBusinessMessages when business_connection_id is present' do
+      conversation = create(
+        :conversation,
+        inbox: telegram_channel.inbox,
+        additional_attributes: {
+          'chat_id' => '123',
+          'business_connection_id' => 'biz-123'
+        }
+      )
+      message = create(
+        :message,
+        message_type: :outgoing,
+        conversation: conversation,
+        source_id: '456'
+      )
+
+      stub_request(:post, "https://api.telegram.org/bot#{telegram_channel.bot_token}/deleteBusinessMessages")
+        .with(
+          body: {
+            business_connection_id: 'biz-123',
+            message_ids: ['456']
+          }
+        )
+        .to_return(
+          status: 200,
+          body: { ok: true, result: true }.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      result = telegram_channel.delete_message_on_telegram(message)
+      expect(result).to eq({ success: true })
+    end
+
+    it 'falls back to deleteMessage when business_connection_id is absent' do
+      conversation = create(
+        :conversation,
+        inbox: telegram_channel.inbox,
+        additional_attributes: {
+          'chat_id' => '123'
+        }
+      )
+      message = create(
+        :message,
+        message_type: :outgoing,
+        conversation: conversation,
+        source_id: '456'
+      )
+
+      stub_request(:post, "https://api.telegram.org/bot#{telegram_channel.bot_token}/deleteMessage")
+        .with(
+          body: 'chat_id=123&message_id=456'
+        )
+        .to_return(
+          status: 200,
+          body: { ok: true, result: true }.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      result = telegram_channel.delete_message_on_telegram(message)
+      expect(result).to eq({ success: true })
+    end
+  end
 end

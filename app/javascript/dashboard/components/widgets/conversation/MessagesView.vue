@@ -243,6 +243,9 @@ export default {
 
       return { incoming, outgoing };
     },
+    inboxSupportsEditOutgoing() {
+      return this.inboxHasFeature(INBOX_FEATURES.EDIT_OUTGOING);
+    },
   },
 
   watch: {
@@ -470,6 +473,7 @@ export default {
       :first-unread-id="unReadMessages[0]?.id"
       :is-an-email-channel="isAnEmailChannel"
       :inbox-supports-reply-to="inboxSupportsReplyTo"
+      :inbox-supports-edit-outgoing="inboxSupportsEditOutgoing"
       :messages="getMessages"
       @retry="handleMessageRetry"
     >

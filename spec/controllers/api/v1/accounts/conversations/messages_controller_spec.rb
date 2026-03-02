@@ -318,7 +318,15 @@ RSpec.describe 'Conversation Messages API', type: :request do
   end
 
   describe 'DELETE /api/v1/accounts/{account.id}/conversations/:conversation_id/messages/:id' do
-    let(:message) { create(:message, account: account, content_attributes: { bcc_emails: ['hello@chatwoot.com'] }) }
+    let(:message) do
+      create(
+        :message,
+        account: account,
+        message_type: :outgoing,
+        sender: create(:user, account: account),
+        content_attributes: { bcc_emails: ['hello@chatwoot.com'] }
+      )
+    end
     let(:conversation) { message.conversation }
 
     context 'when it is an unauthenticated user' do
@@ -454,6 +462,15 @@ RSpec.describe 'Conversation Messages API', type: :request do
           ), params: { status: 'failed', external_error: 'err' }, headers: agent.create_new_auth_token, as: :json
           expect(response).to have_http_status(:forbidden)
         end
+
+        it 'returns forbidden for content edit on unsupported inbox type' do
+          patch api_v1_account_conversation_message_url(
+            account_id: account.id,
+            conversation_id: conversation.display_id,
+            id: message.id
+          ), params: { content: 'updated' }, headers: agent.create_new_auth_token, as: :json
+          expect(response).to have_http_status(:forbidden)
+        end
       end
 
       context 'when agent has API inbox' do
@@ -499,6 +516,74 @@ RSpec.describe 'Conversation Messages API', type: :request do
           expect(response).to have_http_status(:success)
           expect(message.reload.status).to eq('sent')
           expect(message.reload.external_error).to be_nil
+        end
+
+        context 'when editing content' do
+          let!(:message) do
+            create(
+              :message,
+              conversation: conversation,
+              account: account,
+              message_type: :outgoing,
+              sender: agent,
+              content: 'original content'
+            )
+          end
+
+          it 'updates message content' do
+            patch api_v1_account_conversation_message_url(
+              account_id: account.id,
+              conversation_id: conversation.display_id,
+              id: message.id
+            ), params: { content: 'updated content' }, headers: agent.create_new_auth_token, as: :json
+
+            expect(response).to have_http_status(:success)
+            expect(message.reload.content).to eq('updated content')
+          end
+
+          it 'returns unprocessable_entity when content is blank' do
+            patch api_v1_account_conversation_message_url(
+              account_id: account.id,
+              conversation_id: conversation.display_id,
+              id: message.id
+            ), params: { content: '   ' }, headers: agent.create_new_auth_token, as: :json
+
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(message.reload.content).to eq('original content')
+          end
+        end
+      end
+
+      context 'when agent has Telegram inbox' do
+        let(:telegram_channel) { create(:channel_telegram, account: account) }
+        let(:telegram_inbox) { telegram_channel.inbox }
+        let!(:conversation) { create(:conversation, inbox: telegram_inbox, account: account, additional_attributes: { 'chat_id' => '123' }) }
+        let!(:message) do
+          create(
+            :message,
+            conversation: conversation,
+            account: account,
+            message_type: :outgoing,
+            sender: agent,
+            content: 'original content',
+            source_id: '12345'
+          )
+        end
+
+        before do
+          create(:inbox_member, inbox: telegram_inbox, user: agent)
+          allow_any_instance_of(Channel::Telegram).to receive(:edit_message_on_telegram).and_return({ success: true })
+        end
+
+        it 'edits telegram message content' do
+          patch api_v1_account_conversation_message_url(
+            account_id: account.id,
+            conversation_id: conversation.display_id,
+            id: message.id
+          ), params: { content: 'updated telegram content' }, headers: agent.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:success)
+          expect(message.reload.content).to eq('updated telegram content')
         end
       end
     end

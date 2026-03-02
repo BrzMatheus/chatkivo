@@ -6,6 +6,7 @@ import { INBOX_TYPES } from 'dashboard/helper/inbox';
 export const INBOX_FEATURES = {
   REPLY_TO: 'replyTo',
   REPLY_TO_OUTGOING: 'replyToOutgoing',
+  EDIT_OUTGOING: 'editOutgoing',
 };
 
 // This is a single source of truth for inbox features
@@ -26,6 +27,7 @@ export const INBOX_FEATURE_MAP = {
     INBOX_TYPES.TELEGRAM,
     INBOX_TYPES.API,
   ],
+  [INBOX_FEATURES.EDIT_OUTGOING]: [INBOX_TYPES.TELEGRAM, INBOX_TYPES.API],
 };
 
 /**

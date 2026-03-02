@@ -44,14 +44,17 @@ class Webhooks::TelegramEventsJob < ApplicationJob
                       "has_message=#{telegram_params[:message].present?}, " \
                       "has_business_message=#{telegram_params[:business_message].present?}, " \
                       "has_business_connection=#{telegram_params[:business_connection].present?}, " \
-                      "has_edited=#{telegram_params[:edited_message].present? || telegram_params[:edited_business_message].present?}"
+                      "has_edited=#{telegram_params[:edited_message].present? || telegram_params[:edited_business_message].present?}, " \
+                      "has_deleted=#{telegram_params[:deleted_business_messages].present?}"
 
     if telegram_params[:business_connection].present?
       sync_channel_business_connection_id(channel, telegram_params[:business_connection])
       return
     end
 
-    if telegram_params[:edited_message].present? || telegram_params[:edited_business_message].present?
+    if telegram_params[:deleted_business_messages].present?
+      Telegram::DeleteMessageUpdateService.new(inbox: channel.inbox, params: telegram_params).perform
+    elsif telegram_params[:edited_message].present? || telegram_params[:edited_business_message].present?
       Telegram::UpdateMessageService.new(inbox: channel.inbox, params: telegram_params).perform
     else
       Telegram::IncomingMessageService.new(inbox: channel.inbox, params: telegram_params).perform

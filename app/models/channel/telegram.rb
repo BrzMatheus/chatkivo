@@ -42,6 +42,59 @@ class Channel::Telegram < ApplicationRecord
     message_id
   end
 
+  def edit_message_on_telegram(message, content)
+    chat_id_value = chat_id(message)
+    return failed_result('Telegram chat_id is missing for this conversation') if chat_id_value.blank?
+    return failed_result('Telegram source_id is missing for this message') if message.source_id.blank?
+
+    response = HTTParty.post(
+      "#{telegram_api_url}/editMessageText",
+      body: {
+        chat_id: chat_id_value,
+        message_id: message.source_id,
+        text: convert_markdown_to_telegram_html(content),
+        parse_mode: 'HTML'
+      }.merge(optional_business_connection_id(message))
+    )
+
+    return success_result if telegram_response_success?(response)
+
+    failed_result(telegram_error_message(response))
+  rescue StandardError => e
+    failed_result(e.message)
+  end
+
+  def delete_message_on_telegram(message)
+    return failed_result('Telegram source_id is missing for this message') if message.source_id.blank?
+
+    response = if business_connection_id(message).present?
+                 HTTParty.post(
+                   "#{telegram_api_url}/deleteBusinessMessages",
+                   body: {
+                     business_connection_id: business_connection_id(message),
+                     message_ids: [message.source_id]
+                   }
+                 )
+               else
+                 chat_id_value = chat_id(message)
+                 return failed_result('Telegram chat_id is missing for this conversation') if chat_id_value.blank?
+
+                 HTTParty.post(
+                   "#{telegram_api_url}/deleteMessage",
+                   body: {
+                     chat_id: chat_id_value,
+                     message_id: message.source_id
+                   }
+                 )
+               end
+
+    return success_result if telegram_response_success?(response)
+
+    failed_result(telegram_error_message(response))
+  rescue StandardError => e
+    failed_result(e.message)
+  end
+
   def get_telegram_profile_image(user_id)
     # get profile image from telegram
     response = HTTParty.get("#{telegram_api_url}/getUserProfilePhotos", query: { user_id: user_id })
@@ -112,6 +165,32 @@ class Channel::Telegram < ApplicationRecord
   end
 
   private
+
+  def success_result
+    { success: true }
+  end
+
+  def failed_result(error)
+    { success: false, error: error }
+  end
+
+  def telegram_response_success?(response)
+    response.success? && response.parsed_response['ok'] != false
+  end
+
+  def telegram_error_message(response)
+    return 'Unknown Telegram error' if response.blank?
+
+    parsed_response = response.parsed_response || {}
+    return "#{parsed_response['error_code']}, #{parsed_response['description']}" if parsed_response['description'].present?
+
+    response.body.to_s.presence || 'Unknown Telegram error'
+  end
+
+  def optional_business_connection_id(message)
+    value = business_connection_id(message)
+    value.present? ? { business_connection_id: value } : {}
+  end
 
   def telegram_channel_supports_additional_attributes?
     has_attribute?(:additional_attributes)

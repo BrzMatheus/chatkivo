@@ -389,6 +389,17 @@ const actions = {
     }
   },
 
+  editMessage: async ({ commit }, { conversationId, messageId, content }) => {
+    try {
+      const { data } = await MessageApi.update(conversationId, messageId, {
+        content,
+      });
+      commit(types.ADD_MESSAGE, data);
+    } catch (error) {
+      throw new Error(error);
+    }
+  },
+
   deleteConversation: async ({ commit, dispatch }, conversationId) => {
     try {
       await ConversationApi.delete(conversationId);
