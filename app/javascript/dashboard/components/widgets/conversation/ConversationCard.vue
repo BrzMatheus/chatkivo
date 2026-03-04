@@ -120,10 +120,7 @@ const showLabelsSection = computed(() => {
 });
 
 const messagePreviewClass = computed(() => {
-  return [
-    hasUnread.value ? 'font-medium text-n-slate-12' : 'text-n-slate-11',
-    'ltr:pr-12 rtl:pl-12',
-  ];
+  return [hasUnread.value ? 'font-medium text-n-slate-12' : 'text-n-slate-11'];
 });
 
 const conversationPath = computed(() => {
@@ -330,74 +327,76 @@ const deleteConversation = () => {
           <PriorityMark :priority="chat.priority" class="flex-shrink-0" />
         </div>
       </div>
-      <h4
-        class="conversation--user text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
-        :class="hasUnread ? 'font-semibold' : 'font-medium'"
-      >
-        {{ currentContact.name }}
-      </h4>
-      <VoiceCallStatus
-        v-if="voiceCallData.status"
-        key="voice-status-row"
-        :status="voiceCallData.status"
-        :direction="voiceCallData.direction"
-        :message-preview-class="messagePreviewClass"
-      />
-      <MessagePreview
-        v-else-if="lastMessageInChat"
-        key="message-preview"
-        :message="lastMessageInChat"
-        class="my-0 mx-2 leading-6 h-6 flex-1 min-w-0 text-sm"
-        :class="messagePreviewClass"
-      />
-      <p
-        v-else
-        key="no-messages"
-        class="text-n-slate-11 text-sm my-0 mx-2 leading-6 h-6 flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-        :class="messagePreviewClass"
-      >
-        <fluent-icon
-          size="16"
-          class="-mt-0.5 align-middle inline-block text-n-slate-10"
-          icon="info"
-        />
-        <span class="mx-0.5">
-          {{ $t(`CHAT_LIST.NO_MESSAGES`) }}
-        </span>
-      </p>
-      <div
-        class="absolute flex flex-col ltr:right-3 rtl:left-3"
-        :class="showMetaSection ? 'top-8' : 'top-4'"
-      >
-        <span
-          v-if="assignedTeam"
-          class="ml-auto mb-1 px-2 py-0.5 rounded-full bg-n-slate-3 text-xs font-medium text-n-slate-12 truncate max-w-[120px]"
-          :title="`${$t('CHAT_LIST.ASSIGNED_TEAM')}: ${assignedTeam.name}`"
-        >
-          {{ assignedTeam.name }}
-        </span>
-        <div class="flex items-center gap-1 ml-auto">
-          <span class="font-normal leading-4 text-xxs">
-            <TimeAgo
-              :last-activity-timestamp="chat.timestamp"
-              :created-at-timestamp="chat.created_at"
-            />
-          </span>
-          <button
-            v-if="props.enableContextMenu"
-            type="button"
-            class="flex items-center justify-center text-n-slate-9 hover:text-n-slate-12 focus:outline-none"
-            @mousedown.prevent="openContextMenuFromButton"
+      <div class="mx-2 flex items-start gap-2 min-w-0">
+        <div class="flex-1 min-w-0">
+          <h4
+            class="conversation--user text-sm my-0 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap text-n-slate-12"
+            :class="hasUnread ? 'font-semibold' : 'font-medium'"
           >
-            <fluent-icon icon="chevron-down" size="12" />
-          </button>
+            {{ currentContact.name }}
+          </h4>
+          <VoiceCallStatus
+            v-if="voiceCallData.status"
+            key="voice-status-row"
+            :status="voiceCallData.status"
+            :direction="voiceCallData.direction"
+            :message-preview-class="messagePreviewClass"
+            class="!mx-0"
+          />
+          <MessagePreview
+            v-else-if="lastMessageInChat"
+            key="message-preview"
+            :message="lastMessageInChat"
+            class="my-0 mx-0 leading-6 h-6 flex-1 min-w-0 text-sm"
+            :class="messagePreviewClass"
+          />
+          <p
+            v-else
+            key="no-messages"
+            class="text-n-slate-11 text-sm my-0 mx-0 leading-6 h-6 flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+            :class="messagePreviewClass"
+          >
+            <fluent-icon
+              size="16"
+              class="-mt-0.5 align-middle inline-block text-n-slate-10"
+              icon="info"
+            />
+            <span class="mx-0.5">
+              {{ $t(`CHAT_LIST.NO_MESSAGES`) }}
+            </span>
+          </p>
         </div>
-        <span
-          class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ltr:ml-auto rtl:mr-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"
-          :class="hasUnread ? 'block' : 'hidden'"
-        >
-          {{ unreadCount > 9 ? '9+' : unreadCount }}
-        </span>
+        <div class="flex flex-col items-end flex-shrink-0">
+          <span
+            v-if="assignedTeam"
+            class="mb-1 px-2 py-0.5 rounded-full bg-n-slate-3 text-xs font-medium text-n-slate-12 truncate max-w-[120px]"
+            :title="`${$t('CHAT_LIST.ASSIGNED_TEAM')}: ${assignedTeam.name}`"
+          >
+            {{ assignedTeam.name }}
+          </span>
+          <div class="flex items-center gap-1">
+            <span class="font-normal leading-4 text-xxs whitespace-nowrap">
+              <TimeAgo
+                :last-activity-timestamp="chat.timestamp"
+                :created-at-timestamp="chat.created_at"
+              />
+            </span>
+            <button
+              v-if="props.enableContextMenu"
+              type="button"
+              class="flex items-center justify-center text-n-slate-9 hover:text-n-slate-12 focus:outline-none"
+              @mousedown.prevent="openContextMenuFromButton"
+            >
+              <fluent-icon icon="chevron-down" size="12" />
+            </button>
+          </div>
+          <span
+            class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"
+            :class="hasUnread ? 'block' : 'hidden'"
+          >
+            {{ unreadCount > 9 ? '9+' : unreadCount }}
+          </span>
+        </div>
       </div>
       <CardLabels
         v-if="showLabelsSection"
