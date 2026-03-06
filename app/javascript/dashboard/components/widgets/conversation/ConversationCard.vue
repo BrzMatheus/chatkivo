@@ -50,6 +50,7 @@ const router = useRouter();
 const store = useStore();
 
 const hovered = ref(false);
+const isCardHovered = ref(false);
 const showContextMenu = ref(false);
 const contextMenu = ref({
   x: null,
@@ -96,7 +97,7 @@ const hasPendingUnread = computed(() => {
 });
 
 const showContextMenuTrigger = computed(() => {
-  return isActiveChat.value || props.selected;
+  return isActiveChat.value || props.selected || isCardHovered.value;
 });
 
 const voiceCallData = computed(() => ({
@@ -181,6 +182,14 @@ const onSelectConversation = checked => {
   } else {
     emit('deSelectConversation', props.chat.id, inbox.value.id);
   }
+};
+
+const onCardMouseEnter = () => {
+  isCardHovered.value = true;
+};
+
+const onCardMouseLeave = () => {
+  isCardHovered.value = false;
 };
 
 const openContextMenu = e => {
@@ -274,6 +283,8 @@ const deleteConversation = () => {
     }"
     @click="onCardClick"
     @contextmenu="openContextMenu($event)"
+    @mouseenter="onCardMouseEnter"
+    @mouseleave="onCardMouseLeave"
   >
     <div
       class="relative"
@@ -394,7 +405,7 @@ const deleteConversation = () => {
               :class="
                 showContextMenuTrigger
                   ? 'ltr:pr-7 rtl:pl-7'
-                  : 'ltr:pr-0 rtl:pl-0 group-hover:ltr:pr-7 group-hover:rtl:pl-7 group-focus-within:ltr:pr-7 group-focus-within:rtl:pl-7'
+                  : 'ltr:pr-0 rtl:pl-0'
               "
             >
               <span
@@ -414,11 +425,11 @@ const deleteConversation = () => {
             <button
               v-if="props.enableContextMenu"
               type="button"
-              class="absolute ltr:right-1 rtl:left-1 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-n-slate-9 hover:text-n-slate-12 focus:outline-none transition-opacity duration-150"
+              class="absolute ltr:right-1 rtl:left-1 top-1/2 -translate-y-1/2 w-4 h-4 z-10 flex items-center justify-center text-n-slate-10 hover:text-n-slate-12 focus:outline-none transition-opacity duration-150"
               :class="
                 showContextMenuTrigger
                   ? 'opacity-100 pointer-events-auto'
-                  : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto'
+                  : 'opacity-0 pointer-events-none'
               "
               @mousedown.prevent="openContextMenuFromButton"
             >
