@@ -14,6 +14,7 @@ import PriorityMark from './PriorityMark.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
 import VoiceCallStatus from './VoiceCallStatus.vue';
+import { MESSAGE_TYPE } from 'shared/constants/messages';
 
 const props = defineProps({
   activeLabel: { type: String, default: '' },
@@ -86,6 +87,18 @@ const isInboxNameVisible = computed(() => !activeInbox.value);
 
 const lastMessageInChat = computed(() => getLastMessage(props.chat));
 
+const isLastMessageOutgoing = computed(() => {
+  return lastMessageInChat.value?.message_type === MESSAGE_TYPE.OUTGOING;
+});
+
+const hasPendingUnread = computed(() => {
+  return hasUnread.value && !isLastMessageOutgoing.value;
+});
+
+const showContextMenuTrigger = computed(() => {
+  return isActiveChat.value || props.selected;
+});
+
 const voiceCallData = computed(() => ({
   status: props.chat.additional_attributes?.call_status,
   direction: props.chat.additional_attributes?.call_direction,
@@ -116,7 +129,7 @@ const showLabelsSection = computed(() => {
 });
 
 const messagePreviewClass = computed(() => {
-  return [hasUnread.value ? 'font-medium text-n-slate-12' : 'text-n-slate-11'];
+  return [hasPendingUnread.value ? 'font-medium text-n-slate-12' : 'text-n-slate-11'];
 });
 
 const conversationPath = computed(() => {
@@ -320,7 +333,7 @@ const deleteConversation = () => {
         <div class="flex-1 min-w-0">
           <h4
             class="conversation--user text-sm my-0 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap text-n-slate-12"
-            :class="hasUnread ? 'font-semibold' : 'font-medium'"
+            :class="hasPendingUnread ? 'font-semibold' : 'font-medium'"
           >
             {{ currentContact.name }}
           </h4>
@@ -375,26 +388,35 @@ const deleteConversation = () => {
             </span>
           </div>
 
-          <div class="flex items-center justify-end gap-1 min-h-5">
-            <span
-              v-if="assignedTeam"
-              class="px-2 py-0.5 rounded-full bg-n-slate-3 text-xs font-medium text-n-slate-12 truncate max-w-[120px]"
-              :title="`${$t('CHAT_LIST.ASSIGNED_TEAM')}: ${assignedTeam.name}`"
+          <div class="relative flex items-center justify-end min-h-5">
+            <div
+              class="flex items-center justify-end gap-1 transition-all duration-150"
+              :class="
+                showContextMenuTrigger
+                  ? 'ltr:pr-3 rtl:pl-3'
+                  : 'ltr:pr-0 rtl:pl-0 group-hover:ltr:pr-3 group-hover:rtl:pl-3 group-focus-within:ltr:pr-3 group-focus-within:rtl:pl-3'
+              "
             >
-              {{ assignedTeam.name }}
-            </span>
-            <span
-              v-if="hasUnread"
-              class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"
-            >
-              {{ unreadCount > 9 ? '9+' : unreadCount }}
-            </span>
+              <span
+                v-if="assignedTeam"
+                class="px-2 py-0.5 rounded-full bg-n-slate-3 text-xs font-medium text-n-slate-12 truncate max-w-[120px]"
+                :title="`${$t('CHAT_LIST.ASSIGNED_TEAM')}: ${assignedTeam.name}`"
+              >
+                {{ assignedTeam.name }}
+              </span>
+              <span
+                v-if="hasPendingUnread"
+                class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"
+              >
+                {{ unreadCount > 9 ? '9+' : unreadCount }}
+              </span>
+            </div>
             <button
               v-if="props.enableContextMenu"
               type="button"
-              class="flex items-center justify-center text-n-slate-9 hover:text-n-slate-12 focus:outline-none transition-opacity duration-150"
+              class="absolute ltr:right-0 rtl:left-0 top-1/2 -translate-y-1/2 flex items-center justify-center text-n-slate-9 hover:text-n-slate-12 focus:outline-none transition-opacity duration-150"
               :class="
-                isActiveChat || selected
+                showContextMenuTrigger
                   ? 'opacity-100 pointer-events-auto'
                   : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto'
               "
