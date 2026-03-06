@@ -393,8 +393,8 @@ const deleteConversation = () => {
               class="flex items-center justify-end gap-1 transition-all duration-150"
               :class="
                 showContextMenuTrigger
-                  ? 'ltr:pr-3 rtl:pl-3'
-                  : 'ltr:pr-0 rtl:pl-0 group-hover:ltr:pr-3 group-hover:rtl:pl-3 group-focus-within:ltr:pr-3 group-focus-within:rtl:pl-3'
+                  ? 'ltr:pr-7 rtl:pl-7'
+                  : 'ltr:pr-0 rtl:pl-0 group-hover:ltr:pr-7 group-hover:rtl:pl-7 group-focus-within:ltr:pr-7 group-focus-within:rtl:pl-7'
               "
             >
               <span
@@ -414,7 +414,7 @@ const deleteConversation = () => {
             <button
               v-if="props.enableContextMenu"
               type="button"
-              class="absolute ltr:right-0 rtl:left-0 top-1/2 -translate-y-1/2 flex items-center justify-center text-n-slate-9 hover:text-n-slate-12 focus:outline-none transition-opacity duration-150"
+              class="absolute ltr:right-1 rtl:left-1 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-n-slate-9 hover:text-n-slate-12 focus:outline-none transition-opacity duration-150"
               :class="
                 showContextMenuTrigger
                   ? 'opacity-100 pointer-events-auto'
