@@ -160,8 +160,11 @@ class Channel::Telegram < ApplicationRecord
     message.conversation.additional_attributes&.[]('direct_messages_topic_id')
   end
 
-  def reply_to_message_id(message)
-    message.content_attributes['in_reply_to_external_id']
+  def reply_parameters(message)
+    reply_to_message_id = message.content_attributes&.[]('in_reply_to_external_id')
+    return {} if reply_to_message_id.blank?
+
+    { reply_parameters: { message_id: reply_to_message_id }.to_json }
   end
 
   private
@@ -250,7 +253,7 @@ class Channel::Telegram < ApplicationRecord
       chat_id_value,
       message.outgoing_content,
       reply_markup(message),
-      reply_to_message_id(message),
+      reply_parameters(message),
       business_connection_id: biz_conn_id,
       message_thread_id: message_thread_id_value,
       direct_messages_topic_id: direct_messages_topic_id_value
@@ -302,20 +305,21 @@ class Channel::Telegram < ApplicationRecord
     stripped_html.gsub(%r{<br\s*/?>}, "\n")
   end
 
-  def message_request(chat_id, text, reply_markup = nil, reply_to_message_id = nil, business_connection_id: nil,
+  def message_request(chat_id, text, reply_markup = nil, reply_parameters = {}, business_connection_id: nil,
                       message_thread_id: nil, direct_messages_topic_id: nil)
     optional_body = {}
     optional_body[:business_connection_id] = business_connection_id if business_connection_id
     optional_body[:message_thread_id] = message_thread_id if message_thread_id
     optional_body[:direct_messages_topic_id] = direct_messages_topic_id if direct_messages_topic_id
 
+    body = {
+      chat_id: chat_id,
+      text: text,
+      parse_mode: 'HTML'
+    }.merge(optional_body).merge(reply_parameters)
+    body[:reply_markup] = reply_markup if reply_markup.present?
+
     HTTParty.post("#{telegram_api_url}/sendMessage",
-                  body: {
-                    chat_id: chat_id,
-                    text: text,
-                    reply_markup: reply_markup,
-                    parse_mode: 'HTML',
-                    reply_to_message_id: reply_to_message_id
-                  }.merge(optional_body))
+                  body: body)
   end
 end

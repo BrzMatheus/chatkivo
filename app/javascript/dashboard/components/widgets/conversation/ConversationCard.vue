@@ -106,11 +106,7 @@ const showInboxName = computed(() => {
 });
 
 const showMetaSection = computed(() => {
-  return (
-    showInboxName.value ||
-    (props.showAssignee && assignee.value.name) ||
-    props.chat.priority
-  );
+  return showInboxName.value || props.chat.priority;
 });
 
 const hasSlaPolicyId = computed(() => props.chat?.sla_policy_id);
@@ -314,16 +310,9 @@ const deleteConversation = () => {
         <div
           class="flex items-center gap-2 flex-shrink-0"
           :class="{
-            'flex-1 justify-between': !showInboxName,
+            'flex-1 justify-end': !showInboxName,
           }"
         >
-          <span
-            v-if="showAssignee && assignee.name"
-            class="text-n-slate-11 text-xs font-medium leading-3 py-0.5 px-0 inline-flex items-center truncate"
-          >
-            <fluent-icon icon="person" size="12" class="text-n-slate-11" />
-            {{ assignee.name }}
-          </span>
           <PriorityMark :priority="chat.priority" class="flex-shrink-0" />
         </div>
       </div>
@@ -366,20 +355,39 @@ const deleteConversation = () => {
             </span>
           </p>
         </div>
-        <div class="flex flex-col items-end flex-shrink-0">
-          <span
-            v-if="assignedTeam"
-            class="mb-1 px-2 py-0.5 rounded-full bg-n-slate-3 text-xs font-medium text-n-slate-12 truncate max-w-[120px]"
-            :title="`${$t('CHAT_LIST.ASSIGNED_TEAM')}: ${assignedTeam.name}`"
+        <div class="flex flex-col items-end flex-shrink-0 gap-1 pt-0.5">
+          <div
+            class="flex items-center justify-end gap-1 min-h-4 max-w-[180px]"
           >
-            {{ assignedTeam.name }}
-          </span>
-          <div class="flex items-center gap-1">
+            <span
+              v-if="showAssignee && assignee.name"
+              class="text-n-slate-11 text-xs font-medium leading-4 py-0 px-0 inline-flex items-center truncate max-w-[110px]"
+              :title="assignee.name"
+            >
+              <fluent-icon icon="person" size="12" class="text-n-slate-11" />
+              {{ assignee.name }}
+            </span>
             <span class="font-normal leading-4 text-xxs whitespace-nowrap">
               <TimeAgo
                 :last-activity-timestamp="chat.timestamp"
                 :created-at-timestamp="chat.created_at"
               />
+            </span>
+          </div>
+
+          <div class="flex items-center justify-end gap-1 min-h-5">
+            <span
+              v-if="assignedTeam"
+              class="px-2 py-0.5 rounded-full bg-n-slate-3 text-xs font-medium text-n-slate-12 truncate max-w-[120px]"
+              :title="`${$t('CHAT_LIST.ASSIGNED_TEAM')}: ${assignedTeam.name}`"
+            >
+              {{ assignedTeam.name }}
+            </span>
+            <span
+              v-if="hasUnread"
+              class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"
+            >
+              {{ unreadCount > 9 ? '9+' : unreadCount }}
             </span>
             <button
               v-if="props.enableContextMenu"
@@ -390,12 +398,6 @@ const deleteConversation = () => {
               <fluent-icon icon="chevron-down" size="12" />
             </button>
           </div>
-          <span
-            class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"
-            :class="hasUnread ? 'block' : 'hidden'"
-          >
-            {{ unreadCount > 9 ? '9+' : unreadCount }}
-          </span>
         </div>
       </div>
       <CardLabels

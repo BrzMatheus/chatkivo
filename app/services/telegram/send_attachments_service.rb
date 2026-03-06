@@ -35,11 +35,11 @@ class Telegram::SendAttachmentsService
   def send_attachment_by_type(attachment)
     type = attachment_type(attachment[:file_type])
     chat_id = channel.chat_id(message)
-    reply_to_message_id = channel.reply_to_message_id(message)
+    reply_parameters = channel.reply_parameters(message)
 
     temp_file_path = save_attachment_to_tempfile(attachment)
     begin
-      response = send_file_by_type(type, chat_id, temp_file_path, reply_to_message_id)
+      response = send_file_by_type(type, chat_id, temp_file_path, reply_parameters)
     ensure
       File.delete(temp_file_path) if File.exist?(temp_file_path)
     end
@@ -50,20 +50,20 @@ class Telegram::SendAttachmentsService
     { 'audio' => 'audio', 'image' => 'photo', 'file' => 'document', 'video' => 'video' }[file_type] || 'document'
   end
 
-  def send_file_by_type(type, chat_id, file_path, reply_to_message_id)
+  def send_file_by_type(type, chat_id, file_path, reply_parameters)
     case type
     when 'photo'
-      send_photo(chat_id, file_path, reply_to_message_id)
+      send_photo(chat_id, file_path, reply_parameters)
     when 'video'
-      send_video(chat_id, file_path, reply_to_message_id)
+      send_video(chat_id, file_path, reply_parameters)
     when 'audio'
-      send_audio(chat_id, file_path, reply_to_message_id)
+      send_audio(chat_id, file_path, reply_parameters)
     else
-      send_document(chat_id, file_path, reply_to_message_id)
+      send_document(chat_id, file_path, reply_parameters)
     end
   end
 
-  def send_photo(chat_id, file_path, reply_to_message_id)
+  def send_photo(chat_id, file_path, reply_parameters)
     File.open(file_path, 'rb') do |file|
       HTTParty.post("#{channel.telegram_api_url}/sendPhoto",
                     body: {
@@ -71,13 +71,13 @@ class Telegram::SendAttachmentsService
                       **business_connection_body,
                       **topic_body,
                       photo: file,
-                      reply_to_message_id: reply_to_message_id
+                      **reply_parameters
                     },
                     multipart: true)
     end
   end
 
-  def send_video(chat_id, file_path, reply_to_message_id)
+  def send_video(chat_id, file_path, reply_parameters)
     File.open(file_path, 'rb') do |file|
       HTTParty.post("#{channel.telegram_api_url}/sendVideo",
                     body: {
@@ -85,13 +85,13 @@ class Telegram::SendAttachmentsService
                       **business_connection_body,
                       **topic_body,
                       video: file,
-                      reply_to_message_id: reply_to_message_id
+                      **reply_parameters
                     },
                     multipart: true)
     end
   end
 
-  def send_audio(chat_id, file_path, reply_to_message_id)
+  def send_audio(chat_id, file_path, reply_parameters)
     File.open(file_path, 'rb') do |file|
       HTTParty.post("#{channel.telegram_api_url}/sendAudio",
                     body: {
@@ -99,13 +99,13 @@ class Telegram::SendAttachmentsService
                       **business_connection_body,
                       **topic_body,
                       audio: file,
-                      reply_to_message_id: reply_to_message_id
+                      **reply_parameters
                     },
                     multipart: true)
     end
   end
 
-  def send_document(chat_id, file_path, reply_to_message_id)
+  def send_document(chat_id, file_path, reply_parameters)
     File.open(file_path, 'rb') do |file|
       HTTParty.post("#{channel.telegram_api_url}/sendDocument",
                     body: {
@@ -113,7 +113,7 @@ class Telegram::SendAttachmentsService
                       **business_connection_body,
                       **topic_body,
                       document: file,
-                      reply_to_message_id: reply_to_message_id
+                      **reply_parameters
                     },
                     multipart: true)
     end
