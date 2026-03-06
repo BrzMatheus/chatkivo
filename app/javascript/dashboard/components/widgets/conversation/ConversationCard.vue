@@ -392,7 +392,12 @@ const deleteConversation = () => {
             <button
               v-if="props.enableContextMenu"
               type="button"
-              class="flex items-center justify-center text-n-slate-9 hover:text-n-slate-12 focus:outline-none"
+              class="flex items-center justify-center text-n-slate-9 hover:text-n-slate-12 focus:outline-none transition-opacity duration-150"
+              :class="
+                isActiveChat || selected
+                  ? 'opacity-100 pointer-events-auto'
+                  : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto'
+              "
               @mousedown.prevent="openContextMenuFromButton"
             >
               <fluent-icon icon="chevron-down" size="12" />

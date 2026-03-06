@@ -1,3 +1,6 @@
+require 'faraday/multipart'
+require 'ostruct'
+
 # Telegram Attachment APIs: ref: https://core.telegram.org/bots/api#inputfile
 
 # All attachments are sent individually using multipart upload to avoid URL accessibility issues.
@@ -51,72 +54,62 @@ class Telegram::SendAttachmentsService
   end
 
   def send_file_by_type(type, chat_id, file_path, reply_parameters)
-    case type
-    when 'photo'
-      send_photo(chat_id, file_path, reply_parameters)
-    when 'video'
-      send_video(chat_id, file_path, reply_parameters)
-    when 'audio'
-      send_audio(chat_id, file_path, reply_parameters)
-    else
-      send_document(chat_id, file_path, reply_parameters)
+    endpoint = endpoint_for_type(type)
+    upload_key = upload_key_for_type(type)
+
+    File.open(file_path, 'rb') do |file|
+      file_name = File.basename(file_path)
+      mime_type = Marcel::MimeType.for(name: file_name) || 'application/octet-stream'
+
+      payload = {
+        chat_id: chat_id,
+        **business_connection_body,
+        **topic_body,
+        upload_key => Faraday::Multipart::FilePart.new(file, mime_type, file_name),
+        **reply_parameters
+      }
+
+      response = multipart_post_connection.post("#{channel.telegram_api_url}/#{endpoint}", payload)
+      parse_faraday_response(response)
     end
   end
 
-  def send_photo(chat_id, file_path, reply_parameters)
-    File.open(file_path, 'rb') do |file|
-      HTTParty.post("#{channel.telegram_api_url}/sendPhoto",
-                    body: {
-                      chat_id: chat_id,
-                      **business_connection_body,
-                      **topic_body,
-                      photo: file,
-                      **reply_parameters
-                    },
-                    multipart: true)
+  def endpoint_for_type(type)
+    {
+      'photo' => 'sendPhoto',
+      'video' => 'sendVideo',
+      'audio' => 'sendAudio'
+    }[type] || 'sendDocument'
+  end
+
+  def upload_key_for_type(type)
+    {
+      'photo' => :photo,
+      'video' => :video,
+      'audio' => :audio
+    }[type] || :document
+  end
+
+  def multipart_post_connection
+    @multipart_post_connection ||= Faraday.new do |f|
+      f.request :multipart
+      f.options.timeout = 300
+      f.options.open_timeout = 60
     end
   end
 
-  def send_video(chat_id, file_path, reply_parameters)
-    File.open(file_path, 'rb') do |file|
-      HTTParty.post("#{channel.telegram_api_url}/sendVideo",
-                    body: {
-                      chat_id: chat_id,
-                      **business_connection_body,
-                      **topic_body,
-                      video: file,
-                      **reply_parameters
-                    },
-                    multipart: true)
-    end
-  end
-
-  def send_audio(chat_id, file_path, reply_parameters)
-    File.open(file_path, 'rb') do |file|
-      HTTParty.post("#{channel.telegram_api_url}/sendAudio",
-                    body: {
-                      chat_id: chat_id,
-                      **business_connection_body,
-                      **topic_body,
-                      audio: file,
-                      **reply_parameters
-                    },
-                    multipart: true)
-    end
-  end
-
-  def send_document(chat_id, file_path, reply_parameters)
-    File.open(file_path, 'rb') do |file|
-      HTTParty.post("#{channel.telegram_api_url}/sendDocument",
-                    body: {
-                      chat_id: chat_id,
-                      **business_connection_body,
-                      **topic_body,
-                      document: file,
-                      **reply_parameters
-                    },
-                    multipart: true)
-    end
+  def parse_faraday_response(response)
+    parsed = JSON.parse(response.body)
+    OpenStruct.new(success?: response.success?, parsed_response: parsed)
+  rescue JSON::ParserError
+    OpenStruct.new(
+      success?: false,
+      parsed_response: {
+        'ok' => false,
+        'error_code' => response.status,
+        'description' => response.reason_phrase
+      }
+    )
   end
 
   # Telegram picks up the file name from original field name, so we need to save the file with the original name.
