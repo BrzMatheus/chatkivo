@@ -130,7 +130,9 @@ const showLabelsSection = computed(() => {
 });
 
 const messagePreviewClass = computed(() => {
-  return [hasPendingUnread.value ? 'font-medium text-n-slate-12' : 'text-n-slate-11'];
+  return [
+    hasPendingUnread.value ? 'font-medium text-n-slate-12' : 'text-n-slate-11',
+  ];
 });
 
 const conversationPath = computed(() => {
@@ -419,7 +421,11 @@ const deleteConversation = () => {
                 v-if="hasPendingUnread"
                 class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"
               >
-                {{ unreadCount > 9 ? '9+' : unreadCount }}
+                {{
+                  unreadCount > 9
+                    ? $t('CONVERSATION.UNREAD_OVER_NINE')
+                    : unreadCount
+                }}
               </span>
             </div>
             <button
@@ -433,6 +439,7 @@ const deleteConversation = () => {
               "
               @mousedown.prevent="openContextMenuFromButton"
             >
+              <!-- eslint-disable-next-line vue/no-bare-strings-in-template, @intlify/vue-i18n/no-raw-text -->
               <fluent-icon icon="chevron-down" size="12" />
             </button>
           </div>
