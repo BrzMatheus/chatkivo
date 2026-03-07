@@ -98,7 +98,7 @@ const actions = {
         data: payload,
       });
       if (!payload.length) {
-        commit(types.SET_ALL_MESSAGES_LOADED);
+        commit(types.SET_ALL_MESSAGES_LOADED, data.conversationId);
       }
     } catch (error) {
       // Handle error
@@ -193,7 +193,10 @@ const actions = {
 
   async setActiveChat({ commit, dispatch }, { data, after }) {
     commit(types.SET_CURRENT_CHAT_WINDOW, data);
-    commit(types.CLEAR_ALL_MESSAGES_LOADED);
+    commit(types.CLEAR_ALL_MESSAGES_LOADED, data.id);
+    if (data.dataFetched === true) {
+      return;
+    }
     // Forçar o carregamento de mensagens se a conversa tiver apenas 1 mensagem (que veio da lista)
     if (data.dataFetched === undefined || data.messages?.length <= 1) {
       try {
@@ -204,7 +207,7 @@ const actions = {
           before,
           conversationId: data.id,
         });
-        data.dataFetched = true;
+        commit(types.SET_CHAT_DATA_FETCHED, data.id);
       } catch (error) {
         // Ignore error
       }
@@ -217,14 +220,17 @@ const actions = {
         conversationId,
         agentId,
       });
-      dispatch('setCurrentChatAssignee', response.data);
+      dispatch('setCurrentChatAssignee', {
+        conversationId,
+        assignee: response.data,
+      });
     } catch (error) {
       // Handle error
     }
   },
 
-  setCurrentChatAssignee({ commit }, assignee) {
-    commit(types.ASSIGN_AGENT, assignee);
+  setCurrentChatAssignee({ commit }, payload) {
+    commit(types.ASSIGN_AGENT, payload);
   },
 
   assignTeam: async (
@@ -532,7 +538,10 @@ const actions = {
         customAttributes,
       });
       const { custom_attributes } = response.data;
-      commit(types.UPDATE_CONVERSATION_CUSTOM_ATTRIBUTES, custom_attributes);
+      commit(types.UPDATE_CONVERSATION_CUSTOM_ATTRIBUTES, {
+        conversationId,
+        customAttributes: custom_attributes,
+      });
     } catch (error) {
       // Handle error
     }

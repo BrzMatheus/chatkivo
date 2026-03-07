@@ -65,26 +65,34 @@ export const mutations = {
   },
   [types.SET_ALL_MESSAGES_LOADED](_state, conversationId) {
     const chat = getConversationById(_state)(conversationId);
-    if (chat) {
-      chat.allMessagesLoaded = true;
-    }
+    if (!chat) return;
+    chat.allMessagesLoaded = true;
   },
 
   [types.CLEAR_ALL_MESSAGES_LOADED](_state, conversationId) {
     const chat = getConversationById(_state)(conversationId);
-    if (chat) {
-      chat.allMessagesLoaded = false;
-    }
+    if (!chat) return;
+    chat.allMessagesLoaded = false;
   },
   [types.CLEAR_CURRENT_CHAT_WINDOW](_state) {
     _state.selectedChatId = null;
   },
 
   [types.SET_PREVIOUS_CONVERSATIONS](_state, { id, data }) {
-    if (data.length) {
-      const [chat] = _state.allConversations.filter(c => c.id === id);
-      chat.messages.unshift(...data);
+    const chat = _state.allConversations.find(c => c.id === id);
+    if (!chat) return;
+
+    if (!Array.isArray(chat.messages)) {
+      chat.messages = [];
     }
+
+    const existingIds = new Set(chat.messages.map(message => message.id));
+    const incomingMessages = Array.isArray(data)
+      ? data.filter(message => !existingIds.has(message.id))
+      : [];
+
+    if (!incomingMessages.length) return;
+    chat.messages.unshift(...incomingMessages);
   },
   [types.SET_ALL_ATTACHMENTS](_state, { id, data }) {
     _state.attachments[id] = [...data];
