@@ -47,7 +47,21 @@ const submenuPosition = computed(() => [
       <fluent-icon :icon="option.icon" size="14" class="menu-icon" />
       <p class="my-0 mx-2 text-xs">{{ option.label }}</p>
     </div>
-    <fluent-icon icon="chevron-right" size="12" />
+    <svg
+      class="w-3 h-3 flex-shrink-0"
+      viewBox="0 0 12 12"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M4.5 3L7.5 6L4.5 9"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
     <div
       v-if="subMenuAvailable"
       class="submenu bg-n-alpha-3 backdrop-blur-[100px] p-1 shadow-lg rounded-md absolute hidden max-h-[15rem] overflow-y-auto overflow-x-hidden cursor-pointer"

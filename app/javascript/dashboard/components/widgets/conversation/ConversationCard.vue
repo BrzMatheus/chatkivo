@@ -431,17 +431,14 @@ const deleteConversation = () => {
             <button
               v-if="props.enableContextMenu"
               type="button"
-              class="absolute ltr:right-1 rtl:left-1 top-1/2 -translate-y-1/2 w-4 h-4 z-10 flex items-center justify-center text-n-slate-10 hover:text-n-slate-12 focus:outline-none transition-opacity duration-150"
+              class="absolute ltr:right-0 rtl:left-0 top-1/2 -translate-y-1/2 w-5 h-5 z-10 flex items-center justify-center text-n-slate-10 hover:text-n-slate-12 focus:outline-none transition-opacity duration-150 before:content-[''] before:block before:w-0 before:h-0 before:border-l-[4px] before:border-r-[4px] before:border-t-[5px] before:border-l-transparent before:border-r-transparent before:border-t-current before:-translate-y-px"
               :class="
                 showContextMenuTrigger
                   ? 'opacity-100 pointer-events-auto'
                   : 'opacity-0 pointer-events-none'
               "
               @mousedown.prevent="openContextMenuFromButton"
-            >
-              <!-- eslint-disable-next-line vue/no-bare-strings-in-template, @intlify/vue-i18n/no-raw-text -->
-              <fluent-icon icon="chevron-down" size="12" />
-            </button>
+            />
           </div>
         </div>
       </div>
