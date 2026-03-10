@@ -1,0 +1,20 @@
+[
+  {
+    "remoteJid": "5511999999999@s.whatsapp.net",
+    "name": "Contato Teste",
+    "records": [
+      {
+        "wa_id": "MSG_1",
+        "fromMe": false,
+        "messageTimestamp": 1700000010,
+        "content": "Oi"
+      },
+      {
+        "wa_id": "MSG_2",
+        "fromMe": true,
+        "messageTimestamp": 1700000020,
+        "content": "Tudo bem?"
+      }
+    ]
+  }
+]

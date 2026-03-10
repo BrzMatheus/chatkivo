@@ -37,7 +37,24 @@ class MessageFinder
   end
 
   def messages_before(before_id)
-    messages.reorder('created_at desc').where('id < ?', before_id).limit(20).reverse
+    cursor = cursor_messages.select(:id, :created_at).find_by(id: before_id)
+    scoped_messages = messages.reorder('created_at desc, id desc')
+
+    scoped_messages =
+      if cursor
+        scoped_messages.where(
+          '(created_at < ?) OR (created_at = ? AND id < ?)',
+          cursor.created_at, cursor.created_at, cursor.id
+        )
+      else
+        scoped_messages.where('id < ?', before_id)
+      end
+
+    scoped_messages.limit(20).reverse
+  end
+
+  def cursor_messages
+    messages.unscope(:includes, :preload, :eager_load)
   end
 
   def messages_between(after_id, before_id)

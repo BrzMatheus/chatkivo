@@ -1,0 +1,92 @@
+<section class="main-content__body">
+  <hr/>
+  <%= form_for([:evolution_import, namespace, page.resource], method: :post, html: { class: "form", multipart: true }) do |f| %>
+    <div class="form-actions">
+      <div class="pb-3">
+        <h3>Importar Historico Evolution (API Inbox)</h3>
+        <p>Upload de JSON consolidado da Evolution para reconstruir conversa canonica em inbox API.</p>
+      </div>
+
+      <div class="pb-3">
+        <%= label_tag :inbox_id, "Selecionar Inbox API:", class: "block mb-2" %>
+        <% api_inboxes = page.resource.inboxes.where(channel_type: 'Channel::Api') %>
+        <% if api_inboxes.any? %>
+          <%= select_tag :inbox_id,
+              options_from_collection_for_select(api_inboxes, :id, :name),
+              { class: "form-control", required: true, prompt: "Escolha um inbox API" } %>
+        <% else %>
+          <p class="text-color-red">Nenhum inbox API encontrado para esta conta.</p>
+        <% end %>
+      </div>
+
+      <div class="pb-3">
+        <%= label_tag :import_file, "Arquivo JSON:", class: "block mb-2" %>
+        <%= file_field_tag :import_file,
+            accept: ".json,application/json",
+            required: true,
+            class: "form-control" %>
+        <small class="text-muted">Tamanho maximo: 200MB.</small>
+      </div>
+
+      <div class="pb-3">
+        <%= label_tag :dry_run, class: "block mb-2" do %>
+          <%= check_box_tag :dry_run, '1', true %>
+          Executar em DRY_RUN
+        <% end %>
+      </div>
+
+      <% if api_inboxes.any? %>
+        <%= f.submit 'Iniciar Importacao Evolution', class: "button", data: { confirm: "Confirma inicio da importacao Evolution?" } %>
+      <% else %>
+        <%= f.submit 'Iniciar Importacao Evolution', class: "button", disabled: true %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% evolution_imports = page.resource.data_imports.where(data_type: 'evolution_history').order(created_at: :desc).limit(10) %>
+  <div class="mt-6">
+    <h3>Historico de Importacoes Evolution</h3>
+    <% if evolution_imports.any? %>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Status</th>
+            <th>Processados</th>
+            <th>Total</th>
+            <th>Criado em</th>
+            <th>Entrada</th>
+            <th>Relatorio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% evolution_imports.each do |data_import| %>
+            <tr>
+              <td><%= data_import.id %></td>
+              <td><%= data_import.status %></td>
+              <td><%= data_import.processed_records || 0 %></td>
+              <td><%= data_import.total_records || 0 %></td>
+              <td><%= data_import.created_at.strftime('%Y-%m-%d %H:%M:%S') %></td>
+              <td>
+                <% if data_import.import_file.attached? %>
+                  <%= link_to 'Download JSON', rails_blob_path(data_import.import_file, disposition: 'attachment', only_path: true) %>
+                <% else %>
+                  -
+                <% end %>
+              </td>
+              <td>
+                <% if data_import.failed_records.attached? %>
+                  <%= link_to 'Download CSV', rails_blob_path(data_import.failed_records, disposition: 'attachment', only_path: true) %>
+                <% else %>
+                  -
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p>Nenhuma importacao Evolution executada nesta conta.</p>
+    <% end %>
+  </div>
+</section>

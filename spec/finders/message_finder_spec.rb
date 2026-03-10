@@ -73,5 +73,45 @@ describe MessageFinder do
         expect(result.last.id).to be conversation.messages[-2].id
       end
     end
+
+    context 'when ids are not aligned with created_at for before cursor' do
+      let(:params) { { before: cursor_message.id } }
+      let!(:newer_message) do
+        create(:message, account: account, inbox: inbox, conversation: conversation, created_at: Time.zone.at(1_700_000_050))
+      end
+      let!(:cursor_message) do
+        create(:message, account: account, inbox: inbox, conversation: conversation, created_at: Time.zone.at(1_700_000_040))
+      end
+      let!(:older_message_with_higher_id) do
+        create(:message, account: account, inbox: inbox, conversation: conversation, created_at: Time.zone.at(1_700_000_030))
+      end
+
+      it 'uses created_at and id as cursor to fetch the previous timeline' do
+        result_ids = message_finder.perform.pluck(:id)
+
+        expect(result_ids).to include(older_message_with_higher_id.id)
+        expect(result_ids).not_to include(newer_message.id)
+      end
+    end
+
+    context 'when before_id does not exist in the conversation scope' do
+      let!(:other_conversation) { create(:conversation, account: account, inbox: inbox) }
+      let!(:external_before_message) do
+        create(:message, account: account, inbox: inbox, conversation: other_conversation, created_at: Time.zone.at(1_700_000_100))
+      end
+      let(:params) { { before: external_before_message.id } }
+
+      it 'falls back to id cursor filtering' do
+        result_ids = message_finder.perform.pluck(:id)
+        expected_ids = conversation.messages
+                                   .where('id < ?', external_before_message.id)
+                                   .reorder('created_at desc, id desc')
+                                   .limit(20)
+                                   .reverse
+                                   .pluck(:id)
+
+        expect(result_ids).to eq(expected_ids)
+      end
+    end
   end
 end

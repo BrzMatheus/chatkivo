@@ -112,6 +112,47 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
                   notice: 'Importação de histórico do Telegram iniciada. O processo pode levar alguns minutos.')
     # rubocop:enable Rails/I18nLocaleTexts
   end
+
+  # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Rails/I18nLocaleTexts
+  def evolution_import
+    account = requested_resource
+    inbox_id = params[:inbox_id]
+    import_file = params[:import_file]
+    dry_run = params.key?(:dry_run) ? ActiveModel::Type::Boolean.new.cast(params[:dry_run]) : true
+
+    if import_file.blank?
+      redirect_back(fallback_location: [namespace, requested_resource], alert: 'Arquivo JSON e obrigatorio')
+      return
+    end
+
+    max_size = 200.megabytes
+    if import_file.size > max_size
+      redirect_back(fallback_location: [namespace, requested_resource], alert: "Arquivo muito grande. Tamanho maximo: #{max_size / 1.megabyte}MB")
+      return
+    end
+
+    inbox = account.inboxes.find_by(id: inbox_id)
+    unless inbox&.api?
+      redirect_back(fallback_location: [namespace, requested_resource], alert: 'Inbox API invalido')
+      return
+    end
+
+    begin
+      JSON.parse(import_file.read)
+      import_file.rewind
+    rescue JSON::ParserError
+      redirect_back(fallback_location: [namespace, requested_resource], alert: 'Arquivo JSON invalido')
+      return
+    end
+
+    data_import = account.data_imports.create!(data_type: 'evolution_history')
+    data_import.import_file.attach(import_file)
+    Evolution::ImportHistoryJob.perform_later(data_import.id, inbox.id, dry_run: dry_run)
+
+    notice = dry_run ? 'DRY_RUN de importacao Evolution iniciado com sucesso.' : 'Importacao Evolution iniciada com sucesso.'
+    redirect_back(fallback_location: [namespace, requested_resource], notice: notice)
+  end
+  # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Rails/I18nLocaleTexts
 end
 
 SuperAdmin::AccountsController.prepend_mod_with('SuperAdmin::AccountsController')
