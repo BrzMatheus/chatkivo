@@ -683,10 +683,9 @@ function updateAssigneeTab(selectedTab) {
     } else {
       activeStatus.value = wootConstants.STATUS_TYPE.OPEN;
     }
-
-    if (!currentPage.value) {
-      fetchConversations();
-    }
+    // Keep list/meta in sync when changing tabs.
+    // Re-using old cached pages can show stale badge/list combinations.
+    resetAndFetchData();
   }
 }
 
