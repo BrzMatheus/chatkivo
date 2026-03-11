@@ -268,7 +268,6 @@ const confirmDeletion = () => {
         :email="currentAgent.email"
         :availability="currentAgent.availability_status"
         :custom-role-id="currentAgent.custom_role_id"
-        :conversation-filter-mode="currentAgent.conversation_filter_mode"
         :visible-team-ids="currentAgent.visible_team_ids || []"
         :filter-assigned-only="currentAgent.filter_assigned_only || false"
         :filter-unassigned-only="currentAgent.filter_unassigned_only || false"

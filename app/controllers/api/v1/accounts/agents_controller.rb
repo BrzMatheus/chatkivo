@@ -29,10 +29,8 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
     account_user_params = agent_params.slice(:role, :availability, :auto_offline, :conversation_filter_mode, :filter_assigned_only,
                                              :filter_unassigned_only)
     account_user_params[:visible_team_ids] = agent_params[:visible_team_ids] if agent_params.key?(:visible_team_ids)
-
-    update_success = @agent.current_account_user.update(account_user_params.compact)
-
-    render :update if update_success
+    account_user_params[:conversation_filter_mode] = normalized_conversation_filter_mode(account_user_params)
+    @agent.current_account_user.update!(account_user_params.compact)
   end
 
   def destroy
@@ -107,6 +105,35 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
 
   def new_agent_params
     params.require(:agent).permit(:email, :name, :role, :availability, :auto_offline)
+  end
+
+  def normalized_conversation_filter_mode(account_user_params)
+    return account_user_params[:conversation_filter_mode] unless flexible_filter_params_provided?
+
+    visible_team_ids = account_user_params[:visible_team_ids] || []
+    has_visible_teams = visible_team_ids.present?
+    filter_assigned_only = ActiveModel::Type::Boolean.new.cast(
+      account_user_params[:filter_assigned_only]
+    )
+    filter_unassigned_only = ActiveModel::Type::Boolean.new.cast(
+      account_user_params[:filter_unassigned_only]
+    )
+
+    normalized_modes = {
+      [true, true, true] => :team_unassigned_or_mine,
+      [true, false, false] => :team_conversations_only,
+      [false, true, false] => :assigned_conversations_only,
+      [false, false, true] => :unassigned_conversations_only
+    }
+
+    normalized_modes.fetch(
+      [has_visible_teams, filter_assigned_only, filter_unassigned_only],
+      :all_conversations
+    )
+  end
+
+  def flexible_filter_params_provided?
+    agent_params.key?(:visible_team_ids) || agent_params.key?(:filter_assigned_only) || agent_params.key?(:filter_unassigned_only)
   end
 
   def agents

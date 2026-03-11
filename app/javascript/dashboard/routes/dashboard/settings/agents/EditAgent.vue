@@ -43,10 +43,6 @@ const props = defineProps({
     type: Number,
     default: null,
   },
-  conversationFilterMode: {
-    type: String,
-    default: 'all_conversations',
-  },
   visibleTeamIds: {
     type: Array,
     default: () => [],
@@ -72,7 +68,6 @@ const { t } = useI18n();
 const agentName = ref(props.name);
 const agentAvailability = ref(props.availability);
 const selectedRoleId = ref(props.customRoleId || props.type);
-const conversationFilterMode = ref(props.conversationFilterMode);
 const visibleTeamIds = ref([...(props.visibleTeamIds || [])]);
 const filterAssignedOnly = ref(props.filterAssignedOnly || false);
 const filterUnassignedOnly = ref(props.filterUnassignedOnly || false);
@@ -175,6 +170,44 @@ const availabilityStatuses = computed(() =>
     disabled: props.availability === AVAILABILITY_STATUS_KEYS[index],
   }))
 );
+
+const buildConversationFilterMode = () => {
+  const hasVisibleTeams = visibleTeamIds.value.length > 0;
+
+  if (
+    hasVisibleTeams &&
+    filterAssignedOnly.value &&
+    filterUnassignedOnly.value
+  ) {
+    return 'team_unassigned_or_mine';
+  }
+
+  if (
+    hasVisibleTeams &&
+    !filterAssignedOnly.value &&
+    !filterUnassignedOnly.value
+  ) {
+    return 'team_conversations_only';
+  }
+
+  if (
+    !hasVisibleTeams &&
+    filterAssignedOnly.value &&
+    !filterUnassignedOnly.value
+  ) {
+    return 'assigned_conversations_only';
+  }
+
+  if (
+    !hasVisibleTeams &&
+    !filterAssignedOnly.value &&
+    filterUnassignedOnly.value
+  ) {
+    return 'unassigned_conversations_only';
+  }
+
+  return 'all_conversations';
+};
 
 // Toggle inbox selection
 const toggleInbox = inboxId => {
@@ -303,7 +336,7 @@ const editAgent = async () => {
       id: props.id,
       name: agentName.value,
       availability: agentAvailability.value,
-      conversation_filter_mode: conversationFilterMode.value,
+      conversation_filter_mode: buildConversationFilterMode(),
       visible_team_ids: visibleTeamIds.value,
       filter_assigned_only: filterAssignedOnly.value,
       filter_unassigned_only: filterUnassignedOnly.value,
@@ -353,6 +386,7 @@ watch(activeTab, newTab => {
 // Also load if starting on inboxes tab
 onMounted(() => {
   store.dispatch('inboxes/get');
+  store.dispatch('teams/get');
 });
 </script>
 
