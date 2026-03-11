@@ -197,6 +197,18 @@ const hasAppliedFiltersOrActiveFolders = computed(() => {
   return hasAppliedFilters.value || hasActiveFolders.value;
 });
 
+const normalizedSearchQuery = computed(() => {
+  return searchQuery.value.trim();
+});
+
+const hasSearchQuery = computed(() => {
+  return Boolean(normalizedSearchQuery.value);
+});
+
+const isServerSideSearch = computed(() => {
+  return hasSearchQuery.value && !hasAppliedFiltersOrActiveFolders.value;
+});
+
 const currentUserDetails = computed(() => {
   const { id, name } = currentUser.value;
   return { id, name };
@@ -288,6 +300,8 @@ const conversationFilters = computed(() => {
     labels: props.label ? [props.label] : undefined,
     teamId: props.teamId || undefined,
     conversationType: props.conversationType || undefined,
+    q: isServerSideSearch.value ? normalizedSearchQuery.value : undefined,
+    searchScope: isServerSideSearch.value ? 'contact' : undefined,
   };
 });
 
@@ -349,9 +363,8 @@ const conversationList = computed(() => {
     });
   }
 
-  // Aplicar filtro de busca se houver termo de pesquisa
-  if (searchQuery.value && searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim();
+  if (hasAppliedFiltersOrActiveFolders.value && hasSearchQuery.value) {
+    const query = normalizedSearchQuery.value.toLowerCase();
     localConversationList = localConversationList.filter(conversation => {
       const contact = conversation.meta?.sender || {};
       const contactName = (contact.name || '').toLowerCase();
@@ -378,6 +391,16 @@ const showEndOfListMessage = computed(() => {
     conversationList.value.length &&
     hasCurrentPageEndReached.value &&
     !chatListLoading.value
+  );
+});
+
+const showEmptyStateMessage = computed(() => {
+  const isSearchingWithoutEndOfList =
+    isServerSideSearch.value && !hasCurrentPageEndReached.value;
+  return (
+    !chatListLoading.value &&
+    !conversationList.value.length &&
+    !isSearchingWithoutEndOfList
   );
 });
 
@@ -607,7 +630,7 @@ function resetAndFetchData() {
   store.dispatch('conversationPage/reset');
   store.dispatch('emptyAllConversations');
   store.dispatch('clearConversationFilters');
-  store.dispatch('setListLoadingStatus'); // Ativar loading antes de buscar
+  store.dispatch('setListLoadingStatus');
   if (hasActiveFolders.value) {
     const payload = activeFolder.value.query;
     fetchSavedFilteredConversations(payload);
@@ -619,6 +642,10 @@ function resetAndFetchData() {
 }
 
 function loadMoreConversations() {
+  if (hasSearchQuery.value && hasAppliedFiltersOrActiveFolders.value) {
+    return;
+  }
+
   if (hasCurrentPageEndReached.value || chatListLoading.value) {
     return;
   }
@@ -673,7 +700,23 @@ function onBasicFilterChange(value, type) {
 }
 
 function onSearch(value) {
-  searchQuery.value = value || '';
+  const normalizedValue = value?.trim() || '';
+
+  if (searchQuery.value === normalizedValue) {
+    return;
+  }
+
+  searchQuery.value = normalizedValue;
+
+  if (hasAppliedFiltersOrActiveFolders.value) {
+    return;
+  }
+
+  resetBulkActions();
+  store.dispatch('setListLoadingStatus');
+  store.dispatch('conversationPage/reset');
+  store.dispatch('emptyAllConversations');
+  fetchConversations();
 }
 
 function openLastSavedItemInFolder() {
@@ -995,7 +1038,7 @@ watch(conversationFilters, (newVal, oldVal) => {
     />
 
     <p
-      v-if="!chatListLoading && !conversationList.length"
+      v-if="showEmptyStateMessage"
       class="flex overflow-auto justify-center items-center p-4"
     >
       {{ $t('CHAT_LIST.LIST.404') }}
@@ -1065,7 +1108,7 @@ watch(conversationFilters, (newVal, oldVal) => {
             {{ $t('CHAT_LIST.EOF') }}
           </p>
           <IntersectionObserver
-            v-else
+            v-else-if="!(hasSearchQuery && hasAppliedFiltersOrActiveFolders)"
             :options="intersectionObserverOptions"
             @observed="loadMoreConversations"
           />

@@ -74,7 +74,7 @@ class ConversationFinder
     set_assignee_type
 
     find_all_conversations
-    filter_by_status unless params[:q]
+    filter_by_status unless skip_status_filter?
     filter_by_team
     filter_by_labels
     filter_by_query
@@ -143,17 +143,42 @@ class ConversationFinder
   end
 
   def filter_by_query
-    return unless params[:q]
+    return if search_query.blank?
+
+    return filter_by_contact_query if contact_search_scope?
 
     allowed_message_types = [Message.message_types[:incoming], Message.message_types[:outgoing]]
-    @conversations = @conversations.joins(:messages).where('messages.content ILIKE :search', search: "%#{params[:q]}%")
+    @conversations = @conversations.joins(:messages).where('messages.content ILIKE :search', search: "%#{search_query}%")
                                    .where(messages: { message_type: allowed_message_types })
+  end
+
+  def filter_by_contact_query
+    @conversations = @conversations.joins(:contact).where(
+      "CAST(conversations.display_id AS TEXT) ILIKE :search OR
+      contacts.name ILIKE :search OR
+      contacts.email ILIKE :search OR
+      contacts.phone_number ILIKE :search OR
+      contacts.identifier ILIKE :search",
+      search: "%#{search_query}%"
+    )
   end
 
   def filter_by_status
     return if params[:status] == 'all'
 
     @conversations = @conversations.where(status: params[:status] || DEFAULT_STATUS)
+  end
+
+  def skip_status_filter?
+    params[:q].present? && !contact_search_scope?
+  end
+
+  def contact_search_scope?
+    params[:search_scope] == 'contact'
+  end
+
+  def search_query
+    @search_query ||= params[:q].to_s.strip
   end
 
   def filter_by_team
