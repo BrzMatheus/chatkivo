@@ -29,6 +29,14 @@ const getConversationById = _state => conversationId => {
   return _state.allConversations.find(c => c.id === conversationId);
 };
 
+const resolveAssigneeId = assignee => {
+  if (!assignee || assignee.bot_type) {
+    return null;
+  }
+
+  return assignee.id;
+};
+
 // mutations
 export const mutations = {
   [types.SET_ALL_CONVERSATION](_state, conversationList) {
@@ -120,6 +128,7 @@ export const mutations = {
     const chat = getConversationById(_state)(conversationId);
     if (chat) {
       chat.meta.assignee = assignee;
+      chat.assignee_id = resolveAssigneeId(assignee);
     }
   },
 
@@ -315,6 +324,7 @@ export const mutations = {
     const chat = getConversationById(_state)(payload.id);
     if (chat) {
       chat.meta.assignee = payload.assignee;
+      chat.assignee_id = resolveAssigneeId(payload.assignee);
     }
   },
 

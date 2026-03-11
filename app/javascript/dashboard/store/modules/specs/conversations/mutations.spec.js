@@ -714,6 +714,7 @@ describe('#mutations', () => {
         assignee,
       });
       expect(state.allConversations[0].meta.assignee).toEqual(assignee);
+      expect(state.allConversations[0].assignee_id).toBe(1);
       expect(state.allConversations[1].meta.assignee).toBeUndefined();
     });
   });
@@ -1024,7 +1025,9 @@ describe('#mutations', () => {
   describe('#UPDATE_ASSIGNEE', () => {
     it('should update assignee on conversation', () => {
       const state = {
-        allConversations: [{ id: 1, meta: { assignee: null } }],
+        allConversations: [
+          { id: 1, assignee_id: null, meta: { assignee: null } },
+        ],
       };
 
       const payload = {
@@ -1034,6 +1037,22 @@ describe('#mutations', () => {
 
       mutations[types.UPDATE_ASSIGNEE](state, payload);
       expect(state.allConversations[0].meta.assignee).toEqual(payload.assignee);
+      expect(state.allConversations[0].assignee_id).toBe(1);
+    });
+
+    it('should clear assignee_id when assignee payload is from agent bot', () => {
+      const state = {
+        allConversations: [{ id: 1, assignee_id: 3, meta: { assignee: null } }],
+      };
+
+      const payload = {
+        id: 1,
+        assignee: { id: 99, bot_type: 'webhook' },
+      };
+
+      mutations[types.UPDATE_ASSIGNEE](state, payload);
+      expect(state.allConversations[0].meta.assignee).toEqual(payload.assignee);
+      expect(state.allConversations[0].assignee_id).toBe(null);
     });
   });
 

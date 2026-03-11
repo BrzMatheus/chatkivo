@@ -271,6 +271,38 @@ describe('Conversation Helpers', () => {
           )
         ).toBe(true);
       });
+
+      it('uses assignee_id fallback when meta assignee is missing', () => {
+        const conversationWithAssigneeId = {
+          assignee_id: 1,
+          meta: {},
+        };
+
+        expect(
+          applyRoleFilter(
+            conversationWithAssigneeId,
+            role,
+            permissions,
+            currentUserId
+          )
+        ).toBe(true);
+      });
+
+      it('does not treat assigned conversation as unassigned when only assignee_id is present', () => {
+        const conversationWithDifferentAssigneeId = {
+          assignee_id: 2,
+          meta: {},
+        };
+
+        expect(
+          applyRoleFilter(
+            conversationWithDifferentAssigneeId,
+            role,
+            permissions,
+            currentUserId
+          )
+        ).toBe(false);
+      });
     });
   });
 });

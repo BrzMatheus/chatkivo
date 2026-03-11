@@ -159,6 +159,14 @@ describe('#getters', () => {
           meta: { team: { id: 5 } },
           labels: ['sales'],
         },
+        {
+          id: 33,
+          inbox_id: 4,
+          status: 1,
+          assignee_id: 7,
+          meta: {},
+          labels: ['support'],
+        },
       ];
 
       expect(
@@ -181,6 +189,55 @@ describe('#getters', () => {
           labels: ['sales'],
         },
       ]);
+    });
+  });
+  describe('#getMineChats', () => {
+    const rootGetters = {
+      getCurrentUser: {
+        id: 1,
+      },
+    };
+
+    it('returns conversations assigned to current user from meta assignee', () => {
+      const state = {
+        allConversations: [
+          { id: 1, status: 1, meta: { assignee: { id: 1 } } },
+          { id: 2, status: 1, meta: { assignee: { id: 2 } } },
+        ],
+      };
+
+      const result = getters.getMineChats(
+        state,
+        {},
+        {},
+        rootGetters
+      )({
+        status: 1,
+      });
+
+      expect(result).toEqual([
+        { id: 1, status: 1, meta: { assignee: { id: 1 } } },
+      ]);
+    });
+
+    it('returns conversations assigned to current user from assignee_id fallback', () => {
+      const state = {
+        allConversations: [
+          { id: 1, status: 1, assignee_id: 1, meta: {} },
+          { id: 2, status: 1, assignee_id: null, meta: {} },
+        ],
+      };
+
+      const result = getters.getMineChats(
+        state,
+        {},
+        {},
+        rootGetters
+      )({
+        status: 1,
+      });
+
+      expect(result).toEqual([{ id: 1, status: 1, assignee_id: 1, meta: {} }]);
     });
   });
   describe('#getConversationById', () => {

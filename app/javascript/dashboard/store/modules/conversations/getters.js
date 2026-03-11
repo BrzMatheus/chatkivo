@@ -8,6 +8,9 @@ import {
 } from '../../../helper/permissionsHelper';
 import camelcaseKeys from 'camelcase-keys';
 
+const getConversationAssigneeId = conversation =>
+  conversation.assignee_id ?? conversation.meta?.assignee?.id ?? null;
+
 export const getSelectedChatConversation = ({
   allConversations,
   selectedChatId,
@@ -76,8 +79,8 @@ const getters = {
     const currentUserID = rootGetters.getCurrentUser?.id;
 
     return _state.allConversations.filter(conversation => {
-      const { assignee } = conversation.meta;
-      const isAssignedToMe = assignee && assignee.id === currentUserID;
+      const assigneeId = getConversationAssigneeId(conversation);
+      const isAssignedToMe = assigneeId === currentUserID;
       const shouldFilter = applyPageFilters(conversation, activeFilters);
       const isChatMine = isAssignedToMe && shouldFilter;
 
@@ -97,7 +100,7 @@ const getters = {
   },
   getUnAssignedChats: _state => activeFilters => {
     return _state.allConversations.filter(conversation => {
-      const isUnAssigned = !conversation.meta.assignee;
+      const isUnAssigned = getConversationAssigneeId(conversation) === null;
       const shouldFilter = applyPageFilters(conversation, activeFilters);
       return isUnAssigned && shouldFilter;
     });

@@ -90,9 +90,10 @@ export const applyRoleFilter = (
     return true;
   }
 
-  const conversationAssignee = conversation.meta.assignee;
-  const isUnassigned = !conversationAssignee;
-  const isAssignedToUser = conversationAssignee?.id === currentUserId;
+  const conversationAssigneeId =
+    conversation.assignee_id ?? conversation.meta?.assignee?.id ?? null;
+  const isUnassigned = conversationAssigneeId === null;
+  const isAssignedToUser = conversationAssigneeId === currentUserId;
 
   // Check unassigned management permission
   if (permissions.includes('conversation_unassigned_manage')) {
