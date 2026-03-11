@@ -8,18 +8,29 @@ class Conversations::PermissionFilterService
   end
 
   def perform
-    return conversations if user_role == 'administrator'
-    return conversations if account_user.nil?
-
-    apply_conversation_filters
-  rescue StandardError => e
-    Rails.logger.error "PermissionFilterService error: #{e.message}"
-    Rails.logger.error "  User: #{user&.id}, Account: #{account&.id}, AccountUser: #{account_user&.id}"
-    Rails.logger.error "  Backtrace: #{e.backtrace&.first(5)&.join("\n")}"
-    conversations
+    apply_filters_with_safety
   end
 
   private
+
+  def apply_filters_with_safety
+    return conversations if skip_permission_filter?
+
+    apply_conversation_filters
+  rescue StandardError => e
+    log_filter_error(e)
+    conversations
+  end
+
+  def skip_permission_filter?
+    user_role == 'administrator' || account_user.nil?
+  end
+
+  def log_filter_error(error)
+    Rails.logger.error "PermissionFilterService error: #{error.message}"
+    Rails.logger.error "  User: #{user&.id}, Account: #{account&.id}, AccountUser: #{account_user&.id}"
+    Rails.logger.error "  Backtrace: #{error.backtrace&.first(5)&.join("\n")}"
+  end
 
   def apply_conversation_filters
     base_conversations = accessible_conversations
@@ -32,25 +43,37 @@ class Conversations::PermissionFilterService
   end
 
   def flexible_filters_active?
-    account_user.visible_team_ids.present? || account_user.filter_assigned_only || account_user.filter_unassigned_only
+    account_user.visible_team_ids.present? ||
+      account_user.filter_assigned_only ||
+      account_user.filter_unassigned_only
   end
 
   def apply_flexible_filters(base_conversations)
-    filtered = base_conversations
+    filtered = apply_visible_team_filter(base_conversations)
+    apply_assignee_filters(filtered)
+  end
 
-    # Filtro de Times
-    filtered = filtered.where(team_id: account_user.visible_team_ids) if account_user.visible_team_ids.present?
+  def apply_visible_team_filter(base_conversations)
+    return base_conversations if account_user.visible_team_ids.blank?
 
-    # Filtro de Atribuição (combinado)
+    # Keep team-less conversations visible and preserve agent-owned
+    # conversations even when team filters are active.
+    base_conversations.where(
+      'conversations.team_id IN (:team_ids) OR conversations.team_id IS NULL OR conversations.assignee_id = :user_id',
+      team_ids: account_user.visible_team_ids,
+      user_id: user.id
+    )
+  end
+
+  def apply_assignee_filters(filtered_conversations)
     if account_user.filter_assigned_only && account_user.filter_unassigned_only
-      filtered = filtered.where('assignee_id IS NULL OR assignee_id = ?', user.id)
-    elsif account_user.filter_assigned_only
-      filtered = filtered.where(assignee_id: user.id)
-    elsif account_user.filter_unassigned_only
-      filtered = filtered.where(assignee_id: nil)
+      return filtered_conversations.where('assignee_id IS NULL OR assignee_id = ?', user.id)
     end
 
-    filtered
+    return filtered_conversations.where(assignee_id: user.id) if account_user.filter_assigned_only
+    return filtered_conversations.where(assignee_id: nil) if account_user.filter_unassigned_only
+
+    filtered_conversations
   end
 
   def apply_legacy_filters(base_conversations)
@@ -96,7 +119,7 @@ class Conversations::PermissionFilterService
     team_ids = user.teams.where(account_id: account.id).pluck(:id)
     return base_conversations.none if team_ids.empty?
 
-    # Conversas do time que estão sem agente OU atribuídas ao usuário atual
+    # Team conversations that are unassigned OR assigned to the current user.
     base_conversations.where(team_id: team_ids)
                       .where('assignee_id IS NULL OR assignee_id = ?', user.id)
   end

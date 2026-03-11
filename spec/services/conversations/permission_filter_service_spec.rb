@@ -43,5 +43,43 @@ RSpec.describe Conversations::PermissionFilterService do
         expect(result.count).to eq(2)
       end
     end
+
+    context 'when user is an agent with flexible team filters' do
+      let!(:team_one) { create(:team, account: account) }
+      let!(:team_two) { create(:team, account: account) }
+      let!(:team_one_conversation) do
+        create(:conversation, account: account, inbox: inbox, team: team_one)
+      end
+      let!(:team_two_conversation) do
+        create(:conversation, account: account, inbox: inbox, team: team_two)
+      end
+      let!(:mine_other_team_conversation) do
+        create(:conversation, account: account, inbox: inbox, team: team_two)
+      end
+
+      before do
+        mine_other_team_conversation.update!(assignee: agent)
+
+        account.account_users.find_by!(user_id: agent.id).update!(
+          visible_team_ids: [team_one.id],
+          filter_assigned_only: false,
+          filter_unassigned_only: false
+        )
+      end
+
+      it 'keeps teamless and mine conversations while filtering other teams' do
+        result = described_class.new(
+          account.conversations,
+          agent,
+          account
+        ).perform
+
+        expect(result).to include(team_one_conversation)
+        expect(result).to include(conversation)
+        expect(result).to include(another_conversation)
+        expect(result).to include(mine_other_team_conversation)
+        expect(result).not_to include(team_two_conversation)
+      end
+    end
   end
 end
