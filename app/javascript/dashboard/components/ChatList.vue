@@ -253,8 +253,22 @@ const currentConversationInbox = computed(() => {
 
   return store.getters['inboxes/getInbox'](inboxId) || {};
 });
+const isAllInboxesRoute = computed(() => {
+  const allInboxRoutes = ['home', 'inbox_conversation'];
+  return allInboxRoutes.includes(route.name);
+});
+const hasApiInboxes = computed(() => {
+  const availableInboxes = inboxesList.value || [];
+  return availableInboxes.some(
+    inboxItem => inboxItem.channel_type === 'Channel::Api'
+  );
+});
 const isApiInbox = computed(() => {
-  return currentConversationInbox.value.channel_type === 'Channel::Api';
+  if (currentConversationInbox.value.channel_type === 'Channel::Api') {
+    return true;
+  }
+
+  return isAllInboxesRoute.value && hasApiInboxes.value;
 });
 const currentPage = useFunctionGetter(
   'conversationPage/getCurrentPageFilter',
