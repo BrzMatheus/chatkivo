@@ -24,6 +24,15 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         expect(response.body).to include('New account')
         expect(response.body).to include(account.name)
       end
+
+      it 'shows account details page' do
+        sign_in(super_admin, scope: :super_admin)
+
+        get "/super_admin/accounts/#{account.id}"
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include('Importar Historico Evolution')
+      end
     end
   end
 
