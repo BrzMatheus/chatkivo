@@ -520,6 +520,24 @@ RSpec.describe Message do
       expect(message.created_at).to eq message.conversation.last_activity_at
     end
 
+    it 'does not update conversation last_activity_at for activity messages' do
+      conversation = create(:conversation)
+      initial_last_activity_at = 2.days.ago
+      conversation.update_column(:last_activity_at, initial_last_activity_at) # rubocop:disable Rails/SkipsModelValidations
+
+      create(
+        :message,
+        message_type: :activity,
+        conversation: conversation,
+        account: conversation.account,
+        inbox: conversation.inbox,
+        sender: create(:user, account: conversation.account)
+      )
+
+      conversation.reload
+      expect(conversation.last_activity_at).to be_within(1.second).of(initial_last_activity_at)
+    end
+
     it 'updates contact last_activity_at when created' do
       expect { message.save! }.to(change { message.sender.last_activity_at })
     end

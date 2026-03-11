@@ -743,14 +743,14 @@ RSpec.describe Conversation do
       end
     end
 
-    context 'when last_activity_at updated by some actions' do
+    context 'when last_activity_at is updated by non-activity messages' do
       before do
         create(:message, conversation_id: conversation_1.id, message_type: :incoming, created_at: DateTime.now - 8.days)
         create(:message, conversation_id: conversation_2.id, message_type: :incoming, created_at: DateTime.now - 6.days)
         create(:message, conversation_id: conversation_3.id, message_type: :incoming, created_at: DateTime.now - 2.days)
       end
 
-      it 'sort conversations with latest resolved conversation at first' do
+      it 'does not move a conversation to top when only activity messages are created' do
         records = described_class.sort_on_last_activity_at
 
         expect(records.first.id).to eq(conversation_3.id)
@@ -767,7 +767,7 @@ RSpec.describe Conversation do
         end
         records = described_class.sort_on_last_activity_at
 
-        expect(records.first.id).to eq(conversation_1.id)
+        expect(records.first.id).to eq(conversation_3.id)
       end
 
       it 'Sort conversations with latest message' do
