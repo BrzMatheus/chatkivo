@@ -20,13 +20,13 @@ class Evolution::ConversationDedup::CandidateFinder
   def perform
     raise 'Inbox must be an API inbox' unless inbox.api?
 
-    grouped_candidates.filter_map do |identifier, conversations|
-      next if identifier.blank?
+    grouped_candidates.filter_map do |contact_id, conversations|
+      next if contact_id.blank?
       next if conversations.size < 2
       next unless evolution_related_group?(conversations)
 
-      build_group(identifier, conversations)
-    end.sort_by { |group| [-group[:conversations].size, group[:group_key]] }
+      build_group(contact_id, conversations)
+    end.sort_by { |group| [-group[:conversations].size, group[:contact_id], group[:group_key]] }
   end
 
   def apply_send_locks!(groups = perform)
@@ -77,7 +77,7 @@ class Evolution::ConversationDedup::CandidateFinder
   private
 
   def grouped_candidates
-    api_inbox_conversations.group_by { |conversation| normalized_identifier_for(conversation) }
+    api_inbox_conversations.where.not(contact_id: nil).group_by(&:contact_id)
   end
 
   def api_inbox_conversations
@@ -86,13 +86,16 @@ class Evolution::ConversationDedup::CandidateFinder
                                  .where(account_id: account.id, inbox_id: inbox.id)
   end
 
-  def build_group(identifier, conversations)
+  def build_group(contact_id, conversations)
     canonical = choose_canonical(conversations)
     sorted_conversations = conversations.sort_by(&:id)
+    contact = sorted_conversations.first&.contact
 
     {
-      group_key: identifier,
-      normalized_identifier: identifier,
+      group_key: "contact:#{contact_id}",
+      contact_id: contact_id,
+      contact_identifier: contact&.identifier,
+      contact_name: contact&.name,
       conversation_ids: sorted_conversations.map(&:id),
       suggested_canonical_conversation_id: canonical.id,
       suggested_target_conversation_ids: sorted_conversations.map(&:id) - [canonical.id],
@@ -127,6 +130,9 @@ class Evolution::ConversationDedup::CandidateFinder
       has_media: has_media?(conversation),
       source_id_coverage: source_id_coverage(conversation),
       last_activity_at: conversation.last_activity_at,
+      contact_id: conversation.contact_id,
+      contact_identifier: conversation.contact&.identifier,
+      contact_inbox_source_id: conversation.contact_inbox&.source_id,
       dedupe_send_blocked: dedupe_send_blocked?(conversation),
       suggested_canonical: conversation.id == canonical_id
     }
@@ -167,38 +173,6 @@ class Evolution::ConversationDedup::CandidateFinder
         (with_source_id_count.to_f / total_count).round(6)
       end
     end
-  end
-
-  def normalized_identifier_for(conversation)
-    attrs = conversation.additional_attributes.to_h
-    contact = conversation.contact
-    custom_attributes = contact&.custom_attributes.to_h
-
-    candidates = [
-      attrs['historical_import_jid'],
-      conversation.contact_inbox&.source_id,
-      custom_attributes['evolution_remote_jid'],
-      contact&.phone_number
-    ]
-
-    candidates.each do |candidate|
-      normalized = normalize_whatsapp_identifier(candidate)
-      return normalized if normalized.present?
-    end
-
-    nil
-  end
-
-  def normalize_whatsapp_identifier(raw_identifier)
-    value = raw_identifier.to_s.strip.downcase
-    return if value.blank?
-
-    return value if value.end_with?('@s.whatsapp.net')
-
-    digits = value.gsub(/\D/, '')
-    return "#{digits}@s.whatsapp.net" if digits.present?
-
-    nil
   end
 
   def evolution_related_group?(conversations)

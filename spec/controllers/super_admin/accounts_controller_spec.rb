@@ -235,7 +235,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         post "/super_admin/accounts/#{account.id}/evolution_dedup_preview",
              params: {
                inbox_id: api_inbox.id,
-               group_key: '5511777777777@s.whatsapp.net',
+               group_key: "contact:#{contact.id}",
                canonical_conversation_id: canonical_conversation.id,
                target_conversation_ids: [secondary_conversation.id],
                operation: 'merge'
@@ -281,7 +281,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         post "/super_admin/accounts/#{account.id}/evolution_dedup_apply",
              params: {
                inbox_id: api_inbox.id,
-               group_key: '5511666666666@s.whatsapp.net',
+               group_key: "contact:#{contact.id}",
                canonical_conversation_id: canonical_conversation.id,
                target_conversation_ids: [secondary_conversation.id],
                operation: 'merge'
@@ -321,7 +321,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
       post "/super_admin/accounts/#{account.id}/evolution_dedup_apply",
            params: {
              inbox_id: api_inbox.id,
-             group_key: '5511666666666@s.whatsapp.net',
+             group_key: "contact:#{contact.id}",
              canonical_conversation_id: text_only_secondary.id,
              target_conversation_ids: [canonical_with_media.id],
              operation: 'merge'

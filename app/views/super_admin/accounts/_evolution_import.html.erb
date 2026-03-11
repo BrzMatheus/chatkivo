@@ -138,7 +138,7 @@
         <table class="mt-4">
           <thead>
             <tr>
-              <th>Identificador</th>
+              <th>Contato</th>
               <th>Conversas</th>
               <th>Sugestao canonica</th>
               <th>Acoes</th>
@@ -149,7 +149,12 @@
               <% canonical_id = group[:suggested_canonical_conversation_id] %>
               <% group_dom_id = group[:group_key].to_s.parameterize(separator: '_') %>
               <tr>
-                <td><%= group[:group_key] %></td>
+                <td>
+                  <div>contact_id=<%= group[:contact_id] %></div>
+                  <div><%= group[:contact_name] || '-' %></div>
+                  <div><small><%= group[:contact_identifier] || '-' %></small></div>
+                  <div><small><%= group[:group_key] %></small></div>
+                </td>
                 <td>
                   <% group[:conversations].each do |conversation| %>
                     <% label = "ID=#{conversation[:id]} (display ##{conversation[:display_id]})" %>
@@ -157,6 +162,7 @@
                     <% label = "#{label} [historical]" if conversation[:historical_import] %>
                     <% label = "#{label} [trava envio]" if conversation[:dedupe_send_blocked] %>
                     <div><%= label %></div>
+                    <div><small>contact_inbox.source_id=<%= conversation[:contact_inbox_source_id] || '-' %></small></div>
                   <% end %>
                 </td>
                 <td>

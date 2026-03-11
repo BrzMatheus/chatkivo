@@ -9,6 +9,42 @@ RSpec.describe Evolution::ConversationDedup::CandidateFinder do
   let(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: inbox, source_id: jid) }
 
   describe '#perform' do
+    it 'detecta duplicidade por contact_id quando contact_inbox.source_id e UUID' do
+      uuid_contact = create(:contact, account: account, identifier: 'evolution:matheus')
+      uuid_contact_inbox = create(
+        :contact_inbox,
+        contact: uuid_contact,
+        inbox: inbox,
+        source_id: '84fb27d1-2c8d-4932-8af1-712026cd19c3'
+      )
+      original_conversation = create(
+        :conversation,
+        account: account,
+        inbox: inbox,
+        contact: uuid_contact,
+        contact_inbox: uuid_contact_inbox,
+        additional_attributes: { historical_import: false }
+      )
+      imported_conversation = create(
+        :conversation,
+        account: account,
+        inbox: inbox,
+        contact: uuid_contact,
+        contact_inbox: uuid_contact_inbox,
+        additional_attributes: { historical_import: true, historical_import_source: 'evolution_super_admin' }
+      )
+
+      create(:message, account: account, inbox: inbox, conversation: original_conversation, message_type: :incoming, content: 'Original')
+      create(:message, account: account, inbox: inbox, conversation: imported_conversation, message_type: :incoming, content: 'Importada')
+
+      groups = described_class.new(account: account, inbox: inbox).perform
+      group = groups.find { |item| item[:contact_id] == uuid_contact.id }
+
+      expect(group).to be_present
+      expect(group[:group_key]).to eq("contact:#{uuid_contact.id}")
+      expect(group[:conversation_ids]).to contain_exactly(original_conversation.id, imported_conversation.id)
+    end
+
     it 'sugere como canonica a conversa com midia quando o par texto x midia existir' do
       conversation_text = create(
         :conversation,
@@ -39,7 +75,9 @@ RSpec.describe Evolution::ConversationDedup::CandidateFinder do
       group = groups.first
 
       expect(groups.size).to eq(1)
-      expect(group[:group_key]).to eq(jid)
+      expect(group[:group_key]).to eq("contact:#{contact.id}")
+      expect(group[:contact_id]).to eq(contact.id)
+      expect(group[:contact_identifier]).to eq(contact.identifier)
       expect(group[:suggested_canonical_conversation_id]).to eq(conversation_media.id)
       expect(group[:suggested_target_conversation_ids]).to contain_exactly(conversation_text.id)
     end
