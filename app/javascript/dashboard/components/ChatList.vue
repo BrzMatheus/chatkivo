@@ -245,6 +245,17 @@ const currentPageFilterKey = computed(() => {
 });
 
 const inbox = useFunctionGetter('inboxes/getInbox', activeInbox);
+const currentConversationInbox = computed(() => {
+  const inboxId = props.conversationInbox || activeInbox.value;
+  if (!inboxId) {
+    return {};
+  }
+
+  return store.getters['inboxes/getInbox'](inboxId) || {};
+});
+const isApiInbox = computed(() => {
+  return currentConversationInbox.value.channel_type === 'Channel::Api';
+});
 const currentPage = useFunctionGetter(
   'conversationPage/getCurrentPageFilter',
   activeAssigneeTab
@@ -427,6 +438,12 @@ function setFiltersFromUISettings() {
   )
     ? orderBy
     : wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC;
+}
+
+function applyInboxDefaultStatus() {
+  if (isApiInbox.value) {
+    activeStatus.value = wootConstants.STATUS_TYPE.ALL;
+  }
 }
 
 function emitConversationLoaded() {
@@ -678,10 +695,12 @@ function updateAssigneeTab(selectedTab) {
     searchQuery.value = '';
     activeAssigneeTab.value = selectedTab;
 
-    if (selectedTab === wootConstants.ASSIGNEE_TYPE.ALL) {
-      activeStatus.value = wootConstants.STATUS_TYPE.ALL;
-    } else {
-      activeStatus.value = wootConstants.STATUS_TYPE.OPEN;
+    if (!isApiInbox.value) {
+      if (selectedTab === wootConstants.ASSIGNEE_TYPE.ALL) {
+        activeStatus.value = wootConstants.STATUS_TYPE.ALL;
+      } else {
+        activeStatus.value = wootConstants.STATUS_TYPE.OPEN;
+      }
     }
     // Keep list/meta in sync when changing tabs.
     // Re-using old cached pages can show stale badge/list combinations.
@@ -907,6 +926,7 @@ useEventListener(conversationDynamicScroller, 'scroll', handleScroll);
 onMounted(() => {
   store.dispatch('setChatListFilters', conversationFilters.value);
   setFiltersFromUISettings();
+  applyInboxDefaultStatus();
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
   resetAndFetchData();
@@ -951,9 +971,23 @@ provide('deleteConversation', handleDelete);
 
 watch(activeTeam, () => resetAndFetchData());
 
+watch(isApiInbox, (isApi, wasApi) => {
+  if (
+    isApi &&
+    !wasApi &&
+    activeStatus.value !== wootConstants.STATUS_TYPE.ALL
+  ) {
+    activeStatus.value = wootConstants.STATUS_TYPE.ALL;
+    resetAndFetchData();
+  }
+});
+
 watch(
   computed(() => props.conversationInbox),
-  () => resetAndFetchData()
+  () => {
+    applyInboxDefaultStatus();
+    resetAndFetchData();
+  }
 );
 watch(
   computed(() => props.label),
