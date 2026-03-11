@@ -35,6 +35,25 @@ RSpec.describe 'Conversation Messages API', type: :request do
         expect(conversation.messages.first.content).to eq(params[:content])
       end
 
+      it 'bloqueia envio em conversa marcada para deduplicacao' do
+        conversation.update!(
+          additional_attributes: {
+            dedupe_send_blocked: true,
+            dedupe_canonical_conversation_display_id: 999
+          }
+        )
+
+        post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { content: 'nao deve enviar' },
+             headers: agent.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq(
+          'Conversa bloqueada para envio durante reconciliacao de duplicidade. Use a conversa #999.'
+        )
+      end
+
       it 'does not create the message' do
         params = { content: "#{'h' * 150 * 1000}a", private: true }
 

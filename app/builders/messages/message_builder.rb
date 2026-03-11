@@ -23,6 +23,7 @@ class Messages::MessageBuilder
   end
 
   def perform
+    validate_dedupe_send_block!
     @message = @conversation.messages.build(message_params)
     process_attachments
     process_emails
@@ -34,6 +35,26 @@ class Messages::MessageBuilder
   end
 
   private
+
+  def validate_dedupe_send_block!
+    return unless outbound_message?
+    return if @private
+
+    attrs = @conversation.additional_attributes.to_h
+    blocked = ActiveModel::Type::Boolean.new.cast(attrs['dedupe_send_blocked'])
+    return unless blocked
+
+    canonical_display_id = attrs['dedupe_canonical_conversation_display_id']
+    canonical_hint = canonical_display_id.present? ? "##{canonical_display_id}" : 'canonica'
+    raise StandardError, "Conversa bloqueada para envio durante reconciliacao de duplicidade. Use a conversa #{canonical_hint}."
+  end
+
+  def outbound_message?
+    requested_type = @message_type.to_s
+    requested_type = 'outgoing' if requested_type.blank?
+
+    requested_type.in?(%w[outgoing template])
+  end
 
   # Extracts content attributes from the given params.
   # - Converts ActionController::Parameters to a regular hash if needed.

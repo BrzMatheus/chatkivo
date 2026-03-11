@@ -162,4 +162,203 @@ RSpec.describe 'Super Admin accounts API', type: :request do
       end
     end
   end
+
+  describe 'POST /super_admin/accounts/{account_id}/evolution_dedup_preview' do
+    let!(:api_channel) { create(:channel_api, account: account) }
+    let!(:api_inbox) { api_channel.inbox }
+    let!(:contact) { create(:contact, account: account, identifier: 'evolution:5511777777777@s.whatsapp.net') }
+    let!(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: api_inbox, source_id: '5511777777777@s.whatsapp.net') }
+    let!(:canonical_conversation) do
+      create(
+        :conversation,
+        account: account,
+        inbox: api_inbox,
+        contact: contact,
+        contact_inbox: contact_inbox,
+        additional_attributes: { historical_import: false }
+      )
+    end
+    let!(:secondary_conversation) do
+      create(
+        :conversation,
+        account: account,
+        inbox: api_inbox,
+        contact: contact,
+        contact_inbox: contact_inbox,
+        additional_attributes: {
+          historical_import: true,
+          historical_import_source: 'evolution_super_admin',
+          historical_import_jid: '5511777777777@s.whatsapp.net'
+        }
+      )
+    end
+
+    before do
+      create(:message, :with_attachment, account: account, inbox: api_inbox, conversation: canonical_conversation, message_type: :incoming,
+                                         content: 'Com midia')
+      create(:message, account: account, inbox: api_inbox, conversation: secondary_conversation, message_type: :incoming, content: 'Texto')
+    end
+
+    context 'when it is an unauthenticated user' do
+      it 'returns unauthorized' do
+        post "/super_admin/accounts/#{account.id}/evolution_dedup_preview", params: { inbox_id: api_inbox.id }
+        expect(response).to have_http_status(:redirect)
+      end
+    end
+
+    context 'when it is an authenticated user' do
+      before do
+        sign_in(super_admin, scope: :super_admin)
+      end
+
+      it 'gera fila e aplica trava nas conversas secundarias sugeridas' do
+        post "/super_admin/accounts/#{account.id}/evolution_dedup_preview", params: { inbox_id: api_inbox.id }
+
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:notice]).to include('Fila de revisao carregada')
+        expect(secondary_conversation.reload.additional_attributes['dedupe_send_blocked']).to eq(true)
+        expect(canonical_conversation.reload.additional_attributes['dedupe_send_blocked']).to be_nil
+      end
+
+      it 'retorna previa de impacto para um grupo' do
+        post "/super_admin/accounts/#{account.id}/evolution_dedup_preview", params: { inbox_id: api_inbox.id }
+
+        post "/super_admin/accounts/#{account.id}/evolution_dedup_preview",
+             params: {
+               inbox_id: api_inbox.id,
+               group_key: '5511777777777@s.whatsapp.net',
+               canonical_conversation_id: canonical_conversation.id,
+               target_conversation_ids: [secondary_conversation.id],
+               operation: 'merge'
+             }
+
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:notice]).to include('Previa:')
+      end
+    end
+  end
+
+  describe 'POST /super_admin/accounts/{account_id}/evolution_dedup_apply' do
+    let!(:api_channel) { create(:channel_api, account: account) }
+    let!(:api_inbox) { api_channel.inbox }
+    let!(:contact) { create(:contact, account: account, identifier: 'evolution:5511666666666@s.whatsapp.net') }
+    let!(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: api_inbox, source_id: '5511666666666@s.whatsapp.net') }
+    let!(:canonical_conversation) { create(:conversation, account: account, inbox: api_inbox, contact: contact, contact_inbox: contact_inbox) }
+    let!(:secondary_conversation) do
+      create(
+        :conversation,
+        account: account,
+        inbox: api_inbox,
+        contact: contact,
+        contact_inbox: contact_inbox,
+        additional_attributes: {
+          historical_import: true,
+          historical_import_source: 'evolution_super_admin',
+          historical_import_jid: '5511666666666@s.whatsapp.net'
+        }
+      )
+    end
+
+    before do
+      sign_in(super_admin, scope: :super_admin)
+      create(:message, account: account, inbox: api_inbox, conversation: canonical_conversation, message_type: :incoming, source_id: 'WAID:BASE',
+                       content: 'Base')
+      create(:message, account: account, inbox: api_inbox, conversation: secondary_conversation, message_type: :incoming, source_id: 'WAID:SEC',
+                       content: 'Secundaria')
+    end
+
+    it 'aplica reconciliacao no grupo informado' do
+      expect do
+        post "/super_admin/accounts/#{account.id}/evolution_dedup_apply",
+             params: {
+               inbox_id: api_inbox.id,
+               group_key: '5511666666666@s.whatsapp.net',
+               canonical_conversation_id: canonical_conversation.id,
+               target_conversation_ids: [secondary_conversation.id],
+               operation: 'merge'
+             }
+      end.to change { Conversation.where(id: secondary_conversation.id).count }.from(1).to(0)
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:notice]).to include('Reconciliacao concluida')
+      expect(canonical_conversation.reload.messages.find_by(source_id: 'WAID:SEC')).to be_present
+    end
+
+    it 'impede escolher canonica sem midia quando houver outra com midia no grupo' do
+      canonical_with_media = create(
+        :conversation,
+        account: account,
+        inbox: api_inbox,
+        contact: contact,
+        contact_inbox: contact_inbox,
+        additional_attributes: { historical_import: false }
+      )
+      text_only_secondary = create(
+        :conversation,
+        account: account,
+        inbox: api_inbox,
+        contact: contact,
+        contact_inbox: contact_inbox,
+        additional_attributes: {
+          historical_import: true,
+          historical_import_source: 'evolution_super_admin',
+          historical_import_jid: '5511666666666@s.whatsapp.net'
+        }
+      )
+      create(:message, :with_attachment, account: account, inbox: api_inbox, conversation: canonical_with_media, message_type: :incoming,
+                                         content: 'Com midia')
+      create(:message, account: account, inbox: api_inbox, conversation: text_only_secondary, message_type: :incoming, content: 'Texto')
+
+      post "/super_admin/accounts/#{account.id}/evolution_dedup_apply",
+           params: {
+             inbox_id: api_inbox.id,
+             group_key: '5511666666666@s.whatsapp.net',
+             canonical_conversation_id: text_only_secondary.id,
+             target_conversation_ids: [canonical_with_media.id],
+             operation: 'merge'
+           }
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:alert]).to include('Regra de midia')
+      expect(Conversation.where(id: text_only_secondary.id)).to exist
+    end
+  end
+
+  describe 'POST /super_admin/accounts/{account_id}/evolution_dedup_apply_bulk' do
+    let!(:api_channel) { create(:channel_api, account: account) }
+    let!(:api_inbox) { api_channel.inbox }
+    let!(:contact) { create(:contact, account: account, identifier: 'evolution:5511555555555@s.whatsapp.net') }
+    let!(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: api_inbox, source_id: '5511555555555@s.whatsapp.net') }
+    let!(:canonical_conversation) { create(:conversation, account: account, inbox: api_inbox, contact: contact, contact_inbox: contact_inbox) }
+    let!(:secondary_conversation) do
+      create(
+        :conversation,
+        account: account,
+        inbox: api_inbox,
+        contact: contact,
+        contact_inbox: contact_inbox,
+        additional_attributes: {
+          historical_import: true,
+          historical_import_source: 'evolution_super_admin',
+          historical_import_jid: '5511555555555@s.whatsapp.net'
+        }
+      )
+    end
+
+    before do
+      sign_in(super_admin, scope: :super_admin)
+      create(:message, :with_attachment, account: account, inbox: api_inbox, conversation: canonical_conversation, message_type: :incoming,
+                                         content: 'Com midia')
+      create(:message, account: account, inbox: api_inbox, conversation: secondary_conversation, message_type: :incoming, content: 'Texto')
+    end
+
+    it 'aplica reconciliacao em lote com sugestao automatica' do
+      expect do
+        post "/super_admin/accounts/#{account.id}/evolution_dedup_apply_bulk", params: { inbox_id: api_inbox.id }
+      end.to change { Conversation.where(id: secondary_conversation.id).count }.from(1).to(0)
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:notice]).to include('Lote concluido')
+    end
+  end
 end

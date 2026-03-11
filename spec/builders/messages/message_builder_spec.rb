@@ -289,6 +289,37 @@ describe Messages::MessageBuilder do
     end
   end
 
+  describe 'dedupe send guard' do
+    let(:api_channel) { create(:channel_api, account: account) }
+    let(:conversation) do
+      create(
+        :conversation,
+        inbox: api_channel.inbox,
+        account: account,
+        additional_attributes: {
+          dedupe_send_blocked: true,
+          dedupe_canonical_conversation_display_id: 42
+        }
+      )
+    end
+
+    it 'bloqueia mensagem de saida em conversa secundaria travada' do
+      expect { message_builder }.to raise_error(
+        'Conversa bloqueada para envio durante reconciliacao de duplicidade. Use a conversa #42.'
+      )
+    end
+
+    it 'permite nota privada mesmo com trava' do
+      private_params = ActionController::Parameters.new({
+                                                          content: 'nota interna',
+                                                          private: true
+                                                        })
+
+      message = described_class.new(user, conversation, private_params).perform
+      expect(message.private).to be(true)
+    end
+  end
+
   describe 'external channel echo message detection' do
     let(:params) do
       ActionController::Parameters.new({

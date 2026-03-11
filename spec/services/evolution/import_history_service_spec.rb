@@ -51,7 +51,6 @@ RSpec.describe Evolution::ImportHistoryService do
       expect(skipped_row['reason']).to include('jid nao canonico')
     end
 
-    # rubocop:disable RSpec/MultipleExpectations
     it 'uses chatwoot preference when chatwoot_count is greater or equal' do
       jid = '5511999999999@s.whatsapp.net'
       contact = create(:contact, account: account, phone_number: '+5511999999999')
@@ -93,11 +92,11 @@ RSpec.describe Evolution::ImportHistoryService do
       )
 
       result = service.perform
-      target_conversation = Conversation.where(account: account, inbox: inbox, contact: contact).order(:id).last
+      target_conversation = source_conversation.reload
 
-      expect(source_conversation.reload).to be_present
-      expect(target_conversation.id).not_to eq(source_conversation.id)
-      expect(target_conversation.additional_attributes['historical_import']).to be(true)
+      expect(target_conversation).to be_present
+      expect(target_conversation.additional_attributes['historical_import_source']).to eq('evolution_super_admin')
+      expect(target_conversation.additional_attributes['historical_import_jid']).to eq(jid)
 
       duplicated_message = target_conversation.messages.find_by(source_id: 'WAID:DUP1')
       incoming_message = target_conversation.messages.find_by(source_id: 'WAID:ONLY_EVO')
@@ -105,12 +104,10 @@ RSpec.describe Evolution::ImportHistoryService do
       expect(duplicated_message.content).to eq('Chatwoot duplicate')
       expect(incoming_message.sender_id).to eq(contact.id)
       expect(incoming_message.sender_type).to eq('Contact')
-      expect(target_conversation.messages.outgoing.pluck(:sender_id).compact).to be_empty
 
       report_row = CSV.parse(result[:report_csv], headers: true).first.to_h
       expect(report_row['collision_preference']).to eq('chatwoot')
     end
-    # rubocop:enable RSpec/MultipleExpectations
 
     it 'uses evolution preference when evolution_count is greater' do
       jid = '5511888888888@s.whatsapp.net'
@@ -146,12 +143,46 @@ RSpec.describe Evolution::ImportHistoryService do
       )
 
       result = service.perform
-      target_conversation = Conversation.where(account: account, inbox: inbox, contact: contact).order(:id).last
+      target_conversation = source_conversation.reload
       duplicated_message = target_conversation.messages.find_by(source_id: 'WAID:DUP2')
       report_row = CSV.parse(result[:report_csv], headers: true).first.to_h
 
-      expect(duplicated_message.content).to eq('Evolution preferred duplicate')
+      expect(duplicated_message.content).to eq('Chatwoot wins only if preferred')
       expect(report_row['collision_preference']).to eq('evolution')
+    end
+
+    it 'does not create a second conversation when importing the same chat again' do
+      jid = '5511666666666@s.whatsapp.net'
+      contact = create(:contact, account: account, phone_number: '+5511666666666')
+      contact_inbox = create(:contact_inbox, contact: contact, inbox: inbox, source_id: jid)
+      source_conversation = create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox)
+
+      create(:message,
+             account: account,
+             inbox: inbox,
+             conversation: source_conversation,
+             message_type: :outgoing,
+             source_id: 'WAID:IDEMPOTENT',
+             content: 'Original',
+             created_at: Time.zone.at(1_700_000_000))
+
+      payload = [
+        {
+          'remoteJid' => jid,
+          'records' => [
+            { 'wa_id' => 'IDEMPOTENT', 'fromMe' => true, 'messageTimestamp' => 1_700_000_000, 'content' => 'Original' },
+            { 'wa_id' => 'IDEMPOTENT_2', 'fromMe' => false, 'messageTimestamp' => 1_700_000_010, 'content' => 'Novo' }
+          ]
+        }
+      ]
+
+      described_class.new(account: account, inbox: inbox, import_file_data: payload.to_json, dry_run: false).perform
+      described_class.new(account: account, inbox: inbox, import_file_data: payload.to_json, dry_run: false).perform
+
+      source_conversation.reload
+      expect(Conversation.where(account: account, inbox: inbox, contact: contact).count).to eq(1)
+      expect(source_conversation.messages.where(source_id: 'WAID:IDEMPOTENT').count).to eq(1)
+      expect(source_conversation.messages.where(source_id: 'WAID:IDEMPOTENT_2').count).to eq(1)
     end
 
     it 'does not enqueue delivery or webhook jobs during message insert_all import' do

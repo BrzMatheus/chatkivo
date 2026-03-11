@@ -624,6 +624,9 @@ Rails.application.routes.draw do
         post :reset_cache, on: :member
         post :telegram_import, on: :member
         post :evolution_import, on: :member
+        post :evolution_dedup_preview, on: :member
+        post :evolution_dedup_apply, on: :member
+        post :evolution_dedup_apply_bulk, on: :member
       end
       resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
         delete :avatar, on: :member, action: :destroy_avatar

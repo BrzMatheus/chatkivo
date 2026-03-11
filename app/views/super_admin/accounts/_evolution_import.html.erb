@@ -89,4 +89,125 @@
       <p>Nenhuma importacao Evolution executada nesta conta.</p>
     <% end %>
   </div>
+
+  <hr/>
+  <div class="mt-6">
+    <h3>Reconciliacao de Conversas Duplicadas (Evolution/API)</h3>
+    <p>Gere a fila para sugerir conversa canonica por identificador WhatsApp e bloquear envio nas secundarias.</p>
+
+    <%= form_with url: evolution_dedup_preview_super_admin_account_path(page.resource), method: :post, local: true, class: "form" do |form| %>
+      <div class="form-actions">
+        <div class="pb-3">
+          <%= label_tag :inbox_id, "Selecionar Inbox API para revisao:", class: "block mb-2" %>
+          <% api_inboxes = page.resource.inboxes.where(channel_type: 'Channel::Api') %>
+          <% selected_dedup_inbox_id = params[:dedup_inbox_id].presence || api_inboxes.first&.id %>
+          <% if api_inboxes.any? %>
+            <%= select_tag :inbox_id,
+                options_from_collection_for_select(api_inboxes, :id, :name, selected_dedup_inbox_id),
+                { class: "form-control", required: true, prompt: "Escolha um inbox API" } %>
+          <% else %>
+            <p class="text-color-red">Nenhum inbox API encontrado para esta conta.</p>
+          <% end %>
+        </div>
+
+        <% if api_inboxes.any? %>
+          <%= form.submit 'Gerar fila + aplicar trava de envio', class: "button", data: { confirm: "Confirma gerar fila de reconciliacao e travar envio nas conversas secundarias sugeridas?" } %>
+        <% else %>
+          <%= form.submit 'Gerar fila + aplicar trava de envio', class: "button", disabled: true %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if api_inboxes.any? && selected_dedup_inbox_id.present? %>
+      <% dedup_inbox = page.resource.inboxes.find_by(id: selected_dedup_inbox_id) %>
+      <% dedup_groups = if dedup_inbox&.api?
+                          Evolution::ConversationDedup::CandidateFinder.new(account: page.resource, inbox: dedup_inbox).perform
+                        else
+                          []
+                        end %>
+
+      <% if dedup_groups.any? %>
+        <div class="mt-4">
+          <%= form_with url: evolution_dedup_apply_bulk_super_admin_account_path(page.resource), method: :post, local: true do |form| %>
+            <%= hidden_field_tag :inbox_id, dedup_inbox.id %>
+            <%= form.submit 'Aplicar em lote (mesclar e excluir secundarios)', class: "button", data: { confirm: "Confirma aplicar reconciliacao em lote para todos os grupos sugeridos?" } %>
+          <% end %>
+        </div>
+
+        <table class="mt-4">
+          <thead>
+            <tr>
+              <th>Identificador</th>
+              <th>Conversas</th>
+              <th>Sugestao canonica</th>
+              <th>Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% dedup_groups.each do |group| %>
+              <% canonical_id = group[:suggested_canonical_conversation_id] %>
+              <% group_dom_id = group[:group_key].to_s.parameterize(separator: '_') %>
+              <tr>
+                <td><%= group[:group_key] %></td>
+                <td>
+                  <% group[:conversations].each do |conversation| %>
+                    <% label = "ID=#{conversation[:id]} (display ##{conversation[:display_id]})" %>
+                    <% label = "#{label} [MIDIA]" if conversation[:has_media] %>
+                    <% label = "#{label} [historical]" if conversation[:historical_import] %>
+                    <% label = "#{label} [trava envio]" if conversation[:dedupe_send_blocked] %>
+                    <div><%= label %></div>
+                  <% end %>
+                </td>
+                <td>
+                  <% suggested = group[:conversations].find { |conversation| conversation[:id] == canonical_id } %>
+                  <div>ID=<%= canonical_id %> (display #<%= suggested&.dig(:display_id) %>)</div>
+                </td>
+                <td>
+                  <%= form_with url: evolution_dedup_preview_super_admin_account_path(page.resource), method: :post, local: true do |form| %>
+                    <%= hidden_field_tag :inbox_id, dedup_inbox.id %>
+                    <%= hidden_field_tag :group_key, group[:group_key] %>
+                    <div class="pb-2">
+                      <%= label_tag "canonical_conversation_id_#{group_dom_id}", "Conversa canonica" %>
+                      <%= select_tag :canonical_conversation_id,
+                          options_for_select(
+                            group[:conversations].map { |conversation| ["ID=#{conversation[:id]} (##{conversation[:display_id]})", conversation[:id]] },
+                            canonical_id
+                          ),
+                          id: "canonical_conversation_id_#{group_dom_id}",
+                          class: "form-control" %>
+                    </div>
+
+                    <div class="pb-2">
+                      <%= label_tag "operation_#{group_dom_id}", "Operacao" %>
+                      <%= select_tag :operation,
+                          options_for_select([['Mesclar e excluir secundarios', 'merge'], ['Manter canonica e excluir secundarios', 'keep_only']], 'merge'),
+                          id: "operation_#{group_dom_id}",
+                          class: "form-control" %>
+                    </div>
+
+                    <% group[:conversation_ids].each do |conversation_id| %>
+                      <%= hidden_field_tag 'target_conversation_ids[]', conversation_id %>
+                    <% end %>
+
+                    <div class="pb-1">
+                      <%= button_tag 'Pre-visualizar impacto', type: :submit, class: "button" %>
+                    </div>
+                    <div>
+                      <%= button_tag 'Aplicar reconciliacao',
+                          type: :submit,
+                          class: "button",
+                          formaction: evolution_dedup_apply_super_admin_account_path(page.resource),
+                          data: { confirm: "Confirma aplicar reconciliacao para este grupo? Conversas secundarias serao excluidas ao final." } %>
+                    </div>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% elsif params[:dedup_inbox_id].present? %>
+        <p class="mt-4">Nenhum grupo duplicado encontrado para o inbox selecionado.</p>
+      <% end %>
+    <% end %>
+  </div>
 </section>

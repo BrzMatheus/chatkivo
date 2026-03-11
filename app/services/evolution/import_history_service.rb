@@ -87,8 +87,9 @@ class Evolution::ImportHistoryService
       return row
     end
 
-    target_conversation = create_shadow_conversation!(contact_inbox, source_conversation, jid)
-    insert_rows = build_insert_rows(target_conversation, merged_messages)
+    target_conversation = resolve_target_conversation!(contact_inbox, source_conversation, jid)
+    insertable_messages = filter_insertable_messages(chatwoot_messages, merged_messages)
+    insert_rows = build_insert_rows(target_conversation, insertable_messages)
 
     # rubocop:disable Rails/SkipsModelValidations
     Message.insert_all!(insert_rows) if insert_rows.any?
@@ -349,14 +350,8 @@ class Evolution::ImportHistoryService
     existing
   end
 
-  def create_shadow_conversation!(contact_inbox, source_conversation, jid)
-    additional_attributes = source_conversation&.additional_attributes.to_h || {}
-    additional_attributes.merge!(
-      'historical_import' => true,
-      'historical_import_source' => 'evolution_super_admin',
-      'historical_import_jid' => jid,
-      'historical_import_origin_conversation_id' => source_conversation&.id
-    )
+  def resolve_target_conversation!(contact_inbox, source_conversation, jid)
+    return source_conversation.tap { |conversation| ensure_import_metadata!(conversation, jid) } if source_conversation
 
     Conversation.create!(
       account: account,
@@ -364,8 +359,42 @@ class Evolution::ImportHistoryService
       contact: contact_inbox.contact,
       contact_inbox: contact_inbox,
       status: :open,
-      additional_attributes: additional_attributes
+      additional_attributes: {
+        'historical_import_source' => 'evolution_super_admin',
+        'historical_import_jid' => jid
+      }
     )
+  end
+
+  def ensure_import_metadata!(conversation, jid)
+    attrs = conversation.additional_attributes.to_h
+    updated_attrs = attrs.merge(
+      'historical_import_source' => 'evolution_super_admin',
+      'historical_import_jid' => jid
+    )
+    return if attrs == updated_attrs
+
+    # rubocop:disable Rails/SkipsModelValidations
+    conversation.update_columns(additional_attributes: updated_attrs, updated_at: Time.current)
+    # rubocop:enable Rails/SkipsModelValidations
+  end
+
+  def filter_insertable_messages(chatwoot_messages, merged_messages)
+    existing_keys = chatwoot_messages.each_with_object({}) do |message, keys|
+      key = message_identity_key(message)
+      keys[key] = true if key.present?
+    end
+
+    merged_messages.filter_map do |message|
+      key = message_identity_key(message)
+      next if key.present? && existing_keys[key]
+
+      message
+    end
+  end
+
+  def message_identity_key(message)
+    message[:source_id].presence || message[:fallback_key]
   end
 
   def build_insert_rows(target_conversation, merged_messages)

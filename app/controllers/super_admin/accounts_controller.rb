@@ -152,7 +152,170 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     notice = dry_run ? 'DRY_RUN de importacao Evolution iniciado com sucesso.' : 'Importacao Evolution iniciada com sucesso.'
     redirect_back(fallback_location: [namespace, requested_resource], notice: notice)
   end
+
+  def evolution_dedup_preview
+    account = requested_resource
+    inbox = find_api_inbox!(account, params[:inbox_id])
+    return if performed?
+
+    finder = Evolution::ConversationDedup::CandidateFinder.new(account: account, inbox: inbox)
+    groups = finder.perform
+
+    if params[:group_key].present?
+      preview = preview_for_group(groups, account, inbox)
+      notice = "Previa: mover=#{preview[:moved_messages]} deduplicar=#{preview[:deduplicated_messages]} " \
+               "substituir=#{preview[:replaced_messages]} excluir_conversas=#{preview[:deleted_conversations]}"
+    else
+      locked_count = finder.apply_send_locks!(groups)
+      notice = "Fila de revisao carregada. Grupos=#{groups.size}, conversas atualizadas com trava=#{locked_count}."
+    end
+
+    redirect_to super_admin_account_path(account, dedup_inbox_id: inbox.id), notice: notice
+  rescue StandardError => e
+    redirect_to super_admin_account_path(account), alert: "Falha ao gerar previa/fila: #{e.message}"
+  end
+
+  def evolution_dedup_apply
+    account = requested_resource
+    inbox = find_api_inbox!(account, params[:inbox_id])
+    return if performed?
+
+    finder = Evolution::ConversationDedup::CandidateFinder.new(account: account, inbox: inbox)
+    groups = finder.perform
+    group = find_group!(groups, params[:group_key])
+
+    canonical_id = canonical_conversation_id_for(group)
+    target_ids = target_conversation_ids_for(group, canonical_id)
+    operation = dedup_operation
+
+    result = Evolution::ConversationDedup::MergeService.new(
+      account: account,
+      inbox: inbox,
+      canonical_conversation_id: canonical_id,
+      target_conversation_ids: target_ids,
+      operation: operation
+    ).perform
+
+    notice = "Reconciliacao concluida (#{operation}): mover=#{result[:moved_messages]} " \
+             "deduplicar=#{result[:deduplicated_messages]} substituir=#{result[:replaced_messages]} " \
+             "excluir_conversas=#{result[:deleted_conversations]}"
+    redirect_to super_admin_account_path(account, dedup_inbox_id: inbox.id), notice: notice
+  rescue StandardError => e
+    redirect_to super_admin_account_path(account, dedup_inbox_id: params[:inbox_id]), alert: "Falha na reconciliacao: #{e.message}"
+  end
+
+  def evolution_dedup_apply_bulk
+    account = requested_resource
+    inbox = find_api_inbox!(account, params[:inbox_id])
+    return if performed?
+
+    finder = Evolution::ConversationDedup::CandidateFinder.new(account: account, inbox: inbox)
+    groups = finder.perform
+
+    merged_groups = 0
+    moved_messages = 0
+    deduplicated_messages = 0
+    replaced_messages = 0
+    deleted_conversations = 0
+    errors = []
+
+    groups.each do |group|
+      canonical_id = group[:suggested_canonical_conversation_id]
+      target_ids = group[:conversation_ids] - [canonical_id]
+      next if target_ids.blank?
+
+      result = Evolution::ConversationDedup::MergeService.new(
+        account: account,
+        inbox: inbox,
+        canonical_conversation_id: canonical_id,
+        target_conversation_ids: target_ids,
+        operation: 'merge'
+      ).perform
+
+      merged_groups += 1
+      moved_messages += result[:moved_messages]
+      deduplicated_messages += result[:deduplicated_messages]
+      replaced_messages += result[:replaced_messages]
+      deleted_conversations += result[:deleted_conversations]
+    rescue StandardError => e
+      errors << "[grupo #{group[:group_key]}] #{e.message}"
+    end
+
+    notice = "Lote concluido: grupos=#{merged_groups}, mover=#{moved_messages}, deduplicar=#{deduplicated_messages}, " \
+             "substituir=#{replaced_messages}, excluir_conversas=#{deleted_conversations}"
+    notice = "#{notice}. Erros: #{errors.join(' | ')}" if errors.any?
+
+    redirect_to super_admin_account_path(account, dedup_inbox_id: inbox.id), notice: notice
+  rescue StandardError => e
+    redirect_to super_admin_account_path(account, dedup_inbox_id: params[:inbox_id]), alert: "Falha no lote: #{e.message}"
+  end
   # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Rails/I18nLocaleTexts
+
+  private
+
+  def find_api_inbox!(account, inbox_id)
+    inbox = account.inboxes.find_by(id: inbox_id)
+    if inbox&.api?
+      inbox
+    else
+      redirect_to super_admin_account_path(account), alert: 'Inbox API invalido para reconciliacao'
+      nil
+    end
+  end
+
+  def dedup_operation
+    operation = params[:operation].to_s
+    operation = 'merge' if operation.blank?
+    operation
+  end
+
+  def find_group!(groups, group_key)
+    group = groups.find { |item| item[:group_key] == group_key.to_s }
+    raise 'Grupo de duplicidade nao encontrado' unless group
+
+    group
+  end
+
+  def canonical_conversation_id_for(group)
+    chosen_id = params[:canonical_conversation_id].to_i
+    group_ids = group[:conversation_ids]
+    canonical_id = if chosen_id.positive? && group_ids.include?(chosen_id)
+                     chosen_id
+                   else
+                     group[:suggested_canonical_conversation_id]
+                   end
+    enforce_media_priority!(group, canonical_id)
+    canonical_id
+  end
+
+  def target_conversation_ids_for(group, canonical_id)
+    requested_ids = Array(params[:target_conversation_ids]).map(&:to_i).uniq
+    requested_ids = group[:conversation_ids] if requested_ids.blank?
+    requested_ids.select { |id| group[:conversation_ids].include?(id) } - [canonical_id]
+  end
+
+  def preview_for_group(groups, account, inbox)
+    group = find_group!(groups, params[:group_key])
+    canonical_id = canonical_conversation_id_for(group)
+    target_ids = target_conversation_ids_for(group, canonical_id)
+
+    Evolution::ConversationDedup::MergeService.new(
+      account: account,
+      inbox: inbox,
+      canonical_conversation_id: canonical_id,
+      target_conversation_ids: target_ids,
+      operation: dedup_operation,
+      dry_run: true
+    ).preview
+  end
+
+  def enforce_media_priority!(group, canonical_id)
+    media_conversation_ids = group[:conversations].select { |conversation| conversation[:has_media] }.map { |conversation| conversation[:id] }
+    return if media_conversation_ids.blank?
+    return if media_conversation_ids.include?(canonical_id)
+
+    raise 'Regra de midia: escolha uma conversa canonica que tenha midia.'
+  end
 end
 
 SuperAdmin::AccountsController.prepend_mod_with('SuperAdmin::AccountsController')
