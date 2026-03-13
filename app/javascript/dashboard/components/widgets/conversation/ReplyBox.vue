@@ -150,6 +150,7 @@ export default {
       lastEmail: 'getLastEmailInSelectedChat',
       globalConfig: 'globalConfig/get',
       accountId: 'getCurrentAccountId',
+      getAccount: 'accounts/getAccount',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
     }),
     currentContact() {
@@ -176,7 +177,14 @@ export default {
     showContentTemplates() {
       return this.isATwilioWhatsAppChannel && !this.isPrivate;
     },
+    hidePrivateMessages() {
+      return !!this.getAccount(this.accountId)?.settings?.hide_private_messages;
+    },
     isPrivate() {
+      if (this.hidePrivateMessages) {
+        return false;
+      }
+
       if (
         this.currentChat.can_reply ||
         this.isAWhatsAppChannel ||
@@ -425,6 +433,10 @@ export default {
       return !this.showAudioRecorderEditor && !this.copilot.isActive.value;
     },
     isEditorDisabled() {
+      if (this.hidePrivateMessages && this.isReplyRestricted) {
+        return true;
+      }
+
       return (
         this.isAWhatsAppChannel &&
         !this.isOnPrivateNote &&
@@ -442,6 +454,12 @@ export default {
         this.setCCAndToEmailsFromLastChat();
         // Reset Copilot editor state (includes cancelling ongoing generation)
         this.copilot.reset();
+      }
+
+      if (this.hidePrivateMessages) {
+        this.replyType = REPLY_EDITOR_MODES.REPLY;
+        this.fetchAndSetReplyTo();
+        return;
       }
 
       if (this.isOnPrivateNote) {
@@ -467,6 +485,16 @@ export default {
         this.setCCAndToEmailsFromLastChat();
       },
       deep: true,
+    },
+    hidePrivateMessages(enabled) {
+      if (enabled) {
+        this.replyType = REPLY_EDITOR_MODES.REPLY;
+        return;
+      }
+
+      if (this.isReplyRestricted) {
+        this.replyType = REPLY_EDITOR_MODES.NOTE;
+      }
     },
     conversationIdByRoute(conversationId, oldConversationId) {
       if (conversationId !== oldConversationId) {
@@ -934,12 +962,21 @@ export default {
       // This is to prevent from breaking the upload rules
       if (this.attachedFiles.length > 0) this.attachedFiles = [];
 
+      const nextMode = this.hidePrivateMessages
+        ? REPLY_EDITOR_MODES.REPLY
+        : mode;
       const { can_reply: canReply } = this.currentChat;
       this.$store.dispatch('draftMessages/setReplyEditorMode', {
-        mode,
+        mode: nextMode,
       });
-      if (canReply || this.isAWhatsAppChannel || this.isAPIInbox)
-        this.replyType = mode;
+      if (
+        canReply ||
+        this.isAWhatsAppChannel ||
+        this.isAPIInbox ||
+        this.hidePrivateMessages
+      ) {
+        this.replyType = nextMode;
+      }
       if (this.isRecordingAudio) {
         this.toggleAudioRecorder();
       }
@@ -1236,6 +1273,7 @@ export default {
       :mode="replyType"
       :conversation-id="conversationId"
       :is-reply-restricted="isReplyRestricted"
+      :hide-private-messages="hidePrivateMessages"
       :disabled="
         (copilot.isActive.value && copilot.isButtonDisabled.value) ||
         showAudioRecorderEditor

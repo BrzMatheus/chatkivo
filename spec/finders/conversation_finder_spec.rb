@@ -184,6 +184,7 @@ describe ConversationFinder do
       let(:params) { { status: 'pending', assignee_type: 'all', sort_by: 'unread_first' } }
       let!(:unread_recent_conversation) { create(:conversation, account: account, inbox: inbox, status: 'pending') }
       let!(:unread_old_conversation) { create(:conversation, account: account, inbox: inbox, status: 'pending') }
+      let!(:replied_externally_conversation) { create(:conversation, account: account, inbox: inbox, status: 'pending') }
       let!(:read_recent_conversation) { create(:conversation, account: account, inbox: inbox, status: 'pending') }
       let!(:read_old_conversation) { create(:conversation, account: account, inbox: inbox, status: 'pending') }
 
@@ -196,9 +197,14 @@ describe ConversationFinder do
                          message_type: :incoming, created_at: 30.minutes.ago)
         create(:message, conversation: read_old_conversation, account: account, inbox: inbox,
                          message_type: :incoming, created_at: 40.minutes.ago)
+        create(:message, conversation: replied_externally_conversation, account: account, inbox: inbox,
+                         message_type: :incoming, created_at: 35.minutes.ago)
+        create(:message, conversation: replied_externally_conversation, account: account, inbox: inbox,
+                         message_type: :outgoing, created_at: 5.minutes.ago)
 
         unread_recent_conversation.update!(agent_last_seen_at: 1.hour.ago)
         unread_old_conversation.update!(agent_last_seen_at: 1.hour.ago)
+        replied_externally_conversation.update!(agent_last_seen_at: 1.hour.ago)
         read_recent_conversation.update!(agent_last_seen_at: 15.minutes.ago)
         read_old_conversation.update!(agent_last_seen_at: 25.minutes.ago)
       end
@@ -210,6 +216,7 @@ describe ConversationFinder do
           [
             unread_recent_conversation.id,
             unread_old_conversation.id,
+            replied_externally_conversation.id,
             read_recent_conversation.id,
             read_old_conversation.id
           ]

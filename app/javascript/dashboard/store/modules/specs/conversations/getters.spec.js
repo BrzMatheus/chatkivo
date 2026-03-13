@@ -65,14 +65,46 @@ describe('#getters', () => {
 
     it('returns conversations ordered by unread first if chatStatusFilter = unread_first', () => {
       const unreadConversations = [
-        { id: 1, unread_count: 0, last_activity_at: 100 },
-        { id: 2, unread_count: 2, last_activity_at: 90 },
-        { id: 3, unread_count: 1, last_activity_at: 80 },
-        { id: 4, unread_count: 0, last_activity_at: 110 },
+        {
+          id: 1,
+          unread_count: 0,
+          last_activity_at: 100,
+          messages: [],
+          last_non_activity_message: { message_type: 0, created_at: 100 },
+        },
+        {
+          id: 2,
+          unread_count: 2,
+          last_activity_at: 90,
+          messages: [],
+          last_non_activity_message: { message_type: 0, created_at: 90 },
+        },
+        {
+          id: 3,
+          unread_count: 1,
+          last_activity_at: 80,
+          messages: [],
+          last_non_activity_message: { message_type: 0, created_at: 80 },
+        },
+        {
+          id: 4,
+          unread_count: 0,
+          last_activity_at: 110,
+          messages: [],
+          last_non_activity_message: { message_type: 1, created_at: 110 },
+        },
+        {
+          id: 5,
+          unread_count: 3,
+          last_activity_at: 120,
+          messages: [],
+          last_non_activity_message: { message_type: 1, created_at: 120 },
+        },
       ];
       const expectedOrder = [
         unreadConversations[1],
         unreadConversations[2],
+        unreadConversations[4],
         unreadConversations[3],
         unreadConversations[0],
       ];

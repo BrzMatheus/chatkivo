@@ -7,6 +7,11 @@
       "NON_ADMIN": "Entre em contato com o administrador para atualizar o plano e continuar usando todos os recursos."
     },
     "TITLE": "Conta",
+    "DESCRIPTION": "Gerencie os dados gerais e os módulos habilitados desta conta.",
+    "NAVIGATION": {
+      "GENERAL": "Configurações gerais",
+      "SPECIFIC": "Configurações específicas"
+    },
     "SUBMIT": "Atualizar configurações",
     "BACK": "Anterior",
     "DISMISS": "Recusar",
@@ -32,6 +37,48 @@
         "MESSAGE_MANUAL": "Esta conta está programada para exclusão em {deletionDate}. Isto foi solicitado por um administrador. Você pode cancelar a exclusão antes desta data.",
         "MESSAGE_INACTIVITY": "Esta conta está programada para exclusão em {deletionDate} devido à inatividade da conta. Você pode cancelar a exclusão antes desta data.",
         "CLEAR_BUTTON": "Cancelar Exclusão Programada"
+      }
+    },
+    "SPECIFIC": {
+      "TITLE": "Configurações específicas",
+      "NOTE": "Ative ou desative módulos para esta conta específica. As alterações afetam apenas a conta atual.",
+      "SUBMIT": "Atualizar configurações específicas",
+      "SAVING": "Salvando...",
+      "UPDATE": {
+        "SUCCESS": "Configurações específicas atualizadas com sucesso",
+        "ERROR": "Não foi possível atualizar as configurações específicas. Tente novamente."
+      },
+      "FEATURES": {
+        "AUTOMATIONS": {
+          "TITLE": "Automações",
+          "DESCRIPTION": "Permite que esta conta crie e gerencie regras de automação."
+        },
+        "MACROS": {
+          "TITLE": "Macros",
+          "DESCRIPTION": "Permite que esta conta use e gerencie macros salvas."
+        },
+        "INTEGRATIONS": {
+          "TITLE": "Integrações",
+          "DESCRIPTION": "Permite que esta conta acesse integrações nativas e webhooks."
+        },
+        "REPORTS": {
+          "TITLE": "Relatórios",
+          "DESCRIPTION": "Permite que esta conta acesse a área de relatórios e analytics."
+        },
+        "CAMPAIGNS": {
+          "TITLE": "Campanhas",
+          "DESCRIPTION": "Permite que esta conta crie e gerencie campanhas."
+        },
+        "HELP_CENTER": {
+          "TITLE": "Central de ajuda",
+          "DESCRIPTION": "Permite que esta conta acesse e gerencie a central de ajuda."
+        }
+      },
+      "SETTINGS": {
+        "HIDE_PRIVATE_MESSAGES": {
+          "TITLE": "Esconder mensagens privadas",
+          "DESCRIPTION": "Esconde a opção de mensagem privada na barra da conversa e mantém apenas o modo responder disponível para esta conta."
+        }
       }
     },
     "FORM": {

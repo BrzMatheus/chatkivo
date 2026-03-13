@@ -29,6 +29,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    hidePrivateMessages: {
+      type: Boolean,
+      default: false,
+    },
     disabled: {
       type: Boolean,
       default: false,
@@ -60,9 +64,15 @@ export default {
       setReplyMode(REPLY_EDITOR_MODES.REPLY);
     };
     const handleNoteClick = () => {
+      if (props.hidePrivateMessages) return;
       setReplyMode(REPLY_EDITOR_MODES.NOTE);
     };
     const handleModeToggle = () => {
+      if (props.hidePrivateMessages) {
+        setReplyMode(REPLY_EDITOR_MODES.REPLY);
+        return;
+      }
+
       const newMode =
         props.mode === REPLY_EDITOR_MODES.REPLY
           ? REPLY_EDITOR_MODES.NOTE
@@ -95,7 +105,11 @@ export default {
 
     const keyboardEvents = {
       'Alt+KeyP': {
-        action: () => handleNoteClick(),
+        action: () => {
+          if (!props.hidePrivateMessages) {
+            handleNoteClick();
+          }
+        },
         allowOnFocusedInput: true,
       },
       'Alt+KeyL': {
@@ -148,6 +162,7 @@ export default {
       :mode="mode"
       :disabled="disabled"
       :is-reply-restricted="isReplyRestricted"
+      :hide-private-messages="hidePrivateMessages"
       @toggle-mode="handleModeToggle"
     />
     <div class="flex items-center mx-4 my-0">

@@ -7,6 +7,11 @@
       "NON_ADMIN": "Please contact your administrator to upgrade the plan and continue using all features."
     },
     "TITLE": "Account settings",
+    "DESCRIPTION": "Manage the general data and enabled modules for this account.",
+    "NAVIGATION": {
+      "GENERAL": "General settings",
+      "SPECIFIC": "Specific settings"
+    },
     "SUBMIT": "Update settings",
     "BACK": "Back",
     "DISMISS": "Dismiss",
@@ -32,6 +37,48 @@
         "MESSAGE_MANUAL": "This account is scheduled for deletion on {deletionDate}. This was requested by an administrator. You can cancel the deletion before this date.",
         "MESSAGE_INACTIVITY": "This account is scheduled for deletion on {deletionDate} due to account inactivity. You can cancel the deletion before this date.",
         "CLEAR_BUTTON": "Cancel Scheduled Deletion"
+      }
+    },
+    "SPECIFIC": {
+      "TITLE": "Specific settings",
+      "NOTE": "Enable or disable modules for this specific account. Changes apply only to the current account.",
+      "SUBMIT": "Update specific settings",
+      "SAVING": "Saving...",
+      "UPDATE": {
+        "SUCCESS": "Specific settings updated successfully",
+        "ERROR": "Could not update the specific settings, try again!"
+      },
+      "FEATURES": {
+        "AUTOMATIONS": {
+          "TITLE": "Automations",
+          "DESCRIPTION": "Allow this account to create and manage automation rules."
+        },
+        "MACROS": {
+          "TITLE": "Macros",
+          "DESCRIPTION": "Allow this account to use and manage saved macros."
+        },
+        "INTEGRATIONS": {
+          "TITLE": "Integrations",
+          "DESCRIPTION": "Allow this account to access native integrations and webhooks."
+        },
+        "REPORTS": {
+          "TITLE": "Reports",
+          "DESCRIPTION": "Allow this account to access the reporting area and analytics pages."
+        },
+        "CAMPAIGNS": {
+          "TITLE": "Campaigns",
+          "DESCRIPTION": "Allow this account to create and manage campaigns."
+        },
+        "HELP_CENTER": {
+          "TITLE": "Help Center",
+          "DESCRIPTION": "Allow this account to access and manage the help center."
+        }
+      },
+      "SETTINGS": {
+        "HIDE_PRIVATE_MESSAGES": {
+          "TITLE": "Hide private messages",
+          "DESCRIPTION": "Hide the private message option in the conversation bar and keep only the reply mode available for this account."
+        }
       }
     },
     "FORM": {

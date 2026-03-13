@@ -16,9 +16,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  hidePrivateMessages: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['toggleMode']);
+const emit = defineEmits(['toggleMode']);
 
 const wootEditorReplyMode = useTemplateRef('wootEditorReplyMode');
 const wootEditorPrivateMode = useTemplateRef('wootEditorPrivateMode');
@@ -33,6 +37,10 @@ const privateModeSize = useElementSize(wootEditorPrivateMode);
  * @type {ComputedRef<boolean>}
  */
 const isPrivate = computed(() => {
+  if (props.hidePrivateMessages) {
+    return false;
+  }
+
   if (props.isReplyRestricted) {
     // Force switch to private note when replies are restricted
     return true;
@@ -65,6 +73,14 @@ const translateValue = computed(() => {
 
   return `${xTranslate}px`;
 });
+
+const handleToggle = () => {
+  if (props.hidePrivateMessages) {
+    return;
+  }
+
+  emit('toggleMode');
+};
 </script>
 
 <template>
@@ -74,12 +90,16 @@ const translateValue = computed(() => {
     :class="{
       'cursor-not-allowed': disabled || isReplyRestricted,
     }"
-    @click="$emit('toggleMode')"
+    @click="handleToggle"
   >
     <div ref="wootEditorReplyMode" class="flex items-center gap-1 px-2 z-20">
       {{ $t('CONVERSATION.REPLYBOX.REPLY') }}
     </div>
-    <div ref="wootEditorPrivateMode" class="flex items-center gap-1 px-2 z-20">
+    <div
+      v-if="!hidePrivateMessages"
+      ref="wootEditorPrivateMode"
+      class="flex items-center gap-1 px-2 z-20"
+    >
       {{ $t('CONVERSATION.REPLYBOX.PRIVATE_NOTE') }}
     </div>
     <div

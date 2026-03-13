@@ -7,8 +7,9 @@ module SortHandler
       order(last_activity_at: sort_direction)
     end
 
+    # rubocop:disable Metrics/MethodLength
     def sort_on_unread_first(_sort_direction = nil)
-      unread_first_query = sanitize_sql_array([<<~SQL.squish, Message.message_types[:incoming]])
+      unread_first_sql = <<~SQL.squish
         CASE
           WHEN EXISTS (
             SELECT 1
@@ -20,14 +21,24 @@ module SortHandler
                 conversations.agent_last_seen_at IS NULL OR
                 messages.created_at > conversations.agent_last_seen_at
               )
-          ) THEN 0
+          )
+          AND (#{latest_non_activity_message_type_query}) = ? THEN 0
           ELSE 1
         END ASC,
         conversations.last_activity_at DESC
       SQL
 
+      unread_first_query = sanitize_sql_array(
+        [
+          unread_first_sql,
+          Message.message_types[:incoming],
+          Message.message_types[:incoming]
+        ]
+      )
+
       order(Arel.sql(unread_first_query))
     end
+    # rubocop:enable Metrics/MethodLength
 
     def sort_on_created_at(sort_direction = :asc)
       order(created_at: sort_direction)
@@ -52,6 +63,18 @@ module SortHandler
     end
 
     private
+
+    def latest_non_activity_message_type_query
+      <<~SQL.squish
+        SELECT messages.message_type
+        FROM messages
+        WHERE messages.conversation_id = conversations.id
+          AND messages.account_id = conversations.account_id
+          AND messages.message_type != #{Message.message_types[:activity]}
+        ORDER BY messages.created_at DESC, messages.id DESC
+        LIMIT 1
+      SQL
+    end
 
     def generate_sql_query(query)
       Arel::Nodes::SqlLiteral.new(sanitize_sql_for_order(query))

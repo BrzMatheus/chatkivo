@@ -746,6 +746,7 @@ RSpec.describe Conversation do
     describe 'sort_on_unread_first' do
       let!(:unread_recent_conversation) { create(:conversation) }
       let!(:unread_old_conversation) { create(:conversation) }
+      let!(:replied_externally_conversation) { create(:conversation) }
       let!(:read_recent_conversation) { create(:conversation) }
       let!(:read_old_conversation) { create(:conversation) }
 
@@ -758,9 +759,14 @@ RSpec.describe Conversation do
                          inbox: read_recent_conversation.inbox, message_type: :incoming, created_at: 30.minutes.ago)
         create(:message, conversation: read_old_conversation, account: read_old_conversation.account,
                          inbox: read_old_conversation.inbox, message_type: :incoming, created_at: 40.minutes.ago)
+        create(:message, conversation: replied_externally_conversation, account: replied_externally_conversation.account,
+                         inbox: replied_externally_conversation.inbox, message_type: :incoming, created_at: 35.minutes.ago)
+        create(:message, conversation: replied_externally_conversation, account: replied_externally_conversation.account,
+                         inbox: replied_externally_conversation.inbox, message_type: :outgoing, created_at: 5.minutes.ago)
 
         unread_recent_conversation.update!(agent_last_seen_at: 1.hour.ago)
         unread_old_conversation.update!(agent_last_seen_at: 1.hour.ago)
+        replied_externally_conversation.update!(agent_last_seen_at: 1.hour.ago)
         read_recent_conversation.update!(agent_last_seen_at: 15.minutes.ago)
         read_old_conversation.update!(agent_last_seen_at: 25.minutes.ago)
       end
@@ -770,6 +776,7 @@ RSpec.describe Conversation do
           id: [
             unread_recent_conversation.id,
             unread_old_conversation.id,
+            replied_externally_conversation.id,
             read_recent_conversation.id,
             read_old_conversation.id
           ]
@@ -779,6 +786,7 @@ RSpec.describe Conversation do
           [
             unread_recent_conversation.id,
             unread_old_conversation.id,
+            replied_externally_conversation.id,
             read_recent_conversation.id,
             read_old_conversation.id
           ]

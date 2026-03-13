@@ -1,4 +1,8 @@
-import { CONVERSATION_PRIORITY_ORDER } from 'shared/constants/messages';
+import {
+  CONVERSATION_PRIORITY_ORDER,
+  MESSAGE_TYPE,
+} from 'shared/constants/messages';
+import { getLastMessage } from 'dashboard/helper/conversationHelper';
 
 export const findPendingMessageIndex = (chat, message) => {
   const { echo_id: tempMessageId } = message;
@@ -121,8 +125,16 @@ const SORT_OPTIONS = {
 };
 const sortAscending = (valueA, valueB) => valueA - valueB;
 const sortDescending = (valueA, valueB) => valueB - valueA;
+const getLastRelevantMessage = conversation =>
+  getLastMessage({
+    messages: conversation.messages || [],
+    last_non_activity_message: conversation.last_non_activity_message,
+  });
 const unreadRank = conversation =>
-  (conversation.unread_count || 0) > 0 ? 0 : 1;
+  (conversation.unread_count || 0) > 0 &&
+  getLastRelevantMessage(conversation)?.message_type === MESSAGE_TYPE.INCOMING
+    ? 0
+    : 1;
 
 const getSortOrderFunction = sortOrder =>
   sortOrder === 'asc' ? sortAscending : sortDescending;

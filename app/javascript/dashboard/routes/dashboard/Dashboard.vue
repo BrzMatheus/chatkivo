@@ -75,6 +75,7 @@ export default {
         'billing_settings_index',
         'settings_inbox_list',
         'general_settings_index',
+        'specific_settings_index',
         'agent_list',
       ].includes(this.$route.name);
     },
