@@ -63,6 +63,27 @@ describe('#getters', () => {
       ]);
     });
 
+    it('returns conversations ordered by unread first if chatStatusFilter = unread_first', () => {
+      const unreadConversations = [
+        { id: 1, unread_count: 0, last_activity_at: 100 },
+        { id: 2, unread_count: 2, last_activity_at: 90 },
+        { id: 3, unread_count: 1, last_activity_at: 80 },
+        { id: 4, unread_count: 0, last_activity_at: 110 },
+      ];
+      const expectedOrder = [
+        unreadConversations[1],
+        unreadConversations[2],
+        unreadConversations[3],
+        unreadConversations[0],
+      ];
+      const state = {
+        allConversations: [...unreadConversations],
+        chatSortFilter: 'unread_first',
+      };
+
+      expect(getters.getAllConversations(state)).toEqual(expectedOrder);
+    });
+
     it('returns conversations ordered by createdAt in descending order if chatStatusFilter = created_at_desc', () => {
       const state = {
         allConversations: [...conversations],

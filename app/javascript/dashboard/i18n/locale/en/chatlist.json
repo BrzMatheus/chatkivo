@@ -61,6 +61,9 @@
       "last_activity_at_desc": {
         "TEXT": "Last activity: Newest first"
       },
+      "unread_first": {
+        "TEXT": "Unread: Unread first"
+      },
       "created_at_desc": {
         "TEXT": "Created at: Newest first"
       },

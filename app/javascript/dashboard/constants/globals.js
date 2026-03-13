@@ -15,6 +15,7 @@ export default {
   SORT_BY_TYPE: {
     LAST_ACTIVITY_AT_ASC: 'last_activity_at_asc',
     LAST_ACTIVITY_AT_DESC: 'last_activity_at_desc',
+    UNREAD_FIRST: 'unread_first',
     CREATED_AT_ASC: 'created_at_asc',
     CREATED_AT_DESC: 'created_at_desc',
     PRIORITY_ASC: 'priority_asc',

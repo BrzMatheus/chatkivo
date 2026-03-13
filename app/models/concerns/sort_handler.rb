@@ -1,9 +1,32 @@
 module SortHandler
   extend ActiveSupport::Concern
 
+  # rubocop:disable Metrics/BlockLength
   class_methods do
     def sort_on_last_activity_at(sort_direction = :desc)
       order(last_activity_at: sort_direction)
+    end
+
+    def sort_on_unread_first(_sort_direction = nil)
+      unread_first_query = sanitize_sql_array([<<~SQL.squish, Message.message_types[:incoming]])
+        CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM messages
+            WHERE messages.conversation_id = conversations.id
+              AND messages.account_id = conversations.account_id
+              AND messages.message_type = ?
+              AND (
+                conversations.agent_last_seen_at IS NULL OR
+                messages.created_at > conversations.agent_last_seen_at
+              )
+          ) THEN 0
+          ELSE 1
+        END ASC,
+        conversations.last_activity_at DESC
+      SQL
+
+      order(Arel.sql(unread_first_query))
     end
 
     def sort_on_created_at(sort_direction = :asc)
@@ -34,4 +57,5 @@ module SortHandler
       Arel::Nodes::SqlLiteral.new(sanitize_sql_for_order(query))
     end
   end
+  # rubocop:enable Metrics/BlockLength
 end

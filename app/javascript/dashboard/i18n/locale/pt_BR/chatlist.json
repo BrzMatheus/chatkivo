@@ -60,6 +60,9 @@
       "last_activity_at_desc": {
         "TEXT": "Última atividade: Recentes primeiro"
       },
+      "unread_first": {
+        "TEXT": "Não lidas: Não lidas primeiro"
+      },
       "created_at_desc": {
         "TEXT": "Criado em: Recentes primeiro"
       },

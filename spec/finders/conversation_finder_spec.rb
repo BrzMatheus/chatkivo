@@ -180,6 +180,43 @@ describe ConversationFinder do
       end
     end
 
+    context 'with sort_by unread_first' do
+      let(:params) { { status: 'pending', assignee_type: 'all', sort_by: 'unread_first' } }
+      let!(:unread_recent_conversation) { create(:conversation, account: account, inbox: inbox, status: 'pending') }
+      let!(:unread_old_conversation) { create(:conversation, account: account, inbox: inbox, status: 'pending') }
+      let!(:read_recent_conversation) { create(:conversation, account: account, inbox: inbox, status: 'pending') }
+      let!(:read_old_conversation) { create(:conversation, account: account, inbox: inbox, status: 'pending') }
+
+      before do
+        create(:message, conversation: unread_recent_conversation, account: account, inbox: inbox,
+                         message_type: :incoming, created_at: 10.minutes.ago)
+        create(:message, conversation: unread_old_conversation, account: account, inbox: inbox,
+                         message_type: :incoming, created_at: 20.minutes.ago)
+        create(:message, conversation: read_recent_conversation, account: account, inbox: inbox,
+                         message_type: :incoming, created_at: 30.minutes.ago)
+        create(:message, conversation: read_old_conversation, account: account, inbox: inbox,
+                         message_type: :incoming, created_at: 40.minutes.ago)
+
+        unread_recent_conversation.update!(agent_last_seen_at: 1.hour.ago)
+        unread_old_conversation.update!(agent_last_seen_at: 1.hour.ago)
+        read_recent_conversation.update!(agent_last_seen_at: 15.minutes.ago)
+        read_old_conversation.update!(agent_last_seen_at: 25.minutes.ago)
+      end
+
+      it 'returns unread conversations first and sorts each group by last activity desc' do
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).to eq(
+          [
+            unread_recent_conversation.id,
+            unread_old_conversation.id,
+            read_recent_conversation.id,
+            read_old_conversation.id
+          ]
+        )
+      end
+    end
+
     context 'with pagination' do
       let(:params) { { status: 'open', assignee_type: 'me', page: 1 } }
 

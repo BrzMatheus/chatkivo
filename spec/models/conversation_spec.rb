@@ -743,6 +743,49 @@ RSpec.describe Conversation do
       end
     end
 
+    describe 'sort_on_unread_first' do
+      let!(:unread_recent_conversation) { create(:conversation) }
+      let!(:unread_old_conversation) { create(:conversation) }
+      let!(:read_recent_conversation) { create(:conversation) }
+      let!(:read_old_conversation) { create(:conversation) }
+
+      before do
+        create(:message, conversation: unread_recent_conversation, account: unread_recent_conversation.account,
+                         inbox: unread_recent_conversation.inbox, message_type: :incoming, created_at: 10.minutes.ago)
+        create(:message, conversation: unread_old_conversation, account: unread_old_conversation.account,
+                         inbox: unread_old_conversation.inbox, message_type: :incoming, created_at: 20.minutes.ago)
+        create(:message, conversation: read_recent_conversation, account: read_recent_conversation.account,
+                         inbox: read_recent_conversation.inbox, message_type: :incoming, created_at: 30.minutes.ago)
+        create(:message, conversation: read_old_conversation, account: read_old_conversation.account,
+                         inbox: read_old_conversation.inbox, message_type: :incoming, created_at: 40.minutes.ago)
+
+        unread_recent_conversation.update!(agent_last_seen_at: 1.hour.ago)
+        unread_old_conversation.update!(agent_last_seen_at: 1.hour.ago)
+        read_recent_conversation.update!(agent_last_seen_at: 15.minutes.ago)
+        read_old_conversation.update!(agent_last_seen_at: 25.minutes.ago)
+      end
+
+      it 'returns unread conversations first and sorts each group by last activity desc' do
+        records = described_class.where(
+          id: [
+            unread_recent_conversation.id,
+            unread_old_conversation.id,
+            read_recent_conversation.id,
+            read_old_conversation.id
+          ]
+        ).sort_on_unread_first
+
+        expect(records.map(&:id)).to eq(
+          [
+            unread_recent_conversation.id,
+            unread_old_conversation.id,
+            read_recent_conversation.id,
+            read_old_conversation.id
+          ]
+        )
+      end
+    end
+
     context 'when last_activity_at is updated by non-activity messages' do
       before do
         create(:message, conversation_id: conversation_1.id, message_type: :incoming, created_at: DateTime.now - 8.days)

@@ -111,6 +111,7 @@ export const applyRoleFilter = (
 const SORT_OPTIONS = {
   last_activity_at_asc: ['sortOnLastActivityAt', 'asc'],
   last_activity_at_desc: ['sortOnLastActivityAt', 'desc'],
+  unread_first: ['sortOnUnreadFirst', 'desc'],
   created_at_asc: ['sortOnCreatedAt', 'asc'],
   created_at_desc: ['sortOnCreatedAt', 'desc'],
   priority_asc: ['sortOnPriority', 'asc'],
@@ -120,6 +121,8 @@ const SORT_OPTIONS = {
 };
 const sortAscending = (valueA, valueB) => valueA - valueB;
 const sortDescending = (valueA, valueB) => valueB - valueA;
+const unreadRank = conversation =>
+  (conversation.unread_count || 0) > 0 ? 0 : 1;
 
 const getSortOrderFunction = sortOrder =>
   sortOrder === 'asc' ? sortAscending : sortDescending;
@@ -127,6 +130,16 @@ const getSortOrderFunction = sortOrder =>
 const sortConfig = {
   sortOnLastActivityAt: (a, b, sortDirection) =>
     getSortOrderFunction(sortDirection)(a.last_activity_at, b.last_activity_at),
+
+  sortOnUnreadFirst: (a, b) => {
+    const unreadRankDifference = unreadRank(a) - unreadRank(b);
+
+    if (unreadRankDifference !== 0) {
+      return unreadRankDifference;
+    }
+
+    return sortDescending(a.last_activity_at, b.last_activity_at);
+  },
 
   sortOnCreatedAt: (a, b, sortDirection) =>
     getSortOrderFunction(sortDirection)(a.created_at, b.created_at),
