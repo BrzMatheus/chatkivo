@@ -92,9 +92,12 @@ RSpec.describe Evolution::ImportHistoryService do
       )
 
       result = service.perform
-      target_conversation = source_conversation.reload
+      target_conversation = Conversation.where(account: account, inbox: inbox, contact: contact).where.not(id: source_conversation.id).order(:id).last
 
+      expect(source_conversation.reload).to be_present
       expect(target_conversation).to be_present
+      expect(target_conversation.id).not_to eq(source_conversation.id)
+      expect(target_conversation.additional_attributes['historical_import']).to be(true)
       expect(target_conversation.additional_attributes['historical_import_source']).to eq('evolution_super_admin')
       expect(target_conversation.additional_attributes['historical_import_jid']).to eq(jid)
 
@@ -143,15 +146,15 @@ RSpec.describe Evolution::ImportHistoryService do
       )
 
       result = service.perform
-      target_conversation = source_conversation.reload
+      target_conversation = Conversation.where(account: account, inbox: inbox, contact: contact).where.not(id: source_conversation.id).order(:id).last
       duplicated_message = target_conversation.messages.find_by(source_id: 'WAID:DUP2')
       report_row = CSV.parse(result[:report_csv], headers: true).first.to_h
 
-      expect(duplicated_message.content).to eq('Chatwoot wins only if preferred')
+      expect(duplicated_message.content).to eq('Evolution preferred duplicate')
       expect(report_row['collision_preference']).to eq('evolution')
     end
 
-    it 'does not create a second conversation when importing the same chat again' do
+    it 'creates a new shadow conversation on each import so duplicates can be reconciled' do
       jid = '5511666666666@s.whatsapp.net'
       contact = create(:contact, account: account, phone_number: '+5511666666666')
       contact_inbox = create(:contact_inbox, contact: contact, inbox: inbox, source_id: jid)
@@ -179,10 +182,14 @@ RSpec.describe Evolution::ImportHistoryService do
       described_class.new(account: account, inbox: inbox, import_file_data: payload.to_json, dry_run: false).perform
       described_class.new(account: account, inbox: inbox, import_file_data: payload.to_json, dry_run: false).perform
 
-      source_conversation.reload
-      expect(Conversation.where(account: account, inbox: inbox, contact: contact).count).to eq(1)
-      expect(source_conversation.messages.where(source_id: 'WAID:IDEMPOTENT').count).to eq(1)
-      expect(source_conversation.messages.where(source_id: 'WAID:IDEMPOTENT_2').count).to eq(1)
+      conversations = Conversation.where(account: account, inbox: inbox, contact: contact).order(:id)
+      imported_conversations = conversations.where("additional_attributes ->> 'historical_import' = ?", 'true')
+
+      expect(conversations.count).to eq(3)
+      expect(imported_conversations.count).to eq(2)
+      expect(source_conversation.reload.messages.where(source_id: 'WAID:IDEMPOTENT_2').count).to eq(0)
+      expect(imported_conversations.last.messages.where(source_id: 'WAID:IDEMPOTENT').count).to eq(1)
+      expect(imported_conversations.last.messages.where(source_id: 'WAID:IDEMPOTENT_2').count).to eq(1)
     end
 
     it 'does not enqueue delivery or webhook jobs during message insert_all import' do

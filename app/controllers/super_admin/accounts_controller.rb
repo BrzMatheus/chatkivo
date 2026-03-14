@@ -150,7 +150,7 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     Evolution::ImportHistoryJob.perform_later(data_import.id, inbox.id, dry_run: dry_run)
 
     notice = dry_run ? 'DRY_RUN de importacao Evolution iniciado com sucesso.' : 'Importacao Evolution iniciada com sucesso.'
-    redirect_back(fallback_location: [namespace, requested_resource], notice: notice)
+    redirect_to super_admin_account_path(account, dedup_inbox_id: inbox.id), notice: notice
   end
 
   def evolution_dedup_preview

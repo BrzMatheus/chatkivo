@@ -166,7 +166,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         data_import = account.data_imports.order(:id).last
         expect(data_import.data_type).to eq('evolution_history')
         expect(data_import.import_file).to be_attached
-        expect(response).to have_http_status(:redirect)
+        expect(response).to redirect_to(super_admin_account_path(account, dedup_inbox_id: api_inbox.id))
         expect(flash[:notice]).to eq('DRY_RUN de importacao Evolution iniciado com sucesso.')
       end
     end
