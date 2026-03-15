@@ -192,6 +192,55 @@ RSpec.describe Evolution::ImportHistoryService do
       expect(source_conversation.additional_attributes['historical_import_jid']).to eq(jid)
     end
 
+    it 'creates a rebuilt conversation and preserves the original timeline when mode is rebuild' do
+      jid = '5511444444444@s.whatsapp.net'
+      contact = create(:contact, account: account, phone_number: '+5511444444444')
+      contact_inbox = create(:contact_inbox, contact: contact, inbox: inbox, source_id: jid)
+      source_conversation = create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox)
+
+      create(
+        :message,
+        account: account,
+        inbox: inbox,
+        conversation: source_conversation,
+        message_type: :outgoing,
+        source_id: 'WAID:ORIGINAL_ONLY',
+        content: 'Original only',
+        created_at: Time.zone.at(1_700_000_020)
+      )
+
+      payload = [
+        {
+          'remoteJid' => jid,
+          'records' => [
+            { 'wa_id' => 'ORIGINAL_ONLY', 'fromMe' => true, 'messageTimestamp' => 1_700_000_020, 'content' => 'Original only' },
+            { 'wa_id' => 'REBUILD_ONLY', 'fromMe' => false, 'messageTimestamp' => 1_700_000_010, 'content' => 'Historical rebuild' }
+          ]
+        }
+      ]
+
+      described_class.new(
+        account: account,
+        inbox: inbox,
+        import_file_data: payload.to_json,
+        dry_run: false,
+        mode: 'rebuild'
+      ).perform
+
+      conversations = Conversation.where(account: account, inbox: inbox, contact: contact).order(:id)
+      rebuilt_conversation = conversations.where.not(id: source_conversation.id).last
+
+      expect(conversations.count).to eq(2)
+      expect(source_conversation.reload.messages.where(source_id: 'WAID:REBUILD_ONLY')).to be_blank
+      expect(rebuilt_conversation.messages.where(source_id: 'WAID:ORIGINAL_ONLY').count).to eq(1)
+      expect(rebuilt_conversation.messages.where(source_id: 'WAID:REBUILD_ONLY').count).to eq(1)
+      expect(rebuilt_conversation.additional_attributes['historical_import']).to be(true)
+      expect(rebuilt_conversation.additional_attributes['historical_import_mode']).to eq('rebuild')
+      expect(rebuilt_conversation.additional_attributes['historical_import_rebuilt_from_conversation_id']).to eq(source_conversation.id)
+      expect(rebuilt_conversation.created_at.to_i).to eq(1_700_000_010)
+      expect(rebuilt_conversation.last_activity_at.to_i).to eq(1_700_000_020)
+    end
+
     it 'reuses the canonical conversation for the same contact even when the existing contact_inbox uses UUID' do
       jid = '5521968515070@s.whatsapp.net'
       contact = create(:contact, account: account, phone_number: '+5521968515070')

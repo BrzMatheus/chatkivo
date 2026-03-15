@@ -29,7 +29,22 @@
       </div>
 
       <div class="pb-3">
+        <%= label_tag :mode, "Modo de Importacao:", class: "block mb-2" %>
+        <%= select_tag :mode,
+            options_for_select(
+              [
+                ['Importar na conversa existente quando possivel', 'import_direct'],
+                ['Reconstruir em nova conversa para revisao', 'rebuild']
+              ],
+              'import_direct'
+            ),
+            class: "form-control" %>
+        <small class="text-muted">Use reconstrucao quando quiser preservar a conversa atual e revisar uma timeline nova.</small>
+      </div>
+
+      <div class="pb-3">
         <%= label_tag :dry_run, class: "block mb-2" do %>
+          <%= hidden_field_tag :dry_run, '0' %>
           <%= check_box_tag :dry_run, '1', true %>
           Executar em DRY_RUN
         <% end %>

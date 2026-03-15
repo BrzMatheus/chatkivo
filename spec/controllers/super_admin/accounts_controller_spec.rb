@@ -169,6 +169,30 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         expect(response).to redirect_to(super_admin_account_path(account, dedup_inbox_id: api_inbox.id))
         expect(flash[:notice]).to eq('DRY_RUN de importacao Evolution iniciado com sucesso.')
       end
+
+      it 'enqueues a real import when dry_run is unchecked' do
+        import_file = Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/evolution_history.json'), 'application/json')
+
+        expect do
+          post "/super_admin/accounts/#{account.id}/evolution_import",
+               params: { inbox_id: api_inbox.id, import_file: import_file, dry_run: '0' }
+        end.to have_enqueued_job(Evolution::ImportHistoryJob).with(kind_of(Integer), api_inbox.id, dry_run: false, mode: 'import_direct')
+
+        expect(response).to redirect_to(super_admin_account_path(account, dedup_inbox_id: api_inbox.id))
+        expect(flash[:notice]).to eq('Importacao Evolution iniciada com sucesso.')
+      end
+
+      it 'enqueues a rebuild import when rebuild mode is selected' do
+        import_file = Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/evolution_history.json'), 'application/json')
+
+        expect do
+          post "/super_admin/accounts/#{account.id}/evolution_import",
+               params: { inbox_id: api_inbox.id, import_file: import_file, dry_run: '0', mode: 'rebuild' }
+        end.to have_enqueued_job(Evolution::ImportHistoryJob).with(kind_of(Integer), api_inbox.id, dry_run: false, mode: 'rebuild')
+
+        expect(response).to redirect_to(super_admin_account_path(account, dedup_inbox_id: api_inbox.id))
+        expect(flash[:notice]).to eq('Reconstrucao Evolution iniciada com sucesso.')
+      end
     end
   end
 

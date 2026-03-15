@@ -210,10 +210,11 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def contact_inbox
     @contact_inbox = build_contact_inbox
 
-    # fallback for the old case where we do look up only using source id
-    # In future we need to change this and make sure we do look up on combination of inbox_id and source_id
-    # and deprecate the support of passing only source_id as the param
-    @contact_inbox ||= ::ContactInbox.find_by!(source_id: params[:source_id])
+    @contact_inbox ||= if @inbox.present?
+                         @inbox.contact_inboxes.find_by!(source_id: params[:source_id])
+                       else
+                         ::ContactInbox.joins(:inbox).find_by!(inboxes: { account_id: Current.account.id }, source_id: params[:source_id])
+                       end
     authorize @contact_inbox.inbox, :show?
   rescue ActiveRecord::RecordNotUnique
     render json: { error: 'source_id should be unique' }, status: :unprocessable_entity

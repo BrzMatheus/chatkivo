@@ -3,16 +3,24 @@ require 'json'
 
 # rubocop:disable Metrics/ClassLength
 class Evolution::ImportHistoryService
-  pattr_initialize [:account!, :inbox!, :import_file_data!, :dry_run]
+  pattr_initialize [:account!, :inbox!, :import_file_data!, :dry_run, :mode]
 
   REPORT_HEADERS = %w[
-    row_no jid status reason
+    row_no jid mode status reason
     source_conversation_id new_conversation_id resolved_contact_id resolved_contact_inbox_id
     chatwoot_count evolution_count merged_count inserted_count
     collision_preference first_at last_at
   ].freeze
 
   PROCESSED_STATUSES = %w[dry_run inserted].freeze
+  VALID_MODES = %w[import_direct rebuild].freeze
+  DEDUPE_ATTRIBUTE_KEYS = %w[
+    dedupe_send_blocked
+    dedupe_canonical_conversation_id
+    dedupe_canonical_conversation_display_id
+    dedupe_group_key
+    dedupe_blocked_at
+  ].freeze
 
   def perform
     raise 'Inbox must be an API inbox' unless inbox.api?
@@ -87,7 +95,7 @@ class Evolution::ImportHistoryService
       return row
     end
 
-    target_conversation = resolve_target_conversation!(contact_inbox, source_conversation, jid)
+    target_conversation = resolve_target_conversation!(contact_inbox, source_conversation, jid, merged_messages)
     insertable_messages = filter_insertable_messages(chatwoot_messages, merged_messages)
     insert_rows = build_insert_rows(target_conversation, insertable_messages)
 
@@ -110,6 +118,7 @@ class Evolution::ImportHistoryService
     {
       row_no: row_no,
       jid: normalize_jid(chat['remoteJid']),
+      mode: import_mode,
       status: 'pending',
       reason: nil,
       source_conversation_id: nil,
@@ -349,27 +358,53 @@ class Evolution::ImportHistoryService
     existing
   end
 
-  def resolve_target_conversation!(contact_inbox, source_conversation, jid)
+  def resolve_target_conversation!(contact_inbox, source_conversation, jid, merged_messages)
+    return build_rebuilt_conversation!(contact_inbox, source_conversation, jid, merged_messages) if rebuild_mode?
     return source_conversation.tap { |conversation| ensure_import_metadata!(conversation, jid) } if source_conversation
 
-    Conversation.create!(
+    build_import_conversation!(contact_inbox, jid, merged_messages)
+  end
+
+  def build_rebuilt_conversation!(contact_inbox, source_conversation, jid, merged_messages)
+    build_import_conversation!(
+      contact_inbox,
+      jid,
+      merged_messages,
+      source_conversation: source_conversation,
+      rebuild: true
+    )
+  end
+
+  def build_import_conversation!(contact_inbox, jid, merged_messages, source_conversation: nil, rebuild: false)
+    conversation = Conversation.create!(
       account: account,
       inbox: inbox,
       contact: contact_inbox.contact,
       contact_inbox: contact_inbox,
-      status: :open,
-      additional_attributes: {
-        'historical_import_source' => 'evolution_super_admin',
-        'historical_import_jid' => jid
-      }
+      status: source_conversation&.status || :open,
+      assignee_id: source_conversation&.assignee_id,
+      assignee_agent_bot_id: source_conversation&.assignee_agent_bot_id,
+      team_id: source_conversation&.team_id,
+      priority: source_conversation&.priority,
+      custom_attributes: source_conversation&.custom_attributes.to_h,
+      additional_attributes: import_metadata_attributes(
+        source_conversation,
+        jid,
+        historical_import: true,
+        rebuild: rebuild
+      )
     )
+
+    align_conversation_timeline!(conversation, merged_messages)
+    conversation
   end
 
   def ensure_import_metadata!(conversation, jid)
-    attrs = conversation.additional_attributes.to_h
+    attrs = conversation.additional_attributes.to_h.except(*DEDUPE_ATTRIBUTE_KEYS)
     updated_attrs = attrs.merge(
       'historical_import_source' => 'evolution_super_admin',
-      'historical_import_jid' => jid
+      'historical_import_jid' => jid,
+      'historical_import_mode' => import_mode
     )
     return if attrs == updated_attrs
 
@@ -379,6 +414,8 @@ class Evolution::ImportHistoryService
   end
 
   def filter_insertable_messages(chatwoot_messages, merged_messages)
+    return merged_messages if rebuild_mode?
+
     existing_keys = chatwoot_messages.each_with_object({}) do |message, keys|
       key = message_identity_key(message)
       keys[key] = true if key.present?
@@ -415,6 +452,47 @@ class Evolution::ImportHistoryService
         sender_type: message[:sender_type]
       }
     end
+  end
+
+  def import_metadata_attributes(source_conversation, jid, historical_import:, rebuild:)
+    attrs = source_conversation&.additional_attributes.to_h&.except(*DEDUPE_ATTRIBUTE_KEYS) || {}
+
+    attrs['historical_import'] = true if historical_import
+    attrs['historical_import_source'] = 'evolution_super_admin'
+    attrs['historical_import_jid'] = jid
+    attrs['historical_import_mode'] = import_mode
+
+    if rebuild && source_conversation.present?
+      attrs['historical_import_rebuilt_from_conversation_id'] = source_conversation.id
+    else
+      attrs.delete('historical_import_rebuilt_from_conversation_id')
+    end
+
+    attrs
+  end
+
+  def align_conversation_timeline!(conversation, merged_messages)
+    timestamps = merged_messages.map { |message| message[:created_at] }.compact.sort
+    return if timestamps.blank?
+
+    # rubocop:disable Rails/SkipsModelValidations
+    conversation.update_columns(
+      created_at: timestamps.first,
+      last_activity_at: timestamps.last,
+      updated_at: Time.current
+    )
+    # rubocop:enable Rails/SkipsModelValidations
+  end
+
+  def import_mode
+    mode_value = mode.to_s
+    return mode_value if VALID_MODES.include?(mode_value)
+
+    'import_direct'
+  end
+
+  def rebuild_mode?
+    import_mode == 'rebuild'
   end
 
   def dry_run_mode?

@@ -94,6 +94,26 @@ describe MessageFinder do
       end
     end
 
+    context 'when ids are not aligned with created_at for after cursor' do
+      let(:params) { { after: cursor_message.id } }
+      let!(:newer_message) do
+        create(:message, account: account, inbox: inbox, conversation: conversation, created_at: Time.zone.at(1_700_000_050))
+      end
+      let!(:cursor_message) do
+        create(:message, account: account, inbox: inbox, conversation: conversation, created_at: Time.zone.at(1_700_000_040))
+      end
+      let!(:older_message_with_higher_id) do
+        create(:message, account: account, inbox: inbox, conversation: conversation, created_at: Time.zone.at(1_700_000_030))
+      end
+
+      it 'uses created_at and id as cursor to fetch the newer timeline' do
+        result_ids = message_finder.perform.map(&:id)
+
+        expect(result_ids).to include(newer_message.id)
+        expect(result_ids).not_to include(older_message_with_higher_id.id)
+      end
+    end
+
     context 'when before_id does not exist in the conversation scope' do
       let!(:other_conversation) { create(:conversation, account: account, inbox: inbox) }
       let!(:external_before_message) do

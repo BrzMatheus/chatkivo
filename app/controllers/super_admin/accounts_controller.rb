@@ -118,7 +118,9 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     account = requested_resource
     inbox_id = params[:inbox_id]
     import_file = params[:import_file]
-    dry_run = params.key?(:dry_run) ? ActiveModel::Type::Boolean.new.cast(params[:dry_run]) : true
+    dry_run = ActiveModel::Type::Boolean.new.cast(params[:dry_run])
+    mode = params[:mode].to_s.presence
+    mode = 'import_direct' unless Evolution::ImportHistoryService::VALID_MODES.include?(mode)
 
     if import_file.blank?
       redirect_back(fallback_location: [namespace, requested_resource], alert: 'Arquivo JSON e obrigatorio')
@@ -147,9 +149,14 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
 
     data_import = account.data_imports.create!(data_type: 'evolution_history')
     data_import.import_file.attach(import_file)
-    Evolution::ImportHistoryJob.perform_later(data_import.id, inbox.id, dry_run: dry_run)
+    Evolution::ImportHistoryJob.perform_later(data_import.id, inbox.id, dry_run: dry_run, mode: mode)
 
-    notice = dry_run ? 'DRY_RUN de importacao Evolution iniciado com sucesso.' : 'Importacao Evolution iniciada com sucesso.'
+    notice =
+      if dry_run
+        mode == 'rebuild' ? 'DRY_RUN de reconstrucao Evolution iniciado com sucesso.' : 'DRY_RUN de importacao Evolution iniciado com sucesso.'
+      else
+        mode == 'rebuild' ? 'Reconstrucao Evolution iniciada com sucesso.' : 'Importacao Evolution iniciada com sucesso.'
+      end
     redirect_to super_admin_account_path(account, dedup_inbox_id: inbox.id), notice: notice
   end
 

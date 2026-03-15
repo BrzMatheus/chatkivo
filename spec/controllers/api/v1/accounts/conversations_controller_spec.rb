@@ -346,6 +346,26 @@ RSpec.describe 'Conversations API', type: :request do
           expect(response_data[:additional_attributes]).to eq(additional_attributes)
         end
 
+        it 'resolves source_id within the selected inbox when the same source_id exists in another inbox' do
+          allow(Rails.configuration.dispatcher).to receive(:dispatch)
+
+          second_inbox = create(:inbox, account: account)
+          second_contact = create(:contact, account: account)
+          second_contact_inbox = create(:contact_inbox, contact: second_contact, inbox: second_inbox, source_id: contact_inbox.source_id)
+
+          create(:inbox_member, user: agent, inbox: second_inbox)
+
+          post "/api/v1/accounts/#{account.id}/conversations",
+               headers: agent.create_new_auth_token,
+               params: { source_id: contact_inbox.source_id, inbox_id: second_inbox.id },
+               as: :json
+
+          expect(response).to have_http_status(:success)
+          response_data = JSON.parse(response.body, symbolize_names: true)
+
+          expect(account.conversations.find_by(display_id: response_data[:id]).contact_inbox_id).to eq(second_contact_inbox.id)
+        end
+
         it 'does not create a new conversation if source_id is not unique' do
           new_contact = create(:contact, account: account)
 

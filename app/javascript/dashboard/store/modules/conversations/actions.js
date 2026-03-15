@@ -29,6 +29,17 @@ export const hasMessageFailedWithExternalError = pendingMessage => {
   return status === MESSAGE_STATUS.FAILED && externalError !== '';
 };
 
+const compareMessagesByCreatedAtAndId = (firstMessage, secondMessage) => {
+  const createdAtDiff =
+    new Date(firstMessage.created_at) - new Date(secondMessage.created_at);
+
+  if (createdAtDiff !== 0) {
+    return createdAtDiff;
+  }
+
+  return firstMessage.id - secondMessage.id;
+};
+
 // actions
 const actions = {
   getConversation: async ({ commit }, conversationId) => {
@@ -155,10 +166,9 @@ const actions = {
         message => !messages.find(item => item.id === message.id)
       );
       selectedChat.messages.push(...missingMessages);
-      // Sort the messages by created_at
-      const sortedMessages = selectedChat.messages.sort((a, b) => {
-        return new Date(a.created_at) - new Date(b.created_at);
-      });
+      const sortedMessages = selectedChat.messages.sort(
+        compareMessagesByCreatedAtAndId
+      );
       commit(types.SET_MISSING_MESSAGES, {
         id: conversationId,
         data: sortedMessages,

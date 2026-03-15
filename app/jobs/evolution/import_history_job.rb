@@ -5,11 +5,11 @@ class Evolution::ImportHistoryJob < ApplicationJob
   retry_on ActiveStorage::FileNotFoundError, wait: 1.minute, attempts: 3
   retry_on StandardError, wait: 2.minutes, attempts: 2
 
-  def perform(data_import_id, inbox_id, dry_run: true)
+  def perform(data_import_id, inbox_id, dry_run: true, mode: 'import_direct')
     @data_import = DataImport.find(data_import_id)
     @inbox = @data_import.account.inboxes.find(inbox_id)
 
-    process_import(dry_run)
+    process_import(dry_run, mode)
   rescue StandardError => e
     handle_error(e)
     raise
@@ -17,14 +17,15 @@ class Evolution::ImportHistoryJob < ApplicationJob
 
   private
 
-  def process_import(dry_run)
+  def process_import(dry_run, mode)
     @data_import.update!(status: :processing, processing_errors: nil)
 
     result = Evolution::ImportHistoryService.new(
       account: @data_import.account,
       inbox: @inbox,
       import_file_data: @data_import.import_file.download,
-      dry_run: dry_run
+      dry_run: dry_run,
+      mode: mode
     ).perform
 
     attach_report(result[:report_csv])
