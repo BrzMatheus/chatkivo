@@ -5,7 +5,7 @@ RSpec.describe Evolution::ConversationDedup::CandidateFinder do
   let(:api_channel) { create(:channel_api, account: account) }
   let(:inbox) { api_channel.inbox }
   let(:jid) { '5511999999999@s.whatsapp.net' }
-  let(:contact) { create(:contact, account: account, identifier: "evolution:#{jid}") }
+  let(:contact) { create(:contact, account: account, identifier: jid) }
   let(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: inbox, source_id: jid) }
 
   describe '#perform' do

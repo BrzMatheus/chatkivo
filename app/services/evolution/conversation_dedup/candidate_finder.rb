@@ -189,6 +189,7 @@ class Evolution::ConversationDedup::CandidateFinder
     return false unless contact
 
     return true if contact.identifier.to_s.start_with?('evolution:')
+    return true if contact.identifier.to_s.end_with?('@s.whatsapp.net')
 
     contact.custom_attributes.to_h['evolution_remote_jid'].present?
   end

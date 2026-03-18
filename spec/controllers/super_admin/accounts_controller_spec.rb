@@ -199,7 +199,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
   describe 'POST /super_admin/accounts/{account_id}/evolution_dedup_preview' do
     let!(:api_channel) { create(:channel_api, account: account) }
     let!(:api_inbox) { api_channel.inbox }
-    let!(:contact) { create(:contact, account: account, identifier: 'evolution:5511777777777@s.whatsapp.net') }
+    let!(:contact) { create(:contact, account: account, identifier: '5511777777777@s.whatsapp.net') }
     let!(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: api_inbox, source_id: '5511777777777@s.whatsapp.net') }
     let!(:canonical_conversation) do
       create(
@@ -274,7 +274,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
   describe 'POST /super_admin/accounts/{account_id}/evolution_dedup_apply' do
     let!(:api_channel) { create(:channel_api, account: account) }
     let!(:api_inbox) { api_channel.inbox }
-    let!(:contact) { create(:contact, account: account, identifier: 'evolution:5511666666666@s.whatsapp.net') }
+    let!(:contact) { create(:contact, account: account, identifier: '5511666666666@s.whatsapp.net') }
     let!(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: api_inbox, source_id: '5511666666666@s.whatsapp.net') }
     let!(:canonical_conversation) { create(:conversation, account: account, inbox: api_inbox, contact: contact, contact_inbox: contact_inbox) }
     let!(:secondary_conversation) do
@@ -360,7 +360,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
   describe 'POST /super_admin/accounts/{account_id}/evolution_dedup_apply_bulk' do
     let!(:api_channel) { create(:channel_api, account: account) }
     let!(:api_inbox) { api_channel.inbox }
-    let!(:contact) { create(:contact, account: account, identifier: 'evolution:5511555555555@s.whatsapp.net') }
+    let!(:contact) { create(:contact, account: account, identifier: '5511555555555@s.whatsapp.net') }
     let!(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: api_inbox, source_id: '5511555555555@s.whatsapp.net') }
     let!(:canonical_conversation) { create(:conversation, account: account, inbox: api_inbox, contact: contact, contact_inbox: contact_inbox) }
     let!(:secondary_conversation) do

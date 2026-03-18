@@ -173,7 +173,7 @@ class Evolution::ImportHistoryService
       inbox: inbox,
       source_id: jid,
       contact_attributes: {
-        identifier: "evolution:#{jid}",
+        identifier: jid,
         name: contact_name_from(chat, records, jid),
         phone_number: phone_number_from_jid(jid),
         custom_attributes: { evolution_remote_jid: jid }
