@@ -6,6 +6,7 @@ import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
 import AddCannedModal from 'dashboard/routes/dashboard/settings/canned/AddCanned.vue';
 import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
+import { ExceptionWithMessage } from 'shared/helpers/CustomErrors';
 import { conversationUrl, frontendURL } from '../../../helper/URLHelper';
 import {
   ACCOUNT_EVENTS,
@@ -179,7 +180,11 @@ export default {
         useAlert(this.$t('CONVERSATION.SUCCESS_DELETE_MESSAGE'));
         this.handleClose();
       } catch (error) {
-        useAlert(this.$t('CONVERSATION.FAIL_DELETE_MESSSAGE'));
+        if (error instanceof ExceptionWithMessage) {
+          useAlert(error.data);
+        } else {
+          useAlert(this.$t('CONVERSATION.FAIL_DELETE_MESSSAGE'));
+        }
       }
     },
     closeDeleteModal() {

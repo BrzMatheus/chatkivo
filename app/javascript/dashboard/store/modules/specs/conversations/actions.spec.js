@@ -2,6 +2,7 @@ import axios from 'axios';
 import actions, {
   hasMessageFailedWithExternalError,
 } from '../../conversations/actions';
+import { ExceptionWithMessage } from 'shared/helpers/CustomErrors';
 import types from '../../../mutation-types';
 const dataToSend = {
   payload: [
@@ -514,7 +515,23 @@ describe('#deleteMessage', () => {
     axios.delete.mockRejectedValue({ message: 'Incorrect header' });
     await expect(
       actions.deleteMessage({ commit }, { conversationId, messageId })
-    ).rejects.toThrow(Error);
+    ).rejects.toEqual({ message: 'Incorrect header' });
+    expect(commit.mock.calls).toEqual([]);
+  });
+
+  it('propagates backend error messages on delete failure', async () => {
+    const [conversationId, messageId] = [1, 1];
+    axios.delete.mockRejectedValue({
+      response: {
+        data: {
+          error: '401, Unauthorized',
+        },
+      },
+    });
+
+    await expect(
+      actions.deleteMessage({ commit }, { conversationId, messageId })
+    ).rejects.toThrow(ExceptionWithMessage);
     expect(commit.mock.calls).toEqual([]);
   });
 

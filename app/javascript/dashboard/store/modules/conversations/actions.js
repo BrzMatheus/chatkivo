@@ -3,6 +3,7 @@ import ConversationApi from '../../../api/inbox/conversation';
 import MessageApi from '../../../api/inbox/message';
 import { MESSAGE_STATUS, MESSAGE_TYPE } from 'shared/constants/messages';
 import { createPendingMessage } from 'dashboard/helper/commons';
+import { ExceptionWithMessage } from 'shared/helpers/CustomErrors';
 import {
   buildConversationList,
   isOnMentionsView,
@@ -407,7 +408,12 @@ const actions = {
       commit(types.ADD_MESSAGE, data);
       commit(types.DELETE_CONVERSATION_ATTACHMENTS, data);
     } catch (error) {
-      throw new Error(error);
+      const errorMessage = error.response?.data?.error;
+      if (errorMessage) {
+        throw new ExceptionWithMessage(errorMessage);
+      }
+
+      throw error;
     }
   },
 
