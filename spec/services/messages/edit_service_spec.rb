@@ -26,6 +26,28 @@ describe Messages::EditService do
       end
     end
 
+    context 'when api inbox has editable incoming message' do
+      let(:channel_api) { create(:channel_api) }
+      let(:conversation) { create(:conversation, inbox: channel_api.inbox, account: channel_api.account) }
+      let(:message) do
+        create(
+          :message,
+          message_type: :incoming,
+          conversation: conversation,
+          account: channel_api.account,
+          content: 'old incoming',
+          attachments: []
+        )
+      end
+
+      it 'updates the content locally' do
+        result = described_class.new(message: message, content: 'new incoming content').perform
+
+        expect(result[:success]).to be(true)
+        expect(message.reload.content).to eq('new incoming content')
+      end
+    end
+
     context 'when content is blank' do
       let(:channel_api) { create(:channel_api) }
       let(:conversation) { create(:conversation, inbox: channel_api.inbox, account: channel_api.account) }

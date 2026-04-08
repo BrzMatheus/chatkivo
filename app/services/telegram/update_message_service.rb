@@ -6,8 +6,6 @@ class Telegram::UpdateMessageService
 
   def perform
     transform_business_message!
-    find_contact_inbox
-    find_conversation
     find_message
     update_message
   rescue StandardError => e
@@ -16,19 +14,13 @@ class Telegram::UpdateMessageService
 
   private
 
-  def find_contact_inbox
-    @contact_inbox = inbox.contact_inboxes.find_by!(source_id: params[:edited_message][:chat][:id])
-  end
-
-  def find_conversation
-    @conversation = @contact_inbox.conversations.last
-  end
-
   def find_message
-    @message = @conversation.messages.find_by(source_id: params[:edited_message][:message_id])
+    @message = inbox.messages.find_by(source_id: params[:edited_message][:message_id].to_s)
   end
 
   def update_message
+    return if @message.blank?
+
     edited_message = params[:edited_message]
 
     if edited_message[:text].present?

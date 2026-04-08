@@ -40,7 +40,15 @@ describe Telegram::UpdateMessageService do
   describe '#perform' do
     context 'when valid update message params' do
       let(:contact_inbox) { create(:contact_inbox, inbox: telegram_channel.inbox, source_id: common_message_params[:chat][:id]) }
-      let(:conversation) { create(:conversation, contact_inbox: contact_inbox) }
+      let(:conversation) do
+        create(
+          :conversation,
+          account: telegram_channel.account,
+          inbox: telegram_channel.inbox,
+          contact: contact_inbox.contact,
+          contact_inbox: contact_inbox
+        )
+      end
 
       it 'updates the message text when text is present' do
         message = create(:message, conversation: conversation, source_id: text_update_params[:edited_message][:message_id])
@@ -70,6 +78,23 @@ describe Telegram::UpdateMessageService do
           described_class.new(inbox: telegram_channel.inbox, params: text_update_params.with_indifferent_access).perform
           expect(message.reload.content).to eq('updated message')
         end
+      end
+
+      it 'updates the matching message even when it is not in the latest conversation' do
+        older_conversation = conversation
+        create(
+          :conversation,
+          account: telegram_channel.account,
+          inbox: telegram_channel.inbox,
+          contact: contact_inbox.contact,
+          contact_inbox: contact_inbox,
+          created_at: 1.minute.from_now
+        )
+        message = create(:message, conversation: older_conversation, source_id: text_update_params[:edited_message][:message_id], content: 'old')
+
+        described_class.new(inbox: telegram_channel.inbox, params: text_update_params.with_indifferent_access).perform
+
+        expect(message.reload.content).to eq('updated message')
       end
     end
 

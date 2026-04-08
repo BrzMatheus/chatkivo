@@ -62,6 +62,29 @@ RSpec.describe Webhooks::TelegramEventsJob do
     end
   end
 
+  context 'when update message params are sent in the root payload' do
+    let!(:params) do
+      {
+        :bot_token => telegram_channel.bot_token,
+        :edited_message => { message_id: 123 }
+      }
+    end
+
+    it 'calls Telegram::UpdateMessageService' do
+      process_service = double
+      allow(Telegram::UpdateMessageService).to receive(:new).and_return(process_service)
+      allow(process_service).to receive(:perform)
+
+      expect(Telegram::UpdateMessageService).to receive(:new).with(
+        inbox: telegram_channel.inbox,
+        params: { edited_message: { message_id: 123 } }.with_indifferent_access
+      )
+      expect(process_service).to receive(:perform)
+
+      described_class.perform_now(params.with_indifferent_access)
+    end
+  end
+
   context 'when business connection params' do
     let!(:params) do
       {
@@ -106,6 +129,31 @@ RSpec.describe Webhooks::TelegramEventsJob do
       expect(Telegram::DeleteMessageUpdateService).to receive(:new).with(
         inbox: telegram_channel.inbox,
         params: params['telegram'].with_indifferent_access
+      )
+      expect(process_service).to receive(:perform)
+
+      described_class.perform_now(params.with_indifferent_access)
+    end
+  end
+
+  context 'when deleted business messages are sent in the root payload' do
+    let!(:params) do
+      {
+        :bot_token => telegram_channel.bot_token,
+        :deleted_business_messages => {
+          message_ids: [123]
+        }
+      }
+    end
+
+    it 'calls Telegram::DeleteMessageUpdateService' do
+      process_service = double
+      allow(Telegram::DeleteMessageUpdateService).to receive(:new).and_return(process_service)
+      allow(process_service).to receive(:perform)
+
+      expect(Telegram::DeleteMessageUpdateService).to receive(:new).with(
+        inbox: telegram_channel.inbox,
+        params: { deleted_business_messages: { message_ids: [123] } }.with_indifferent_access
       )
       expect(process_service).to receive(:perform)
 

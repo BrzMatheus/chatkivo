@@ -25,6 +25,28 @@ describe Messages::DeleteService do
       end
     end
 
+    context 'when api inbox has deletable incoming message' do
+      let(:channel_api) { create(:channel_api) }
+      let(:conversation) { create(:conversation, inbox: channel_api.inbox, account: channel_api.account) }
+      let(:message) do
+        create(
+          :message,
+          message_type: :incoming,
+          conversation: conversation,
+          account: channel_api.account,
+          content: 'hello from api'
+        )
+      end
+
+      it 'applies local tombstone' do
+        result = described_class.new(message: message).perform
+
+        expect(result[:success]).to be(true)
+        expect(message.reload.deleted).to be(true)
+        expect(message.content).to eq('This message was deleted')
+      end
+    end
+
     context 'when telegram remote delete fails' do
       let(:telegram_channel) { create(:channel_telegram) }
       let(:conversation) do

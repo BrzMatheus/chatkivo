@@ -26,6 +26,8 @@ class Conversations::MessageWindowService
       tiktok_messaging_window
     when 'Channel::Whatsapp'
       MESSAGING_WINDOW_24_HOURS
+    when 'Channel::Telegram'
+      MESSAGING_WINDOW_24_HOURS
     when 'Channel::TwilioSms'
       twilio_messaging_window
     end

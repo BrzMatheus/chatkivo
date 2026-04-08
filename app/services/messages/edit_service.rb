@@ -27,6 +27,8 @@ class Messages::EditService
   private
 
   def editable_message?
+    return editable_api_message? if message.inbox.api?
+
     message.outgoing? &&
       !message.private? &&
       !message.activity? &&
@@ -37,6 +39,14 @@ class Messages::EditService
 
   def supported_inbox?
     message.inbox.api? || message.inbox.telegram?
+  end
+
+  def editable_api_message?
+    !message.private? &&
+      !message.activity? &&
+      !message_deleted? &&
+      message.text? &&
+      message.attachments.blank?
   end
 
   def message_deleted?

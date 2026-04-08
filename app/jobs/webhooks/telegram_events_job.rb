@@ -33,12 +33,13 @@ class Webhooks::TelegramEventsJob < ApplicationJob
   end
 
   def process_event_params(channel, params)
-    unless params[:telegram]
+    telegram_params = extract_telegram_params(params)
+
+    unless telegram_params.present?
       Rails.logger.warn "[Telegram] Job ignorado - params[:telegram] ausente: #{params.keys.inspect}"
       return
     end
 
-    telegram_params = params['telegram'].with_indifferent_access
     Rails.logger.info "[Telegram] Processando evento: inbox_id=#{channel.inbox.id}, " \
                       "message_id=#{telegram_params.dig(:message, :message_id) || telegram_params.dig(:business_message, :message_id)}, " \
                       "has_message=#{telegram_params[:message].present?}, " \
@@ -68,5 +69,13 @@ class Webhooks::TelegramEventsJob < ApplicationJob
     return unless channel.persist_business_connection_id!(business_connection_id)
 
     Rails.logger.info "[Telegram] Atualizado business_connection_id no canal #{channel.id}: #{business_connection_id}"
+  end
+
+  def extract_telegram_params(params)
+    wrapped_params = params[:telegram] || params['telegram']
+    return wrapped_params.with_indifferent_access if wrapped_params.present?
+
+    root_payload = params.with_indifferent_access.except(:bot_token)
+    (root_payload.presence)
   end
 end

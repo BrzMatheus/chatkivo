@@ -180,25 +180,25 @@ export default {
     hidePrivateMessages() {
       return !!this.getAccount(this.accountId)?.settings?.hide_private_messages;
     },
+    isReplyWindowBypassedChannel() {
+      // Telegram now uses can_reply for the expired badge, but this delivery
+      // intentionally preserves the current composer behavior.
+      return (
+        this.isAWhatsAppChannel || this.isAPIInbox || this.isATelegramChannel
+      );
+    },
     isPrivate() {
       if (this.hidePrivateMessages) {
         return false;
       }
 
-      if (
-        this.currentChat.can_reply ||
-        this.isAWhatsAppChannel ||
-        this.isAPIInbox
-      ) {
+      if (this.currentChat.can_reply || this.isReplyWindowBypassedChannel) {
         return this.isOnPrivateNote;
       }
       return true;
     },
     isReplyRestricted() {
-      return (
-        !this.currentChat?.can_reply &&
-        !(this.isAWhatsAppChannel || this.isAPIInbox)
-      );
+      return !this.currentChat?.can_reply && !this.isReplyWindowBypassedChannel;
     },
     inboxId() {
       return this.currentChat.inbox_id;
@@ -466,7 +466,7 @@ export default {
         return;
       }
 
-      if (canReply || this.isAWhatsAppChannel || this.isAPIInbox) {
+      if (canReply || this.isReplyWindowBypassedChannel) {
         this.replyType = REPLY_EDITOR_MODES.REPLY;
       } else {
         this.replyType = REPLY_EDITOR_MODES.NOTE;
@@ -971,8 +971,7 @@ export default {
       });
       if (
         canReply ||
-        this.isAWhatsAppChannel ||
-        this.isAPIInbox ||
+        this.isReplyWindowBypassedChannel ||
         this.hidePrivateMessages
       ) {
         this.replyType = nextMode;

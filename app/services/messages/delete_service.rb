@@ -34,6 +34,8 @@ class Messages::DeleteService
   private
 
   def deletable_message?
+    return deletable_api_message? if message.inbox.api?
+
     message.outgoing? &&
       !message.private? &&
       !message.activity? &&
@@ -42,6 +44,12 @@ class Messages::DeleteService
 
   def message_deleted?
     ActiveModel::Type::Boolean.new.cast(message.deleted)
+  end
+
+  def deletable_api_message?
+    !message.private? &&
+      !message.activity? &&
+      !message_deleted?
   end
 
   def success

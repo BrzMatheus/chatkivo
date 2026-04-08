@@ -170,6 +170,9 @@ export default {
         instagramInbox
       );
     },
+    showReplyWindowBanner() {
+      return !this.currentChat.can_reply && !this.isATelegramChannel;
+    },
 
     replyWindowBannerMessage() {
       if (this.isAWhatsAppChannel) {
@@ -447,7 +450,7 @@ export default {
 <template>
   <div class="flex flex-col justify-between flex-grow h-full min-w-0 m-0">
     <Banner
-      v-if="!currentChat.can_reply"
+      v-if="showReplyWindowBanner"
       color-scheme="alert"
       class="mx-2 mt-2 overflow-hidden rounded-lg"
       :banner-message="replyWindowBannerMessage"

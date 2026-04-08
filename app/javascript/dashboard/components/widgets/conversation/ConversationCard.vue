@@ -12,6 +12,7 @@ import TimeAgo from 'dashboard/components/ui/TimeAgo.vue';
 import CardLabels from './conversationCardComponents/CardLabels.vue';
 import PriorityMark from './PriorityMark.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
+import TelegramExpiredBadge from './components/TelegramExpiredBadge.vue';
 import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
 import VoiceCallStatus from './VoiceCallStatus.vue';
 import { MESSAGE_TYPE } from 'shared/constants/messages';
@@ -124,6 +125,13 @@ const showMetaSection = computed(() => {
 });
 
 const hasSlaPolicyId = computed(() => props.chat?.sla_policy_id);
+
+const isTelegramConversationExpired = computed(() => {
+  return (
+    inbox.value?.channel_type === 'Channel::Telegram' &&
+    props.chat?.can_reply === false
+  );
+});
 
 const showLabelsSection = computed(() => {
   return props.chat.labels?.length > 0 || hasSlaPolicyId.value;
@@ -417,6 +425,10 @@ const deleteConversation = () => {
               >
                 {{ assignedTeam.name }}
               </span>
+              <TelegramExpiredBadge
+                v-if="isTelegramConversationExpired"
+                class="max-w-[140px] truncate"
+              />
               <span
                 v-if="hasPendingUnread"
                 class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"

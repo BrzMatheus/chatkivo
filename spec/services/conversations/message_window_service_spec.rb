@@ -478,7 +478,7 @@ RSpec.describe Conversations::MessageWindowService do
     let!(:telegram_inbox) { create(:inbox, channel: telegram_channel, account: telegram_channel.account) }
     let!(:conversation) { create(:conversation, inbox: telegram_inbox, account: telegram_channel.account) }
 
-    it 'return true irrespective of the last message time' do
+    it 'return true if the last message is incoming and within the messaging window (24 hours limit)' do
       create(
         :message,
         account: conversation.account,
@@ -488,6 +488,55 @@ RSpec.describe Conversations::MessageWindowService do
       )
       service = described_class.new(conversation)
       expect(service.can_reply?).to be true
+    end
+
+    it 'return false if the last message is incoming and outside the messaging window (24 hours limit)' do
+      create(
+        :message,
+        account: conversation.account,
+        inbox: telegram_inbox,
+        conversation: conversation,
+        created_at: 25.hours.ago
+      )
+      service = described_class.new(conversation)
+      expect(service.can_reply?).to be false
+    end
+
+    it 'return true if last message is outgoing but previous incoming message is within window' do
+      create(
+        :message,
+        account: conversation.account,
+        inbox: telegram_inbox,
+        conversation: conversation,
+        message_type: :incoming,
+        created_at: 6.hours.ago
+      )
+
+      create(
+        :message,
+        account: conversation.account,
+        inbox: telegram_inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        created_at: 1.hour.ago
+      )
+
+      service = described_class.new(conversation)
+      expect(service.can_reply?).to be true
+    end
+
+    it 'return false if there is no incoming message in the conversation' do
+      create(
+        :message,
+        account: conversation.account,
+        inbox: telegram_inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        created_at: 1.hour.ago
+      )
+
+      service = described_class.new(conversation)
+      expect(service.can_reply?).to be false
     end
   end
 

@@ -570,6 +570,29 @@ RSpec.describe 'Conversation Messages API', type: :request do
             expect(response).to have_http_status(:unprocessable_entity)
             expect(message.reload.content).to eq('original content')
           end
+
+          context 'when the message is incoming from an API inbox' do
+            let!(:message) do
+              create(
+                :message,
+                conversation: conversation,
+                account: account,
+                message_type: :incoming,
+                content: 'incoming original'
+              )
+            end
+
+            it 'updates message content' do
+              patch api_v1_account_conversation_message_url(
+                account_id: account.id,
+                conversation_id: conversation.display_id,
+                id: message.id
+              ), params: { content: 'incoming updated' }, headers: agent.create_new_auth_token, as: :json
+
+              expect(response).to have_http_status(:success)
+              expect(message.reload.content).to eq('incoming updated')
+            end
+          end
         end
       end
 
