@@ -68,11 +68,17 @@ class Channel::Telegram < ApplicationRecord
     return failed_result('Telegram source_id is missing for this message') if message.source_id.blank?
 
     response = if business_connection_id(message).present?
+                 message_id_value = Integer(message.source_id, exception: false)
+                 return failed_result('Telegram source_id is invalid for business deletion') if message_id_value.blank?
+
                  HTTParty.post(
                    "#{telegram_api_url}/deleteBusinessMessages",
                    body: {
                      business_connection_id: business_connection_id(message),
-                     message_ids: [message.source_id]
+                     message_ids: [message_id_value]
+                   }.to_json,
+                   headers: {
+                     'Content-Type' => 'application/json'
                    }
                  )
                else

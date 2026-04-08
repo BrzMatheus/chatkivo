@@ -273,7 +273,10 @@ RSpec.describe Channel::Telegram do
         .with(
           body: {
             business_connection_id: 'biz-123',
-            message_ids: ['456']
+            message_ids: [456]
+          }.to_json,
+          headers: {
+            'Content-Type' => 'application/json'
           }
         )
         .to_return(
