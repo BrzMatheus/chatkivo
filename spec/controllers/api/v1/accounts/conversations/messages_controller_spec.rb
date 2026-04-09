@@ -498,7 +498,7 @@ RSpec.describe 'Conversation Messages API', type: :request do
         it 'uses StatusUpdateService to perform status update' do
           service = instance_double(Messages::StatusUpdateService)
           expect(Messages::StatusUpdateService).to receive(:new)
-            .with(message, 'failed', 'err123')
+            .with(message, 'failed', 'err123', nil)
             .and_return(service)
           expect(service).to receive(:perform)
           patch api_v1_account_conversation_message_url(
@@ -520,6 +520,29 @@ RSpec.describe 'Conversation Messages API', type: :request do
           expect(message.reload.external_error).to eq('err123')
         end
 
+        it 'updates source_id together with status' do
+          patch api_v1_account_conversation_message_url(
+            account_id: account.id,
+            conversation_id: conversation.display_id,
+            id: message.id
+          ), params: { status: 'delivered', source_id: 'wamid.external.123' }, headers: agent.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:success)
+          expect(message.reload.status).to eq('delivered')
+          expect(message.reload.source_id).to eq('wamid.external.123')
+        end
+
+        it 'updates source_id without requiring status' do
+          patch api_v1_account_conversation_message_url(
+            account_id: account.id,
+            conversation_id: conversation.display_id,
+            id: message.id
+          ), params: { source_id: 'wamid.external.456' }, headers: agent.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:success)
+          expect(message.reload.source_id).to eq('wamid.external.456')
+        end
+
         it 'ignores transient timeout errors for failed status updates' do
           expect(Messages::StatusUpdateService).not_to receive(:new)
 
@@ -535,6 +558,24 @@ RSpec.describe 'Conversation Messages API', type: :request do
           expect(response).to have_http_status(:success)
           expect(message.reload.status).to eq('sent')
           expect(message.reload.external_error).to be_nil
+        end
+
+        it 'still syncs source_id when transient failed status is ignored' do
+          expect(Messages::StatusUpdateService).not_to receive(:new)
+
+          patch api_v1_account_conversation_message_url(
+            account_id: account.id,
+            conversation_id: conversation.display_id,
+            id: message.id
+          ),
+                params: { status: 'failed', external_error: 'Timed out reading data from server', source_id: 'wamid.external.789' },
+                headers: agent.create_new_auth_token,
+                as: :json
+
+          expect(response).to have_http_status(:success)
+          expect(message.reload.status).to eq('sent')
+          expect(message.reload.external_error).to be_nil
+          expect(message.reload.source_id).to eq('wamid.external.789')
         end
 
         context 'when editing content' do

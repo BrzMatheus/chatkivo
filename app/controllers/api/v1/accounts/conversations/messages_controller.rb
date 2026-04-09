@@ -3,7 +3,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
     'timed out reading data from server'
   ].freeze
 
-  before_action :ensure_api_inbox_for_status_update, only: :update, if: :status_update_request?
+  before_action :ensure_api_inbox_for_status_update, only: :update, if: :status_or_source_id_update_request?
   before_action :ensure_supported_inbox_for_content_edit, only: :update, if: :content_edit_request?
 
   def index
@@ -19,10 +19,10 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def update
-    return handle_status_update if status_update_request?
+    return handle_status_update if status_or_source_id_update_request?
     return handle_content_edit if content_edit_request?
 
-    render json: { error: 'Either status or content should be provided' }, status: :unprocessable_entity
+    render json: { error: 'Either status, source_id or content should be provided' }, status: :unprocessable_entity
   end
 
   def destroy
@@ -74,7 +74,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def permitted_params
-    params.permit(:id, :target_language, :status, :external_error, :content)
+    params.permit(:id, :target_language, :status, :external_error, :content, :source_id)
   end
 
   def already_translated_content_available?
@@ -94,6 +94,14 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
     permitted_params[:status].present?
   end
 
+  def source_id_update_request?
+    permitted_params[:source_id].present?
+  end
+
+  def status_or_source_id_update_request?
+    status_update_request? || source_id_update_request?
+  end
+
   def content_edit_request?
     params.key?(:content)
   end
@@ -104,8 +112,14 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
         '[Api::MessagesController] Ignoring transient failed status update for API inbox message ' \
         "message_id=#{message.id} conversation_id=#{@conversation.id} error=#{permitted_params[:external_error]}"
       )
+      message.update!(source_id: permitted_params[:source_id]) if source_id_update_request?
     else
-      Messages::StatusUpdateService.new(message, permitted_params[:status], permitted_params[:external_error]).perform
+      Messages::StatusUpdateService.new(
+        message,
+        permitted_params[:status],
+        permitted_params[:external_error],
+        permitted_params[:source_id]
+      ).perform
     end
     @message = message
   end

@@ -27,11 +27,33 @@ describe Messages::StatusUpdateService do
         expect(message.reload.status).to eq('failed')
         expect(message.reload.external_error).to eq('some error')
       end
+
+      it 'updates source_id along with status' do
+        service = described_class.new(message, 'delivered', nil, 'wamid.external.123')
+        service.perform
+
+        expect(message.reload.status).to eq('delivered')
+        expect(message.reload.source_id).to eq('wamid.external.123')
+      end
+    end
+
+    context 'when only source_id is provided' do
+      it 'updates the source_id' do
+        service = described_class.new(message, nil, nil, 'wamid.external.456')
+        service.perform
+
+        expect(message.reload.source_id).to eq('wamid.external.456')
+      end
     end
 
     context 'when status is invalid' do
       it 'returns false for invalid status' do
         service = described_class.new(message, 'invalid_status')
+        expect(service.perform).to be false
+      end
+
+      it 'returns false when status and source_id are both blank' do
+        service = described_class.new(message, nil)
         expect(service.perform).to be false
       end
 
