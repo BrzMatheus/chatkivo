@@ -37,6 +37,21 @@ class Whatsapp::WebhookTeardownService
 
     api_client.clear_phone_number_callback_override(phone_number_id)
     Rails.logger.info "[WHATSAPP] Phone number webhook override cleared for channel #{@channel.id}"
+
+    clear_legacy_waba_override(api_client)
+  end
+
+  # Legacy channels (pre phone-number-level override) were configured with a
+  # WABA-level override_callback_uri. Clearing only the phone-level override
+  # would leave that stale URL in place, so clear it as a best-effort fallback.
+  def clear_legacy_waba_override(api_client)
+    waba_id = @channel.provider_config['business_account_id']
+    return if waba_id.blank?
+
+    api_client.clear_waba_callback_override(waba_id)
+    Rails.logger.info "[WHATSAPP] Legacy WABA webhook override cleared for channel #{@channel.id}"
+  rescue StandardError => e
+    Rails.logger.error "[WHATSAPP] Legacy WABA webhook override clear failed for channel #{@channel.id}: #{e.message}"
   end
 
   def handle_webhook_teardown_error(error)

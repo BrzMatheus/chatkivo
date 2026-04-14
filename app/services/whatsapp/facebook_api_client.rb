@@ -110,6 +110,16 @@ class Whatsapp::FacebookApiClient
     handle_response(response, 'Phone number webhook callback clear failed')
   end
 
+  def clear_waba_callback_override(waba_id)
+    response = HTTParty.post(
+      "#{BASE_URI}/#{@api_version}/#{waba_id}/subscribed_apps",
+      headers: request_headers,
+      body: { override_callback_uri: '' }.to_json
+    )
+
+    handle_response(response, 'WABA webhook callback clear failed')
+  end
+
   private
 
   def request_headers
