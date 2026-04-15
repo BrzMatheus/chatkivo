@@ -39,11 +39,14 @@ class Whatsapp::WebhookTeardownService
   end
 
   # The WABA-level override_callback_uri is shared across every phone number on
-  # the WABA, so we must not clear it while a sibling channel still depends on
-  # it. A sibling that has its own phone_number_id is using a phone-level
-  # override (which takes precedence over the WABA-level value) and does not
-  # depend on the WABA fallback. Only siblings without a phone_number_id are
-  # still relying on WABA-level webhooks and should block the clear.
+  # the WABA, so we must not clear it while any sibling channel still depends
+  # on it. We use a persisted marker written by WebhookSetupService as ground
+  # truth: a channel that has webhook_override_level == 'phone_number' in its
+  # provider_config is using a phone-level override (which takes precedence
+  # over the WABA-level value) and does not need the WABA fallback. Siblings
+  # without that marker are treated as legacy / still dependent on the WABA
+  # callback and block the clear. phone_number_id alone cannot distinguish
+  # these cases because legacy embedded-signup channels also persist it.
   def clear_legacy_waba_override(api_client)
     waba_id = provider_config['business_account_id']
     return if waba_id.blank?
@@ -60,7 +63,7 @@ class Whatsapp::WebhookTeardownService
       .where.not(id: @channel.id)
       .exists?([
                  "provider_config ->> 'business_account_id' = ? AND " \
-                 "(provider_config ->> 'phone_number_id' IS NULL OR provider_config ->> 'phone_number_id' = '')",
+                 "COALESCE(provider_config ->> 'webhook_override_level', '') <> 'phone_number'",
                  waba_id
                ])
   end
