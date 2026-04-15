@@ -1,5 +1,12 @@
 class Whatsapp::FacebookApiClient
   BASE_URI = 'https://graph.facebook.com'.freeze
+  # Webhook fields the WhatsApp Cloud handler depends on. `messages` is the
+  # standard inbound channel; `smb_message_echoes` delivers outbound messages
+  # sent from the WhatsApp Business app (coexistence sync, consumed by
+  # Webhooks::WhatsappEventsJob#message_echo_event?). Meta downgrades the app
+  # subscription to default fields if we POST /subscribed_apps without one, so
+  # we resend this list on every (re)subscribe to keep the subscription stable.
+  SUBSCRIBED_FIELDS = %w[messages smb_message_echoes].freeze
 
   def initialize(access_token = nil)
     @access_token = access_token
@@ -75,7 +82,8 @@ class Whatsapp::FacebookApiClient
   def subscribe_app_to_waba(waba_id)
     response = HTTParty.post(
       "#{BASE_URI}/#{@api_version}/#{waba_id}/subscribed_apps",
-      headers: request_headers
+      headers: request_headers,
+      body: { subscribed_fields: SUBSCRIBED_FIELDS }.to_json
     )
 
     handle_response(response, 'App subscription to WABA failed')

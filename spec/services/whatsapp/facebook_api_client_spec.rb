@@ -162,10 +162,13 @@ describe Whatsapp::FacebookApiClient do
 
     context 'when successful' do
       before do
-        # Step 1: Subscribe app to WABA
+        # Step 1: Subscribe app to WABA with the explicit field list. Pinning
+        # the body here guards against future regressions that drop
+        # smb_message_echoes and silently break SMB coexistence.
         stub_request(:post, "https://graph.facebook.com/#{api_version}/#{waba_id}/subscribed_apps")
           .with(
-            headers: { 'Authorization' => "Bearer #{access_token}", 'Content-Type' => 'application/json' }
+            headers: { 'Authorization' => "Bearer #{access_token}", 'Content-Type' => 'application/json' },
+            body: { subscribed_fields: %w[messages smb_message_echoes] }.to_json
           )
           .to_return(
             status: 200,
