@@ -16,6 +16,12 @@ module Featurable
     include FlagShihTzu
     has_flags FEATURES.merge(column: 'feature_flags').merge(QUERY_MODE)
 
+    # has_flags defines selected_feature_flags= on the model class. Re-define it
+    # here so API/UI callers can use public feature names like "automations".
+    define_method :selected_feature_flags= do |features|
+      assign_selected_feature_flags(features)
+    end
+
     before_create :enable_default_features
   end
 
@@ -60,14 +66,18 @@ module Featurable
   end
 
   def selected_feature_flags=(features)
+    assign_selected_feature_flags(features)
+  end
+
+  private
+
+  def assign_selected_feature_flags(features)
     selected_features = Array(features).map(&:to_s)
 
     all_features.each_key do |feature_name|
       send("feature_#{feature_name}=", selected_features.include?(feature_name))
     end
   end
-
-  private
 
   def enable_default_features
     config = InstallationConfig.find_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS')
