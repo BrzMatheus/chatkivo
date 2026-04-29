@@ -141,7 +141,7 @@ watch(
 <!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <Policy
-    v-if="!hasChildren || hasAccessibleChildren"
+    v-if="(!hasChildren && isAllowed(to)) || hasAccessibleChildren"
     :permissions="resolvePermissions(to)"
     :feature-flag="resolveFeatureFlag(to)"
     as="li"

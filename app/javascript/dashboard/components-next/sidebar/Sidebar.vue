@@ -412,11 +412,6 @@ const menuItems = computed(() => {
           to: accountScopedRoute('csat_reports'),
         },
         {
-          name: 'Reports SLA',
-          label: t('SIDEBAR.REPORTS_SLA'),
-          to: accountScopedRoute('sla_reports'),
-        },
-        {
           name: 'Reports Bot',
           label: t('SIDEBAR.REPORTS_BOT'),
           to: accountScopedRoute('bot_reports'),
@@ -586,18 +581,6 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.CUSTOM_ROLES'),
           icon: 'i-lucide-shield-plus',
           to: accountScopedRoute('custom_roles_list'),
-        },
-        {
-          name: 'Settings Sla',
-          label: t('SIDEBAR.SLA'),
-          icon: 'i-lucide-clock-alert',
-          to: accountScopedRoute('sla_list'),
-        },
-        {
-          name: 'Settings Security',
-          label: t('SIDEBAR.SECURITY'),
-          icon: 'i-lucide-shield',
-          to: accountScopedRoute('security_settings_index'),
         },
         {
           name: 'Settings Billing',

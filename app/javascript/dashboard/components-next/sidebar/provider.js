@@ -2,6 +2,8 @@ import { inject, provide, ref, computed } from 'vue';
 import { usePolicy } from 'dashboard/composables/usePolicy';
 import { useRouter } from 'vue-router';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useMapGetter } from 'dashboard/composables/store';
+import { useAccount } from 'dashboard/composables/useAccount';
 
 const SidebarControl = Symbol('SidebarControl');
 
@@ -90,6 +92,10 @@ export function useSidebarContext() {
 
   const router = useRouter();
   const { shouldShow } = usePolicy();
+  const { accountId } = useAccount();
+  const isFeatureEnabledonAccount = useMapGetter(
+    'accounts/isFeatureEnabledonAccount'
+  );
 
   const resolvePath = to => {
     if (to) return router.resolve(to)?.path || '/';
@@ -126,6 +132,21 @@ export function useSidebarContext() {
     return router.resolve(to)?.meta?.featureFlag || '';
   };
 
+  const resolveFeatureFlags = to => {
+    if (!to) return [];
+
+    if (to.params?.navigationPath) {
+      const targetRoute = findRouteByName(to.params.navigationPath);
+      return (
+        targetRoute?.meta?.featureFlags ||
+        [resolveFeatureFlag(to)].filter(Boolean)
+      );
+    }
+
+    const routeMeta = router.resolve(to)?.meta || {};
+    return routeMeta.featureFlags || [routeMeta.featureFlag].filter(Boolean);
+  };
+
   const resolveInstallationType = to => {
     if (!to) return [];
 
@@ -140,10 +161,15 @@ export function useSidebarContext() {
 
   const isAllowed = to => {
     const permissions = resolvePermissions(to);
-    const featureFlag = resolveFeatureFlag(to);
+    const featureFlags = resolveFeatureFlags(to);
     const installationType = resolveInstallationType(to);
 
-    return shouldShow(featureFlag, permissions, installationType);
+    return (
+      shouldShow(null, permissions, installationType) &&
+      featureFlags.every(featureFlag =>
+        isFeatureEnabledonAccount.value(accountId.value, featureFlag)
+      )
+    );
   };
 
   return {

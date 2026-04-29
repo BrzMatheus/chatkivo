@@ -57,6 +57,10 @@ const campaignsRoutes = {
           meta: {
             ...meta,
             featureFlag: FEATURE_FLAGS.WHATSAPP_CAMPAIGNS,
+            featureFlags: [
+              FEATURE_FLAGS.CAMPAIGNS,
+              FEATURE_FLAGS.WHATSAPP_CAMPAIGNS,
+            ],
           },
           component: WhatsAppCampaignsPage,
         },
