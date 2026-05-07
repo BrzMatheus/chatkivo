@@ -8,6 +8,27 @@ RSpec.describe Imap::FetchEmailService do
   let(:imap) { instance_double(Net::IMAP) }
   let(:eml_content_with_message_id) { Rails.root.join('spec/fixtures/files/only_text.eml').read }
 
+  def expect_peek_fetch_for_new_email
+    expect(imap).to have_received(:search).with(%w[SINCE 25-Oct-2020])
+    expect(imap).to have_received(:fetch).with([1], ['UID', 'BODY.PEEK[HEADER]'])
+    expect(imap).to have_received(:fetch).with(1, 'BODY.PEEK[]')
+    expect(imap).not_to have_received(:fetch).with(1, 'RFC822')
+    expect(imap).to have_received(:logout)
+  end
+
+  def expect_peek_fetch_logs
+    expect(logger).to have_received(:info).with(
+      "[IMAP::FETCH_EMAIL_SERVICE] Inbox #{imap_email_channel.inbox.id}: fetching mails from #{imap_email_channel.email}, found 1."
+    )
+    expect(logger).to have_received(:info).with(
+      '[IMAP::FETCH_EMAIL_SERVICE] Inbox ' \
+      "#{imap_email_channel.inbox.id}: fetched 1 headers with UIDs [101]; BODY.PEEK[HEADER]; no_seen=true."
+    )
+    expect(logger).to have_received(:info).with(
+      "[IMAP::FETCH_EMAIL_SERVICE] Inbox #{imap_email_channel.inbox.id}: fetching UID 101 with BODY.PEEK[]; no_seen=true."
+    )
+  end
+
   describe '#perform' do
     before do
       allow(Rails).to receive(:logger).and_return(logger)
@@ -24,23 +45,20 @@ RSpec.describe Imap::FetchEmailService do
       it 'fetches the emails and returns the emails that are not present in the db' do
         travel_to '26.10.2020 10:00'.to_datetime do
           email_object = create_inbound_email_from_fixture('only_text.eml')
-          email_header = Net::IMAP::FetchData.new(1, 'BODY[HEADER]' => eml_content_with_message_id)
-          imap_fetch_mail = Net::IMAP::FetchData.new(1, 'RFC822' => eml_content_with_message_id)
+          email_header = Net::IMAP::FetchData.new(1, 'UID' => 101, 'BODY[HEADER]' => eml_content_with_message_id)
+          imap_fetch_mail = Net::IMAP::FetchData.new(1, 'BODY[]' => eml_content_with_message_id)
 
           allow(imap).to receive(:search).with(%w[SINCE 25-Oct-2020]).and_return([1])
-          allow(imap).to receive(:fetch).with([1], 'BODY.PEEK[HEADER]').and_return([email_header])
-          allow(imap).to receive(:fetch).with(1, 'RFC822').and_return([imap_fetch_mail])
+          allow(imap).to receive(:fetch).with([1], ['UID', 'BODY.PEEK[HEADER]']).and_return([email_header])
+          allow(imap).to receive(:fetch).with(1, 'BODY.PEEK[]').and_return([imap_fetch_mail])
           allow(imap).to receive(:logout)
 
           result = described_class.new(channel: imap_email_channel).perform
 
           expect(result.length).to eq 1
           expect(result[0].message_id).to eq email_object.message_id
-          expect(imap).to have_received(:search).with(%w[SINCE 25-Oct-2020])
-          expect(imap).to have_received(:fetch).with([1], 'BODY.PEEK[HEADER]')
-          expect(imap).to have_received(:fetch).with(1, 'RFC822')
-          expect(logger).to have_received(:info).with("[IMAP::FETCH_EMAIL_SERVICE] Fetching mails from #{imap_email_channel.email}, found 1.")
-          expect(imap).to have_received(:logout)
+          expect_peek_fetch_for_new_email
+          expect_peek_fetch_logs
         end
       end
 
@@ -52,14 +70,15 @@ RSpec.describe Imap::FetchEmailService do
           email_header = Net::IMAP::FetchData.new(1, 'BODY[HEADER]' => eml_content_with_message_id)
 
           allow(imap).to receive(:search).with(%w[SINCE 25-Oct-2020]).and_return([1])
-          allow(imap).to receive(:fetch).with([1], 'BODY.PEEK[HEADER]').and_return([email_header])
+          allow(imap).to receive(:fetch).with([1], ['UID', 'BODY.PEEK[HEADER]']).and_return([email_header])
           allow(imap).to receive(:logout)
 
           result = described_class.new(channel: imap_email_channel).perform
 
           expect(result.length).to eq 0
           expect(imap).to have_received(:search).with(%w[SINCE 25-Oct-2020])
-          expect(imap).to have_received(:fetch).with([1], 'BODY.PEEK[HEADER]')
+          expect(imap).to have_received(:fetch).with([1], ['UID', 'BODY.PEEK[HEADER]'])
+          expect(imap).not_to have_received(:fetch).with(1, 'BODY.PEEK[]')
           expect(imap).not_to have_received(:fetch).with(1, 'RFC822')
         end
       end

@@ -1,6 +1,11 @@
 require 'net/imap'
 
 class Imap::BaseFetchEmailService
+  HEADER_FETCH_ATTRIBUTE = 'BODY.PEEK[HEADER]'.freeze
+  HEADER_RESPONSE_ATTRIBUTE = 'BODY[HEADER]'.freeze
+  FULL_EMAIL_FETCH_ATTRIBUTE = 'BODY.PEEK[]'.freeze
+  FULL_EMAIL_RESPONSE_ATTRIBUTE = 'BODY[]'.freeze
+
   pattr_initialize [:channel!, :interval]
 
   def fetch_emails
@@ -47,7 +52,7 @@ class Imap::BaseFetchEmailService
   end
 
   def process_message_id(message_id_with_seq)
-    seq_no, message_id = message_id_with_seq
+    seq_no, message_id, uid = message_id_with_seq
 
     if message_id.blank?
       Rails.logger.info "[IMAP::FETCH_EMAIL_SERVICE] Empty message id for #{channel.email} with seq no. <#{seq_no}>."
@@ -56,8 +61,12 @@ class Imap::BaseFetchEmailService
 
     return if email_already_present?(channel, message_id)
 
-    # Fetch the original mail content using the sequence no
-    mail_str = imap_client.fetch(seq_no, 'RFC822')[0].attr['RFC822']
+    Rails.logger.info(
+      "[IMAP::FETCH_EMAIL_SERVICE] Inbox #{channel.inbox.id}: fetching UID #{uid} with #{FULL_EMAIL_FETCH_ATTRIBUTE}; no_seen=true."
+    )
+
+    # Fetch the original mail content without setting the \Seen flag on the server.
+    mail_str = imap_client.fetch(seq_no, FULL_EMAIL_FETCH_ATTRIBUTE)[0].attr[FULL_EMAIL_RESPONSE_ATTRIBUTE]
 
     if mail_str.blank?
       Rails.logger.info "[IMAP::FETCH_EMAIL_SERVICE] Fetch failed for #{channel.email} with message-id <#{message_id}>."
@@ -73,29 +82,48 @@ class Imap::BaseFetchEmailService
   # You can send batches of message sequence number in `.fetch` method.
   def fetch_message_ids_with_sequence
     seq_nums = fetch_available_mail_sequence_numbers
+    log_mail_fetch_summary(seq_nums)
 
-    Rails.logger.info "[IMAP::FETCH_EMAIL_SERVICE] Fetching mails from #{channel.email}, found #{seq_nums.length}."
+    seq_nums.each_slice(10).with_object([]) do |batch, message_ids_with_seq|
+      fetch_message_header_batch(batch, message_ids_with_seq)
+    end
+  end
 
-    message_ids_with_seq = []
-    seq_nums.each_slice(10).each do |batch|
-      # Fetch only message-id only without mail body or contents.
-      batch_message_ids = imap_client.fetch(batch, 'BODY.PEEK[HEADER]')
+  def fetch_message_header_batch(batch, message_ids_with_seq)
+    # Fetch only message-id only without mail body or contents.
+    batch_message_ids = imap_client.fetch(batch, ['UID', HEADER_FETCH_ATTRIBUTE])
 
-      # .fetch returns an array of Net::IMAP::FetchData or nil
-      # (instead of an empty array) if there is no matching message.
-      # Check
-      if batch_message_ids.blank?
-        Rails.logger.info "[IMAP::FETCH_EMAIL_SERVICE] Fetching the batch failed for #{channel.email}."
-        next
-      end
-
-      batch_message_ids.each do |data|
-        message_id = build_mail_from_string(data.attr['BODY[HEADER]']).message_id
-        message_ids_with_seq.push([data.seqno, message_id])
-      end
+    # .fetch returns an array of Net::IMAP::FetchData or nil
+    # (instead of an empty array) if there is no matching message.
+    if batch_message_ids.blank?
+      Rails.logger.info "[IMAP::FETCH_EMAIL_SERVICE] Fetching the batch failed for #{channel.email}."
+      return
     end
 
-    message_ids_with_seq
+    log_header_fetch(batch_message_ids)
+
+    batch_message_ids.each do |data|
+      message_ids_with_seq.push(message_id_with_sequence(data))
+    end
+  end
+
+  def message_id_with_sequence(data)
+    message_id = build_mail_from_string(data.attr[HEADER_RESPONSE_ATTRIBUTE]).message_id
+    [data.seqno, message_id, data.attr['UID']]
+  end
+
+  def log_mail_fetch_summary(seq_nums)
+    Rails.logger.info(
+      "[IMAP::FETCH_EMAIL_SERVICE] Inbox #{channel.inbox.id}: fetching mails from #{channel.email}, found #{seq_nums.length}."
+    )
+  end
+
+  def log_header_fetch(batch_message_ids)
+    fetched_uids = batch_message_ids.filter_map { |data| data.attr['UID'] }
+    Rails.logger.info(
+      "[IMAP::FETCH_EMAIL_SERVICE] Inbox #{channel.inbox.id}: fetched #{batch_message_ids.length} headers with " \
+      "UIDs #{fetched_uids}; #{HEADER_FETCH_ATTRIBUTE}; no_seen=true."
+    )
   end
 
   # Sends a SEARCH command to search the mailbox for messages that were
