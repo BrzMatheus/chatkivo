@@ -68,11 +68,7 @@ export default {
       }
     },
   },
-  unmounted() {
-    document.removeEventListener('keypress', this.handleEnterKeyPress);
-  },
   mounted() {
-    document.addEventListener('keypress', this.handleEnterKeyPress);
     if (this.isWidgetOpen) {
       this.focusInput();
     }
@@ -147,6 +143,7 @@ export default {
       @typing-on="onTypingOn"
       @focus="onFocus"
       @blur="onBlur"
+      @keydown.enter.exact.prevent="handleEnterKeyPress"
     />
     <div class="flex items-center ltr:pl-2 rtl:pr-2">
       <ChatAttachmentButton

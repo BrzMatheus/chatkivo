@@ -176,8 +176,9 @@ export const actions = {
     }
   },
 
-  resolveConversation: async () => {
+  resolveConversation: async ({ dispatch }) => {
     await toggleStatus();
+    await dispatch('conversationAttributes/getAttributes', {}, { root: true });
   },
 
   setCustomAttributes: async (_, customAttributes = {}) => {

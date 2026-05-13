@@ -58,6 +58,9 @@ const onBackButtonClick = () => {
         />
       </div>
     </div>
-    <HeaderActions :show-popout-button="showPopoutButton" />
+    <HeaderActions
+      :show-popout-button="showPopoutButton"
+      :show-end-conversation-button="false"
+    />
   </header>
 </template>

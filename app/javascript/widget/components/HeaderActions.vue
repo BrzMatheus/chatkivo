@@ -45,7 +45,7 @@ export default {
       return this.conversationAttributes.status;
     },
     hasWidgetOptions() {
-      return this.showPopoutButton || this.conversationStatus === 'open';
+      return this.showPopoutButton || this.canLeaveConversation;
     },
   },
   methods: {
