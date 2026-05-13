@@ -179,6 +179,23 @@ en:
       avg_resolution_time: Avg resolution time
       resolution_count: Resolution count
       avg_customer_waiting_time: Avg customer waiting time
+    conversation_export_csv:
+      conversation_id: Conversation ID
+      conversation_created_at: Conversation created at
+      conversation_status: Conversation status
+      inbox_name: Inbox
+      customer_name: Customer name
+      customer_email: Customer email
+      customer_phone_number: Customer phone number
+      assignee_name: Assignee
+      message_id: Message ID
+      message_created_at: Message created at
+      message_type: Message type
+      sender_name: Sender name
+      sender_type: Sender type
+      private_message: Private
+      content_type: Content type
+      message_content: Message
     conversation_traffic_csv:
       timezone: Timezone
     sla_csv:

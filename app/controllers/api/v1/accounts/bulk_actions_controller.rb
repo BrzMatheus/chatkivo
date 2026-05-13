@@ -13,6 +13,18 @@ class Api::V1::Accounts::BulkActionsController < Api::V1::Accounts::BaseControll
     end
   end
 
+  def export_conversations
+    conversations = exportable_conversations
+    authorize_conversation_exports(conversations)
+
+    send_data(
+      Conversations::BulkExportService.new(conversations: conversations).perform,
+      filename: "selected-conversations-#{Time.current.strftime('%Y%m%d-%H%M%S')}.csv",
+      type: 'text/csv; charset=utf-8',
+      disposition: 'attachment'
+    )
+  end
+
   private
 
   def normalized_type
@@ -33,6 +45,21 @@ class Api::V1::Accounts::BulkActionsController < Api::V1::Accounts::BaseControll
       current_user.id,
       contact_params
     )
+  end
+
+  def exportable_conversations
+    @current_account.conversations
+                    .where(display_id: export_conversation_params[:ids])
+                    .includes(:contact, :inbox, :assignee, :assignee_agent_bot, messages: :sender)
+                    .order(:display_id)
+  end
+
+  def authorize_conversation_exports(conversations)
+    conversations.each { |conversation| authorize conversation, :show? }
+  end
+
+  def export_conversation_params
+    params.permit(ids: [])
   end
 
   def delete_contact_action?

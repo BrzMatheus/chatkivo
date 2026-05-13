@@ -1,10 +1,12 @@
 import types from '../mutation-types';
 import BulkActionsAPI from '../../api/bulkActions';
+import { downloadCsvFile } from '../../helper/downloadHelper';
 
 export const state = {
   selectedConversationIds: [],
   uiFlags: {
     isUpdating: false,
+    isExporting: false,
   },
 };
 
@@ -26,6 +28,17 @@ export const actions = {
       throw new Error(error);
     } finally {
       commit(types.SET_BULK_ACTIONS_FLAG, { isUpdating: false });
+    }
+  },
+  exportConversations: async function exportConversations({ commit }, payload) {
+    commit(types.SET_BULK_ACTIONS_FLAG, { isExporting: true });
+    try {
+      const response = await BulkActionsAPI.exportConversations(payload);
+      downloadCsvFile(payload.fileName, `\uFEFF${response.data}`);
+    } catch (error) {
+      throw new Error(error);
+    } finally {
+      commit(types.SET_BULK_ACTIONS_FLAG, { isExporting: false });
     }
   },
   setSelectedConversationIds({ commit }, id) {

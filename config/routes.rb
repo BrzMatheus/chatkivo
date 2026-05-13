@@ -51,7 +51,9 @@ Rails.application.routes.draw do
           namespace :actions do
             resource :contact_merge, only: [:create]
           end
-          resource :bulk_actions, only: [:create]
+          resource :bulk_actions, only: [:create] do
+            post :export_conversations
+          end
           resources :agents, only: [:index, :create, :update, :destroy] do
             post :bulk_create, on: :collection
           end

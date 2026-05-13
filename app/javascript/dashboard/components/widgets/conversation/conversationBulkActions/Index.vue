@@ -3,6 +3,7 @@ import { getUnixTime } from 'date-fns';
 import { findSnoozeTime } from 'dashboard/helper/snoozeHelpers';
 import { emitter } from 'shared/helpers/mitt';
 import wootConstants from 'dashboard/constants/globals';
+import { useAlert } from 'dashboard/composables';
 import {
   CMD_BULK_ACTION_SNOOZE_CONVERSATION,
   CMD_BULK_ACTION_REOPEN_CONVERSATION,
@@ -10,6 +11,7 @@ import {
 } from 'dashboard/helper/commandbar/events';
 
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
 import AgentSelector from './AgentSelector.vue';
 import UpdateActions from './UpdateActions.vue';
 import LabelActions from './LabelActions.vue';
@@ -23,6 +25,7 @@ export default {
     TeamActions,
     CustomSnoozeModal,
     NextButton,
+    DropdownMenu,
   },
   props: {
     conversations: {
@@ -64,9 +67,23 @@ export default {
       showUpdateActions: false,
       showLabelActions: false,
       showTeamsList: false,
+      showExportActions: false,
+      isExporting: false,
       popoverPositions: {},
       showCustomTimeSnoozeModal: false,
     };
+  },
+  computed: {
+    exportMenuItems() {
+      return [
+        {
+          label: this.$t('BULK_ACTION.EXPORT.DOWNLOAD_CSV'),
+          action: 'export_csv',
+          value: 'export_csv',
+          icon: 'i-lucide-download',
+        },
+      ];
+    },
   },
   mounted() {
     emitter.on(
@@ -137,6 +154,27 @@ export default {
     resolveConversations() {
       this.$emit('resolveConversations');
     },
+    async exportSelectedConversations() {
+      this.showExportActions = false;
+      this.isExporting = true;
+      try {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        await this.$store.dispatch('bulkActions/exportConversations', {
+          ids: this.conversations,
+          fileName: `selected-conversations-${timestamp}.csv`,
+        });
+        useAlert(this.$t('BULK_ACTION.EXPORT.SUCCESS'));
+      } catch {
+        useAlert(this.$t('BULK_ACTION.EXPORT.ERROR'));
+      } finally {
+        this.isExporting = false;
+      }
+    },
+    handleExportAction({ action }) {
+      if (action === 'export_csv') {
+        this.exportSelectedConversations();
+      }
+    },
     toggleUpdateActions() {
       this.showUpdateActions = !this.showUpdateActions;
     },
@@ -148,6 +186,9 @@ export default {
     },
     toggleTeamsList() {
       this.showTeamsList = !this.showTeamsList;
+    },
+    toggleExportActions() {
+      this.showExportActions = !this.showExportActions;
     },
   },
 };
@@ -205,6 +246,27 @@ export default {
           faded
           @click="toggleTeamsList"
         />
+        <div
+          v-on-clickaway="() => (showExportActions = false)"
+          class="relative"
+        >
+          <NextButton
+            v-tooltip="$t('BULK_ACTION.EXPORT.SETTINGS_TOOLTIP')"
+            icon="i-lucide-settings"
+            slate
+            xs
+            faded
+            :is-loading="isExporting"
+            :disabled="isExporting"
+            @click="toggleExportActions"
+          />
+          <DropdownMenu
+            v-if="showExportActions"
+            :menu-items="exportMenuItems"
+            class="top-full mt-1 w-56 ltr:right-0 rtl:left-0"
+            @action="handleExportAction"
+          />
+        </div>
       </div>
       <transition name="popover-animation">
         <LabelActions
