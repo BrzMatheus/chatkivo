@@ -8,12 +8,28 @@ class Api::V1::Widget::BaseController < ApplicationController
   private
 
   def conversations
+    @conversations ||= if use_identified_contact_fallback?
+                         identified_contact_fallback_conversations
+                       else
+                         current_contact_inbox_conversations
+                       end
+  end
+
+  def current_contact_inbox_conversations
     if @contact_inbox.hmac_verified?
       verified_contact_inbox_ids = @contact.contact_inboxes.where(inbox_id: auth_token_params[:inbox_id], hmac_verified: true).map(&:id)
-      @conversations = @contact.conversations.where(contact_inbox_id: verified_contact_inbox_ids)
+      @contact.conversations.where(contact_inbox_id: verified_contact_inbox_ids)
     else
-      @conversations = @contact_inbox.conversations.where(inbox_id: auth_token_params[:inbox_id])
+      @contact_inbox.conversations.where(inbox_id: auth_token_params[:inbox_id])
     end
+  end
+
+  def identified_contact_conversations
+    @contact.conversations.where(inbox_id: auth_token_params[:inbox_id])
+  end
+
+  def identified_contact_fallback_conversations
+    identified_contact_conversations.where.not(contact_inbox_id: @contact_inbox.id)
   end
 
   def conversation
@@ -28,12 +44,14 @@ class Api::V1::Widget::BaseController < ApplicationController
   end
 
   def find_or_create_conversation
+    conversation_scope = conversations
+
     # Se lock_to_single_conversation está habilitado, usar a última conversa
     if inbox.lock_to_single_conversation?
-      @contact_inbox.conversations.last
+      conversation_scope.last
     else
       # Caso contrário, usar a última conversa não resolvida
-      @contact_inbox.conversations.where.not(status: :resolved).last
+      conversation_scope.where.not(status: :resolved).last
     end
   end
 
@@ -42,9 +60,7 @@ class Api::V1::Widget::BaseController < ApplicationController
     @contact_inbox.with_lock do
       # Verificar novamente após adquirir o lock
       existing = find_or_create_conversation
-      return existing if existing
-
-      ::Conversation.create!(conversation_params)
+      existing || ::Conversation.create!(conversation_params)
     end
   rescue ActiveRecord::RecordNotUnique => e
     # Se ainda assim houver duplicação (por constraints de DB), buscar a existente
@@ -85,6 +101,17 @@ class Api::V1::Widget::BaseController < ApplicationController
 
   def contact_phone_number
     permitted_params.dig(:contact, :phone_number)
+  end
+
+  def use_identified_contact_fallback?
+    return false unless @contact.email.present? || @contact.phone_number.present?
+
+    return false unless identified_contact_fallback_conversations.exists?
+
+    return true if current_contact_inbox_conversations.empty?
+    return true if inbox.lock_to_single_conversation?
+
+    identified_contact_fallback_conversations.where.not(status: :resolved).exists?
   end
 
   def browser_params

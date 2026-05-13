@@ -38,8 +38,8 @@ describe('#actions', () => {
       expect(commit.mock.calls).toEqual([
         ['setConversationUIFlag', { isCreating: true }],
         [
-          'pushMessageToConversation',
-          { id: 1, content: 'This is a test message' },
+          'setMessagesInConversation',
+          [{ id: 1, content: 'This is a test message' }],
         ],
         ['setConversationUIFlag', { isCreating: false }],
       ]);

@@ -38,6 +38,11 @@ export const actions = {
     try {
       await ContactsAPI.update(user);
       dispatch('get');
+      if (user.email || user.phone_number) {
+        dispatch('conversation/clearConversations', {}, { root: true });
+        dispatch('conversation/fetchOldConversations', {}, { root: true });
+        dispatch('conversationAttributes/getAttributes', {}, { root: true });
+      }
     } catch (error) {
       // Ignore error
     }

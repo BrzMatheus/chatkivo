@@ -2,6 +2,7 @@ import { API } from 'widget/helpers/axios';
 import { actions } from '../../message';
 
 const commit = vi.fn();
+const dispatch = vi.fn();
 vi.mock('widget/helpers/axios');
 
 describe('#actions', () => {
@@ -20,6 +21,7 @@ describe('#actions', () => {
       await actions.update(
         {
           commit,
+          dispatch,
           getters: {
             getUIFlags: {
               isUpdating: false,
@@ -42,6 +44,12 @@ describe('#actions', () => {
           { root: true },
         ],
         ['toggleUpdateStatus', false],
+      ]);
+      expect(dispatch.mock.calls).toEqual([
+        ['contacts/get', {}, { root: true }],
+        ['conversation/clearConversations', {}, { root: true }],
+        ['conversation/fetchOldConversations', {}, { root: true }],
+        ['conversationAttributes/getAttributes', {}, { root: true }],
       ]);
     });
 

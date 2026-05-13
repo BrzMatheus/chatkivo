@@ -78,7 +78,12 @@ describe('#actions', () => {
       API.patch.mockResolvedValue({ data: { id: 1 } });
       await actions.update({ commit, dispatch }, { identifier: 1, user });
       expect(commit.mock.calls).toEqual([]);
-      expect(dispatch.mock.calls).toEqual([['get']]);
+      expect(dispatch.mock.calls).toEqual([
+        ['get'],
+        ['conversation/clearConversations', {}, { root: true }],
+        ['conversation/fetchOldConversations', {}, { root: true }],
+        ['conversationAttributes/getAttributes', {}, { root: true }],
+      ]);
     });
   });
 });

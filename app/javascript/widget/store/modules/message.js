@@ -37,6 +37,11 @@ export const actions = {
         { root: true }
       );
       dispatch('contacts/get', {}, { root: true });
+      if (email) {
+        dispatch('conversation/clearConversations', {}, { root: true });
+        dispatch('conversation/fetchOldConversations', {}, { root: true });
+        dispatch('conversationAttributes/getAttributes', {}, { root: true });
+      }
     } catch (error) {
       // Ignore error
     }
