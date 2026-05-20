@@ -1,8 +1,7 @@
 import fromUnixTime from 'date-fns/fromUnixTime';
 import format from 'date-fns/format';
 
-export const downloadCsvFile = (fileName, content) => {
-  const contentType = 'data:text/csv;charset=utf-8;';
+const downloadFile = (fileName, content, contentType) => {
   const blob = new Blob([content], { type: contentType });
   const url = URL.createObjectURL(blob);
 
@@ -12,6 +11,12 @@ export const downloadCsvFile = (fileName, content) => {
   link.click();
   return link;
 };
+
+export const downloadCsvFile = (fileName, content) =>
+  downloadFile(fileName, content, 'data:text/csv;charset=utf-8;');
+
+export const downloadHtmlFile = (fileName, content) =>
+  downloadFile(fileName, content, 'text/html;charset=utf-8;');
 
 export const generateFileName = ({ type, to, businessHours = false }) => {
   let name = `${type}-report-${format(fromUnixTime(to), 'dd-MM-yyyy')}`;

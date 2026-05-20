@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Conversation export</title>
+    <style>
+      <%= stylesheet %>
+    </style>
+  </head>
+  <body>
+    <main class="export">
+      <header class="export-header">
+        <p class="eyebrow">Conversation export</p>
+        <h1>Selected conversations</h1>
+        <p class="summary">
+          <%= conversations.size %> conversations exported on <%= h(format_datetime(Time.current)) %>
+        </p>
+      </header>
+
+      <div class="layout">
+        <aside class="sidebar">
+          <h2>Chats</h2>
+          <div class="chat-list">
+            <% conversations.each do |conversation| %>
+              <% contact = conversation.contact %>
+              <% messages = messages_for(conversation) %>
+              <a class="chat-link" href="#conversation-<%= conversation.display_id %>">
+                <span class="avatar"><%= h(initials(contact&.name)) %></span>
+                <span class="chat-link-body">
+                  <strong><%= h(contact_name(conversation)) %></strong>
+                  <span>#<%= conversation.display_id %> - <%= h(conversation.inbox&.name || 'Unknown inbox') %></span>
+                  <small><%= messages.count %> messages - <%= h(conversation.status) %></small>
+                </span>
+              </a>
+            <% end %>
+          </div>
+        </aside>
+
+        <section class="conversation-list">
+          <% conversations.each do |conversation| %>
+            <% contact = conversation.contact %>
+            <% messages = messages_for(conversation) %>
+            <% previous_date = nil %>
+            <article class="conversation" id="conversation-<%= conversation.display_id %>">
+              <header class="conversation-header">
+                <div>
+                  <p>Conversation #<%= conversation.display_id %></p>
+                  <h2><%= h(contact_name(conversation)) %></h2>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Status</dt>
+                    <dd><%= h(definition_value(conversation.status)) %></dd>
+                  </div>
+                  <div>
+                    <dt>Inbox</dt>
+                    <dd><%= h(definition_value(conversation.inbox&.name)) %></dd>
+                  </div>
+                  <div>
+                    <dt>Assignee</dt>
+                    <dd><%= h(definition_value(conversation.assigned_entity&.name)) %></dd>
+                  </div>
+                  <div>
+                    <dt>Email</dt>
+                    <dd><%= h(definition_value(contact&.email)) %></dd>
+                  </div>
+                  <div>
+                    <dt>Phone</dt>
+                    <dd><%= h(definition_value(contact&.phone_number)) %></dd>
+                  </div>
+                  <div>
+                    <dt>Created</dt>
+                    <dd><%= h(format_datetime(conversation.created_at)) %></dd>
+                  </div>
+                </dl>
+              </header>
+
+              <div class="history">
+                <% if messages.blank? %>
+                  <div class="empty-state">
+                    No messages were found in this conversation.
+                  </div>
+                <% end %>
+
+                <% messages.each do |message| %>
+                  <% message_date = message.created_at.to_date %>
+                  <% content = message_content(message) %>
+                  <% if message_date != previous_date %>
+                    <div class="date-separator">
+                      <span><%= h(format_date(message.created_at)) %></span>
+                    </div>
+                    <% previous_date = message_date %>
+                  <% end %>
+
+                  <div class="<%= h(message_row_classes(message)) %>" id="message-<%= message.id %>">
+                    <div class="bubble">
+                      <div class="message-meta">
+                        <strong><%= h(sender_name(message, conversation)) %></strong>
+                        <time><%= h(format_time(message.created_at)) %></time>
+                      </div>
+
+                      <% if message.private? %>
+                        <span class="private-badge">Private note</span>
+                      <% end %>
+
+                      <% if content.present? %>
+                        <p class="message-text"><%= h(content) %></p>
+                      <% else %>
+                        <p class="message-text muted">No text content</p>
+                      <% end %>
+
+                      <% if message.attachments.present? %>
+                        <ul class="attachments">
+                          <% message.attachments.each do |attachment| %>
+                            <li><%= h(attachment_label(attachment)) %></li>
+                          <% end %>
+                        </ul>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            </article>
+          <% end %>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

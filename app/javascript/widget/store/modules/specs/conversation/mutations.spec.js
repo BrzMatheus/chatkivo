@@ -185,6 +185,32 @@ describe('#mutations', () => {
   });
 
   describe('#setMissingMessages', () => {
+    it('sets missing messages in conversations', () => {
+      const state = {
+        conversations: {
+          454: {
+            id: 454,
+            content: 'hi',
+          },
+        },
+      };
+      const payload = {
+        454: {
+          id: 454,
+          content: 'hi',
+        },
+        465: {
+          id: 465,
+          content: 'new reply',
+        },
+      };
+
+      mutations.setMissingMessagesInConversation(state, payload);
+
+      expect(state.conversations).toEqual(payload);
+      expect(state.conversation).toBeUndefined();
+    });
+
     it('sets messages if payload is not empty', () => {
       const state = {
         uiFlags: { allMessagesLoaded: false },

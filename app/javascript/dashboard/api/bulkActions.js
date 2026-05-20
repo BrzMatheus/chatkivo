@@ -9,6 +9,10 @@ class BulkActionsAPI extends ApiClient {
   exportConversations({ ids }) {
     return axios.post(`${this.url}/export_conversations`, { ids });
   }
+
+  exportConversationsHtml({ ids }) {
+    return axios.post(`${this.url}/export_conversations_html`, { ids });
+  }
 }
 
 export default new BulkActionsAPI();

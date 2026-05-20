@@ -52,6 +52,23 @@ describe ActionCableListener do
       )
       listener.message_created(event)
     end
+
+    it 'sends message to all contact inboxes for the same inbox' do
+      # HACK: to reload conversation inbox members
+      expect(conversation.inbox.reload.inbox_members.count).to eq(1)
+      contact_inbox = create(:contact_inbox, contact: conversation.contact, inbox: inbox)
+      other_inbox = create(:inbox, account: account)
+      create(:contact_inbox, contact: conversation.contact, inbox: other_inbox)
+
+      expect(ActionCableBroadcastJob).to receive(:perform_later).with(
+        a_collection_containing_exactly(
+          agent.pubsub_token, admin.pubsub_token, conversation.contact_inbox.pubsub_token, contact_inbox.pubsub_token
+        ),
+        'message.created',
+        message.push_event_data.merge(account_id: account.id)
+      )
+      listener.message_created(event)
+    end
   end
 
   describe '#typing_on' do

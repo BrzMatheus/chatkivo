@@ -77,10 +77,16 @@ export default {
     exportMenuItems() {
       return [
         {
+          label: this.$t('BULK_ACTION.EXPORT.DOWNLOAD_HTML'),
+          action: 'export_html',
+          value: 'export_html',
+          icon: 'i-lucide-file-text',
+        },
+        {
           label: this.$t('BULK_ACTION.EXPORT.DOWNLOAD_CSV'),
           action: 'export_csv',
           value: 'export_csv',
-          icon: 'i-lucide-download',
+          icon: 'i-lucide-table',
         },
       ];
     },
@@ -154,15 +160,23 @@ export default {
     resolveConversations() {
       this.$emit('resolveConversations');
     },
-    async exportSelectedConversations() {
+    async exportSelectedConversations(format) {
       this.showExportActions = false;
       this.isExporting = true;
       try {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        await this.$store.dispatch('bulkActions/exportConversations', {
-          ids: this.conversations,
-          fileName: `selected-conversations-${timestamp}.csv`,
-        });
+        const isHtmlExport = format === 'html';
+        await this.$store.dispatch(
+          isHtmlExport
+            ? 'bulkActions/exportConversationsHtml'
+            : 'bulkActions/exportConversations',
+          {
+            ids: this.conversations,
+            fileName: `selected-conversations-${timestamp}.${
+              isHtmlExport ? 'html' : 'csv'
+            }`,
+          }
+        );
         useAlert(this.$t('BULK_ACTION.EXPORT.SUCCESS'));
       } catch {
         useAlert(this.$t('BULK_ACTION.EXPORT.ERROR'));
@@ -171,8 +185,11 @@ export default {
       }
     },
     handleExportAction({ action }) {
+      if (action === 'export_html') {
+        this.exportSelectedConversations('html');
+      }
       if (action === 'export_csv') {
-        this.exportSelectedConversations();
+        this.exportSelectedConversations('csv');
       }
     },
     toggleUpdateActions() {

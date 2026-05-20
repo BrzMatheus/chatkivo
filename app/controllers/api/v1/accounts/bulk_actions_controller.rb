@@ -25,6 +25,18 @@ class Api::V1::Accounts::BulkActionsController < Api::V1::Accounts::BaseControll
     )
   end
 
+  def export_conversations_html
+    conversations = exportable_conversations(include_attachments: true)
+    authorize_conversation_exports(conversations)
+
+    send_data(
+      Conversations::BulkHtmlExportService.new(conversations: conversations).perform,
+      filename: "selected-conversations-#{Time.current.strftime('%Y%m%d-%H%M%S')}.html",
+      type: 'text/html; charset=utf-8',
+      disposition: 'attachment'
+    )
+  end
+
   private
 
   def normalized_type
@@ -47,10 +59,12 @@ class Api::V1::Accounts::BulkActionsController < Api::V1::Accounts::BaseControll
     )
   end
 
-  def exportable_conversations
+  def exportable_conversations(include_attachments: false)
+    message_includes = include_attachments ? [:sender, :attachments] : :sender
+
     @current_account.conversations
                     .where(display_id: export_conversation_params[:ids])
-                    .includes(:contact, :inbox, :assignee, :assignee_agent_bot, messages: :sender)
+                    .includes(:contact, :inbox, :assignee, :assignee_agent_bot, messages: message_includes)
                     .order(:display_id)
   end
 

@@ -18,7 +18,8 @@
     "AGENT_LIST_LOADING": "Loading agents",
     "EXPORT": {
       "SETTINGS_TOOLTIP": "Export selected conversations",
-      "DOWNLOAD_CSV": "Download CSV for analysis",
+      "DOWNLOAD_HTML": "Download readable HTML",
+      "DOWNLOAD_CSV": "Download raw CSV",
       "SUCCESS": "Conversation export downloaded successfully.",
       "ERROR": "Failed to export conversations. Please try again."
     },

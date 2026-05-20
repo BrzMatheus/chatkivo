@@ -53,6 +53,7 @@ Rails.application.routes.draw do
           end
           resource :bulk_actions, only: [:create] do
             post :export_conversations
+            post :export_conversations_html
           end
           resources :agents, only: [:index, :create, :update, :destroy] do
             post :bulk_create, on: :collection
