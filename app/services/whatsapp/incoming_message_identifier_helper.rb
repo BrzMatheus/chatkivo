@@ -14,8 +14,7 @@ module Whatsapp::IncomingMessageIdentifierHelper
   end
 
   def set_contact_from_message
-    contact_params = @processed_params[:contacts]&.first
-    return if contact_params.blank?
+    contact_params = @processed_params[:contacts]&.first || {}
 
     source_ids = incoming_message_source_ids(contact_params)
     return if source_ids.blank?
@@ -26,8 +25,9 @@ module Whatsapp::IncomingMessageIdentifierHelper
       contact_attributes: attrs
     )
     @contact = @contact_inbox.contact
-    update_whatsapp_identifiers(source_ids: source_ids, username: contact_params.dig(:profile, :username), phone_number: attrs[:phone_number])
-    update_contact_with_profile_name(contact_params)
+    update_whatsapp_identifiers(source_ids: source_ids, username: contact_params.dig(:profile, :username),
+                                phone_number: attrs[:phone_number])
+    update_contact_with_profile_name(contact_params) if contact_params.present?
   end
 
   def find_or_create_contact_inbox(source_ids:, contact_attributes:)
@@ -66,9 +66,11 @@ module Whatsapp::IncomingMessageIdentifierHelper
   end
 
   def contact_attributes_from_contact_params(contact_params, source_identifier)
+    phone_identifier = contact_params[:wa_id].presence || messages_data.first[:from].presence
+
     contact_attributes_for_identifier(
-      contact_params.dig(:profile, :name).presence || source_identifier,
-      contact_params[:wa_id].presence || messages_data.first[:from].presence
+      contact_params.dig(:profile, :name).presence || phone_identifier || source_identifier,
+      phone_identifier
     )
   end
 

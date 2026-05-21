@@ -33,7 +33,9 @@ class Whatsapp::IncomingMessageBaseService
     # misconfigurations in the Meta business manager account.
     # We use an atomic Redis SET NX to prevent concurrent workers from both
     # processing the same message simultaneously.
-    return if find_message_by_source_id(messages_data.first[:id])
+    existing_message = find_message_by_source_id(messages_data.first[:id])
+    return handle_existing_message(existing_message) if existing_message
+
     return unless lock_message_source_id!
 
     set_contact
@@ -43,6 +45,23 @@ class Whatsapp::IncomingMessageBaseService
     ActiveRecord::Base.transaction do
       set_conversation
       create_messages
+    end
+  end
+
+  def handle_existing_message(existing_message)
+    set_contact
+    return unless @contact
+    return if @contact.blocked? && !outgoing_echo
+
+    ActiveRecord::Base.transaction do
+      set_conversation
+      if existing_message.conversation_id != @conversation.id
+        Rails.logger.info(
+          "Moving duplicate WhatsApp message #{existing_message.id} " \
+          "from conversation #{existing_message.conversation_id} to #{@conversation.id}"
+        )
+        existing_message.update!(conversation_id: @conversation.id)
+      end
     end
   end
 
@@ -100,15 +119,16 @@ class Whatsapp::IncomingMessageBaseService
 
   def set_conversation
     # if lock to single conversation is disabled, we will create a new conversation if previous conversation is resolved
-    @conversation = if @inbox.lock_to_single_conversation
-                      @contact_inbox.conversations.last
-                    else
-                      @contact_inbox.conversations
-                                    .where.not(status: :resolved).last
-                    end
+    @conversation = find_existing_conversation
     return if @conversation
 
-    @conversation = ::Conversation.create!(conversation_params)
+    @contact_inbox.with_lock do
+      @conversation = find_existing_conversation
+      @conversation ||= ::Conversation.create!(conversation_params)
+    end
+  rescue ActiveRecord::RecordNotUnique => e
+    Rails.logger.warn "Duplicate WhatsApp conversation detected for contact_inbox #{@contact_inbox.id}: #{e.message}"
+    @conversation = find_existing_conversation || raise
   end
 
   def attach_files
@@ -197,7 +217,11 @@ class Whatsapp::IncomingMessageBaseService
     return false if message_phone_number.blank?
 
     phone_number = "+#{message_phone_number}"
-    formatted_phone_number = TelephoneNumber.parse(phone_number).international_number
+    formatted_phone_number = begin
+      TelephoneNumber.parse(phone_number).international_number
+    rescue StandardError
+      phone_number
+    end
     @contact.name == phone_number || @contact.name == formatted_phone_number
   end
 end

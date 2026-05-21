@@ -12,6 +12,14 @@ module Whatsapp::IncomingMessageServiceHelpers
     }
   end
 
+  def find_existing_conversation
+    if @inbox.lock_to_single_conversation
+      @contact_inbox.conversations.last
+    else
+      @contact_inbox.conversations.where.not(status: :resolved).last
+    end
+  end
+
   def processed_params
     @processed_params ||= params
   end
