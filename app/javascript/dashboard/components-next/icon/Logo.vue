@@ -16,7 +16,7 @@ const globalConfig = useMapGetter('globalConfig/get');
 
 const logoSource = computed(() => {
   if (props.variant === 'header') {
-    return '/brand-assets/logo_thumbnailheader.svg';
+    return '/brand-assets/logo_thumbnailhead.svg';
   }
   return '/brand-assets/logo_thumbnailsidebar.svg';
 });
@@ -27,6 +27,13 @@ const logoSource = computed(() => {
     v-if="globalConfig.logoThumbnail"
     v-bind="attrs"
     :src="globalConfig.logoThumbnail"
+    class="object-contain"
   />
-  <img v-else v-bind="attrs" :src="logoSource" alt="Logo" />
+  <img
+    v-else
+    v-bind="attrs"
+    :src="logoSource"
+    alt="Logo"
+    class="object-contain"
+  />
 </template>

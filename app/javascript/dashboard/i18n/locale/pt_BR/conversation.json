@@ -72,6 +72,7 @@
     "UNSUPPORTED_MESSAGE_FACEBOOK": "Esta mensagem não é suportada. Você pode ver esta mensagem no aplicativo Facebook Messenger.",
     "UNSUPPORTED_MESSAGE_INSTAGRAM": "Esta mensagem não é suportada. Você pode ver esta mensagem no aplicativo do Instagram.",
     "SUCCESS_DELETE_MESSAGE": "Mensagem excluída com sucesso",
+    "DELETED_MESSAGE_MARKER": "Mensagem excluída",
     "FAIL_DELETE_MESSSAGE": "Não foi possível excluir a mensagem! Tente novamente",
     "SUCCESS_EDIT_MESSAGE": "Mensagem editada com sucesso",
     "FAIL_EDIT_MESSAGE": "Não foi possível editar a mensagem! Tente novamente",

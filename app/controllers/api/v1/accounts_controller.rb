@@ -109,9 +109,11 @@ class Api::V1::AccountsController < Api::BaseController
       :auto_resolve_label,
       :hide_private_messages,
       :disable_whatsapp_image_uploads,
+      :preserve_deleted_message_content,
       :dashboard_primary_color,
       :dashboard_background_color_light,
       :dashboard_background_color_dark,
+      :dashboard_agent_message_bubble_color,
       :agent_message_signature_enabled,
       :agent_message_signature_template,
       :agent_message_signature_mode

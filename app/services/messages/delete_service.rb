@@ -5,14 +5,31 @@ class Messages::DeleteService
   pattr_initialize [:message!]
 
   def self.apply_local_deletion!(message)
+    return apply_preserved_local_deletion!(message) if preserve_deleted_content?(message)
+
     ActiveRecord::Base.transaction do
       message.update!(
         content: I18n.t('conversations.messages.deleted'),
         content_type: :text,
-        content_attributes: { deleted: true }
+        content_attributes: deleted_content_attributes(message)
       )
       message.attachments.destroy_all
     end
+  end
+
+  def self.apply_preserved_local_deletion!(message)
+    message.update!(content_attributes: deleted_content_attributes(message, preserve_content: true))
+  end
+
+  def self.preserve_deleted_content?(message)
+    ActiveModel::Type::Boolean.new.cast(message.account.preserve_deleted_message_content)
+  end
+
+  def self.deleted_content_attributes(message, preserve_content: false)
+    message.content_attributes.to_h.merge(
+      deleted: true,
+      deleted_content_preserved: preserve_content
+    )
   end
 
   def perform

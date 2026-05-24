@@ -15,12 +15,17 @@ const props = defineProps({
   hideMeta: { type: Boolean, default: false },
 });
 
-const { variant, orientation, inReplyTo, shouldGroupWithNext } =
-  useMessageContext();
+const {
+  variant,
+  orientation,
+  inReplyTo,
+  shouldGroupWithNext,
+  contentAttributes,
+} = useMessageContext();
 const { t } = useI18n();
 
 const varaintBaseMap = {
-  [MESSAGE_VARIANTS.AGENT]: 'bg-n-solid-blue text-n-slate-12',
+  [MESSAGE_VARIANTS.AGENT]: 'bg-n-agent-bubble text-n-slate-12',
   [MESSAGE_VARIANTS.PRIVATE]:
     'bg-n-solid-amber text-n-amber-12 [&_.prosemirror-mention-node]:font-semibold',
   [MESSAGE_VARIANTS.USER]: 'bg-n-slate-4 text-n-slate-12',
@@ -76,6 +81,13 @@ const shouldShowMeta = computed(
     variant.value !== MESSAGE_VARIANTS.ACTIVITY
 );
 
+const shouldShowDeletedMarker = computed(() => {
+  return (
+    contentAttributes.value?.deleted &&
+    contentAttributes.value?.deletedContentPreserved
+  );
+});
+
 const replyToPreview = computed(() => {
   if (!inReplyTo) return '';
 
@@ -114,6 +126,13 @@ const replyToPreview = computed(() => {
       />
     </div>
     <slot />
+    <div
+      v-if="shouldShowDeletedMarker"
+      class="mt-0.5 text-[11px] leading-3 text-n-slate-11/70"
+      :class="flexOrientationClass"
+    >
+      {{ t('CONVERSATION.DELETED_MESSAGE_MARKER') }}
+    </div>
     <MessageMeta
       v-if="shouldShowMeta"
       :class="[

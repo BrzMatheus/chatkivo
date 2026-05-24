@@ -82,6 +82,10 @@
         "DISABLE_WHATSAPP_IMAGE_UPLOADS": {
           "TITLE": "Disable WhatsApp image uploads",
           "DESCRIPTION": "Remove and block image uploads in WhatsApp inbox conversations. Other attachments remain available."
+        },
+        "PRESERVE_DELETED_MESSAGE_CONTENT": {
+          "TITLE": "Preserve deleted message content",
+          "DESCRIPTION": "Keep messages deleted by agents visible internally and show a deleted-message label under the original content."
         }
       },
       "APPEARANCE": {
@@ -99,6 +103,10 @@
         "BACKGROUND_COLOR_DARK": {
           "LABEL": "Dark background",
           "DESCRIPTION": "Applied when the dashboard is in dark mode."
+        },
+        "AGENT_MESSAGE_BUBBLE_COLOR": {
+          "LABEL": "Reply bubble",
+          "DESCRIPTION": "Used by outbound agent message bubbles."
         }
       },
       "AGENT_SIGNATURE": {

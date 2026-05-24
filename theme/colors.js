@@ -228,6 +228,7 @@ export const colors = {
     black: '#000000',
     brand: 'rgb(var(--brand-color) / <alpha-value>)',
     background: 'rgb(var(--background-color) / <alpha-value>)',
+    'agent-bubble': 'rgb(var(--agent-message-bubble-color) / <alpha-value>)',
     'input-background': 'rgba(var(--background-input-box))',
     surface: {
       1: 'rgb(var(--surface-1) / <alpha-value>)',

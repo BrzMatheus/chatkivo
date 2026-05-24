@@ -21,6 +21,7 @@ import AccountSettingsHeader from './components/AccountSettingsHeader.vue';
 const ACCOUNT_SETTING_KEYS = {
   HIDE_PRIVATE_MESSAGES: 'hide_private_messages',
   DISABLE_WHATSAPP_IMAGE_UPLOADS: 'disable_whatsapp_image_uploads',
+  PRESERVE_DELETED_MESSAGE_CONTENT: 'preserve_deleted_message_content',
 };
 
 const APPEARANCE_CHANGE_KEY = 'dashboard_appearance';
@@ -103,6 +104,15 @@ const accountSettingConfigs = computed(() => [
       'GENERAL_SETTINGS.SPECIFIC.SETTINGS.DISABLE_WHATSAPP_IMAGE_UPLOADS.DESCRIPTION'
     ),
   },
+  {
+    key: ACCOUNT_SETTING_KEYS.PRESERVE_DELETED_MESSAGE_CONTENT,
+    title: t(
+      'GENERAL_SETTINGS.SPECIFIC.SETTINGS.PRESERVE_DELETED_MESSAGE_CONTENT.TITLE'
+    ),
+    description: t(
+      'GENERAL_SETTINGS.SPECIFIC.SETTINGS.PRESERVE_DELETED_MESSAGE_CONTENT.DESCRIPTION'
+    ),
+  },
 ]);
 
 const appearanceColorConfigs = computed(() => [
@@ -129,6 +139,15 @@ const appearanceColorConfigs = computed(() => [
     ),
     description: t(
       'GENERAL_SETTINGS.SPECIFIC.APPEARANCE.BACKGROUND_COLOR_DARK.DESCRIPTION'
+    ),
+  },
+  {
+    key: DASHBOARD_APPEARANCE_SETTING_KEYS.AGENT_MESSAGE_BUBBLE_COLOR,
+    label: t(
+      'GENERAL_SETTINGS.SPECIFIC.APPEARANCE.AGENT_MESSAGE_BUBBLE_COLOR.LABEL'
+    ),
+    description: t(
+      'GENERAL_SETTINGS.SPECIFIC.APPEARANCE.AGENT_MESSAGE_BUBBLE_COLOR.DESCRIPTION'
     ),
   },
 ]);
@@ -167,6 +186,7 @@ const selectedFeatureFlags = ref([]);
 const accountSettings = ref({
   [ACCOUNT_SETTING_KEYS.HIDE_PRIVATE_MESSAGES]: false,
   [ACCOUNT_SETTING_KEYS.DISABLE_WHATSAPP_IMAGE_UPLOADS]: false,
+  [ACCOUNT_SETTING_KEYS.PRESERVE_DELETED_MESSAGE_CONTENT]: false,
 });
 const dashboardAppearanceSettings = ref({ ...DEFAULT_DASHBOARD_APPEARANCE });
 const agentSignatureSettings = ref({ ...DEFAULT_AGENT_SIGNATURE_SETTINGS });
@@ -211,6 +231,8 @@ watch(
         !!account.settings?.hide_private_messages,
       [ACCOUNT_SETTING_KEYS.DISABLE_WHATSAPP_IMAGE_UPLOADS]:
         !!account.settings?.disable_whatsapp_image_uploads,
+      [ACCOUNT_SETTING_KEYS.PRESERVE_DELETED_MESSAGE_CONTENT]:
+        !!account.settings?.preserve_deleted_message_content,
     };
     dashboardAppearanceSettings.value = getDashboardAppearanceSettings(
       account.settings
@@ -353,7 +375,7 @@ const saveSpecificSettings = async () => {
               />
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-3">
+            <div class="grid gap-4 sm:grid-cols-2">
               <div
                 v-for="colorSetting in appearanceColorConfigs"
                 :key="colorSetting.key"

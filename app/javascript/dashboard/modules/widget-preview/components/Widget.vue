@@ -189,7 +189,7 @@ export default {
           src="~dashboard/assets/images/bubble-logo.svg"
           alt=""
           draggable="false"
-          class="w-6 h-6 mx-auto"
+          class="object-contain w-6 h-6 mx-auto"
         />
         <div v-if="isBubbleExpanded" class="ltr:pl-2.5 rtl:pr-2.5">
           {{ getWidgetBubbleLauncherTitle }}

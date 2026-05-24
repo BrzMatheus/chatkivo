@@ -82,6 +82,10 @@
         "DISABLE_WHATSAPP_IMAGE_UPLOADS": {
           "TITLE": "Desativar envio de imagens no WhatsApp",
           "DESCRIPTION": "Remove e bloqueia o envio de imagens nas conversas de inbox WhatsApp. Outros anexos continuam disponíveis."
+        },
+        "PRESERVE_DELETED_MESSAGE_CONTENT": {
+          "TITLE": "Preservar conteúdo de mensagens excluídas",
+          "DESCRIPTION": "Mantém mensagens apagadas por agentes visíveis internamente e exibe um aviso de mensagem excluída abaixo do conteúdo original."
         }
       },
       "APPEARANCE": {
@@ -99,6 +103,10 @@
         "BACKGROUND_COLOR_DARK": {
           "LABEL": "Fundo escuro",
           "DESCRIPTION": "Aplicado quando o dashboard está no modo escuro."
+        },
+        "AGENT_MESSAGE_BUBBLE_COLOR": {
+          "LABEL": "Balão das respostas",
+          "DESCRIPTION": "Usado no balão das mensagens enviadas pelo atendente."
         }
       },
       "AGENT_SIGNATURE": {

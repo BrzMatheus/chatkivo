@@ -229,6 +229,7 @@ export const mutations = {
 
   [types.DELETE_CONVERSATION_ATTACHMENTS](_state, message) {
     if (message.status !== MESSAGE_STATUS.SENT) return;
+    if (message.content_attributes?.deleted_content_preserved) return;
 
     const { conversation_id: id } = message;
     const existingAttachments = _state.attachments[id] || [];

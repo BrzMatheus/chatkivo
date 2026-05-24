@@ -1,7 +1,13 @@
 {
-  "name": "Chatwoot",
-  "short_name": "Chatwoot",
+  "name": "ChatBravo",
+  "short_name": "ChatBravo",
   "icons": [{
+    "src": "\/brand-assets\/logo_thumbnailhead.svg",
+    "sizes": "any",
+    "type": "image\/svg+xml",
+    "purpose": "any maskable"
+   },
+   {
     "src": "\/android-icon-36x36.png",
     "sizes": "36x36",
     "type": "image\/png",
@@ -39,6 +45,6 @@
    }],
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1f93ff",
-  "theme_color": "#1f93ff"
+  "background_color": "#111113",
+  "theme_color": "#111113"
 }
