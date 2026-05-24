@@ -3,6 +3,7 @@ import {
   MESSAGE_TYPE,
 } from 'shared/constants/messages';
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
+import { getWhatsAppMessageWindowPriorityRank } from 'dashboard/helper/whatsappMessageWindowHelper';
 
 export const findPendingMessageIndex = (chat, message) => {
   const { echo_id: tempMessageId } = message;
@@ -140,8 +141,22 @@ const getSortOrderFunction = sortOrder =>
   sortOrder === 'asc' ? sortAscending : sortDescending;
 
 const sortConfig = {
-  sortOnLastActivityAt: (a, b, sortDirection) =>
-    getSortOrderFunction(sortDirection)(a.last_activity_at, b.last_activity_at),
+  sortOnLastActivityAt: (a, b, sortDirection) => {
+    if (sortDirection === 'desc') {
+      const priorityDifference =
+        getWhatsAppMessageWindowPriorityRank(a) -
+        getWhatsAppMessageWindowPriorityRank(b);
+
+      if (priorityDifference !== 0) {
+        return priorityDifference;
+      }
+    }
+
+    return getSortOrderFunction(sortDirection)(
+      a.last_activity_at,
+      b.last_activity_at
+    );
+  },
 
   sortOnUnreadFirst: (a, b) => {
     const unreadRankDifference = unreadRank(a) - unreadRank(b);

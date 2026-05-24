@@ -47,6 +47,12 @@
       "BADGE": "Conversa Expirada",
       "TOOLTIP": "Essa conversa foi expirada por ter passado de 24h; suas mensagens podem não chegar até o usuário."
     },
+    "WHATSAPP_MESSAGE_WINDOW": {
+      "WARNING_BADGE": "Limite 24h chegando",
+      "WARNING_TOOLTIP": "A janela de 24h do WhatsApp está perto de expirar.",
+      "EXPIRED_BADGE": "Limitação de 24h",
+      "EXPIRED_TOOLTIP": "A janela de 24h do WhatsApp expirou. Use um modelo de mensagem para retomar a conversa."
+    },
     "OLD_INSTAGRAM_INBOX_REPLY_BANNER": "Esta conta do Instagram foi migrada para a nova caixa de entrada do canal do Instagram. Todas as novas mensagens serão mostradas lá. Você não poderá mais enviar mensagens desta conversa.",
     "REPLYING_TO": "Você está respondendo a:",
     "REMOVE_SELECTION": "Remover seleção",

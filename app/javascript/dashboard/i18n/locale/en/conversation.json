@@ -48,6 +48,12 @@
       "BADGE": "Expired Conversation",
       "TOOLTIP": "This conversation expired after 24 hours. Your messages may not reach the user."
     },
+    "WHATSAPP_MESSAGE_WINDOW": {
+      "WARNING_BADGE": "24h limit ending",
+      "WARNING_TOOLTIP": "The WhatsApp 24-hour reply window is ending soon.",
+      "EXPIRED_BADGE": "24h limitation",
+      "EXPIRED_TOOLTIP": "The WhatsApp 24-hour reply window has expired. Use a template message to resume the conversation."
+    },
     "OLD_INSTAGRAM_INBOX_REPLY_BANNER": "This Instagram account was migrated to the new Instagram channel inbox. All new messages will show up there. You won’t be able to send messages from this conversation anymore.",
     "REPLYING_TO": "You are replying to:",
     "REMOVE_SELECTION": "Remove Selection",

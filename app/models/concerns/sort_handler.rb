@@ -4,7 +4,9 @@ module SortHandler
   # rubocop:disable Metrics/BlockLength
   class_methods do
     def sort_on_last_activity_at(sort_direction = :desc)
-      order(last_activity_at: sort_direction)
+      return order(last_activity_at: sort_direction) unless sort_direction.to_s == 'desc'
+
+      order(generate_sql_query("#{whatsapp_message_window_warning_order_query}, conversations.last_activity_at DESC"))
     end
 
     # rubocop:disable Metrics/MethodLength
@@ -73,6 +75,37 @@ module SortHandler
           AND messages.message_type != #{Message.message_types[:activity]}
         ORDER BY messages.created_at DESC, messages.id DESC
         LIMIT 1
+      SQL
+    end
+
+    def latest_non_activity_message_created_at_query
+      <<~SQL.squish
+        SELECT messages.created_at
+        FROM messages
+        WHERE messages.conversation_id = conversations.id
+          AND messages.account_id = conversations.account_id
+          AND messages.message_type != #{Message.message_types[:activity]}
+        ORDER BY messages.created_at DESC, messages.id DESC
+        LIMIT 1
+      SQL
+    end
+
+    def whatsapp_message_window_warning_order_query
+      <<~SQL.squish
+        CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM inboxes
+            WHERE inboxes.id = conversations.inbox_id
+              AND inboxes.channel_type = 'Channel::Whatsapp'
+          )
+          AND (#{latest_non_activity_message_type_query}) = #{Message.message_types[:incoming]}
+          AND (#{latest_non_activity_message_created_at_query}) BETWEEN
+            (CURRENT_TIMESTAMP - INTERVAL '24 hours') AND
+            (CURRENT_TIMESTAMP - INTERVAL '21 hours')
+          THEN 0
+          ELSE 1
+        END ASC
       SQL
     end
 

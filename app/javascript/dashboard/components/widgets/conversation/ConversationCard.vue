@@ -13,9 +13,11 @@ import CardLabels from './conversationCardComponents/CardLabels.vue';
 import PriorityMark from './PriorityMark.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import TelegramExpiredBadge from './components/TelegramExpiredBadge.vue';
+import WhatsAppMessageWindowBadge from './components/WhatsAppMessageWindowBadge.vue';
 import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
 import VoiceCallStatus from './VoiceCallStatus.vue';
 import { MESSAGE_TYPE } from 'shared/constants/messages';
+import { getWhatsAppMessageWindowStatus } from 'dashboard/helper/whatsappMessageWindowHelper';
 
 const props = defineProps({
   activeLabel: { type: String, default: '' },
@@ -132,6 +134,10 @@ const isTelegramConversationExpired = computed(() => {
     props.chat?.can_reply === false
   );
 });
+
+const whatsAppMessageWindowStatus = computed(() =>
+  getWhatsAppMessageWindowStatus(props.chat, inbox.value)
+);
 
 const showLabelsSection = computed(() => {
   return props.chat.labels?.length > 0 || hasSlaPolicyId.value;
@@ -428,6 +434,11 @@ const deleteConversation = () => {
               <TelegramExpiredBadge
                 v-if="isTelegramConversationExpired"
                 class="max-w-[140px] truncate"
+              />
+              <WhatsAppMessageWindowBadge
+                v-if="whatsAppMessageWindowStatus"
+                :status="whatsAppMessageWindowStatus"
+                class="max-w-[150px]"
               />
               <span
                 v-if="hasPendingUnread"

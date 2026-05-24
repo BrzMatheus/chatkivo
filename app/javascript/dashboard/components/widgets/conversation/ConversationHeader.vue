@@ -10,11 +10,13 @@ import MoreActions from './MoreActions.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import TelegramExpiredBadge from './components/TelegramExpiredBadge.vue';
+import WhatsAppMessageWindowBadge from './components/WhatsAppMessageWindowBadge.vue';
 import wootConstants from 'dashboard/constants/globals';
 import { conversationListPageURL } from 'dashboard/helper/URLHelper';
 import { snoozedReopenTime } from 'dashboard/helper/snoozeHelpers';
 import { useInbox } from 'dashboard/composables/useInbox';
 import { useI18n } from 'vue-i18n';
+import { getWhatsAppMessageWindowStatus } from 'dashboard/helper/whatsappMessageWindowHelper';
 
 const props = defineProps({
   chat: {
@@ -101,6 +103,10 @@ const isTelegramConversationExpired = computed(() => {
   );
 });
 
+const whatsAppMessageWindowStatus = computed(() =>
+  getWhatsAppMessageWindowStatus(props.chat, inbox.value)
+);
+
 const toggleContactPanel = () => {
   const isCurrentlyOpen = uiSettings.value?.is_contact_sidebar_open || false;
   updateUISettings({
@@ -162,6 +168,11 @@ const toggleContactPanel = () => {
             <TelegramExpiredBadge
               v-if="isTelegramConversationExpired"
               class="flex-shrink-0"
+            />
+            <WhatsAppMessageWindowBadge
+              v-if="whatsAppMessageWindowStatus"
+              :status="whatsAppMessageWindowStatus"
+              class="flex-shrink-0 max-w-[150px]"
             />
             <span v-if="isSnoozed" class="font-medium text-n-amber-10">
               {{ snoozedDisplayText }}
