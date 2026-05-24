@@ -50,8 +50,15 @@ const bufferToWav = async (buffer, numChannels, sampleRate) => {
 
 const decodeAudioData = async audioBlob => {
   const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  const arrayBuffer = await audioBlob.arrayBuffer();
-  const audioData = await audioContext.decodeAudioData(arrayBuffer);
+  let audioData;
+
+  try {
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    audioData = await audioContext.decodeAudioData(arrayBuffer);
+  } finally {
+    await audioContext.close();
+  }
+
   return audioData;
 };
 

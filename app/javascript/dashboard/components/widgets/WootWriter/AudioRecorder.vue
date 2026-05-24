@@ -26,6 +26,14 @@ const record = ref(null);
 const isRecording = ref(false);
 const isPlaying = ref(false);
 const hasRecording = ref(false);
+const recordedAudioUrl = ref('');
+
+const clearRecordedAudioUrl = () => {
+  if (recordedAudioUrl.value) {
+    URL.revokeObjectURL(recordedAudioUrl.value);
+    recordedAudioUrl.value = '';
+  }
+};
 
 const formatTimeProgress = time => {
   const duration = intervalToDuration({ start: 0, end: time });
@@ -38,15 +46,14 @@ const formatTimeProgress = time => {
 const initWaveSurfer = () => {
   wavesurfer.value = WaveSurfer.create({
     container: waveformContainer.value,
-    waveColor: '#9CA3AF',
-    progressColor: '#F59AAF',
-    height: 28,
+    waveColor: '#1F93FF',
+    progressColor: '#6E6F73',
+    height: 56,
     barWidth: 2,
-    barGap: 3,
+    barGap: 1,
     barRadius: 2,
     cursorWidth: 0,
     interact: false,
-    normalize: true,
     plugins: [
       RecordPlugin.create({
         scrollingWaveform: true,
@@ -66,12 +73,13 @@ const initWaveSurfer = () => {
 
   record.value.on('record-end', async blob => {
     const audioBlob = await convertAudio(blob, props.audioRecordFormat);
-    const audioUrl = URL.createObjectURL(audioBlob);
+    clearRecordedAudioUrl();
+    recordedAudioUrl.value = URL.createObjectURL(audioBlob);
     const fileName = `${getUuid()}.mp3`;
     const file = new File([audioBlob], fileName, {
       type: props.audioRecordFormat,
     });
-    wavesurfer.value.load(audioUrl);
+    wavesurfer.value.load(recordedAudioUrl.value);
     emit('finishRecord', {
       name: file.name,
       type: file.type,
@@ -115,14 +123,12 @@ onUnmounted(() => {
   if (wavesurfer.value) {
     wavesurfer.value.destroy();
   }
+  clearRecordedAudioUrl();
 });
 
 defineExpose({ playPause, stopRecording, record });
 </script>
 
 <template>
-  <div
-    ref="waveformContainer"
-    class="flex items-center w-full h-9 overflow-hidden"
-  />
+  <div ref="waveformContainer" class="w-full p-1" />
 </template>
