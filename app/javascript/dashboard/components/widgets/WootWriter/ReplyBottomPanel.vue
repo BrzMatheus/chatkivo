@@ -310,8 +310,13 @@ export default {
         <span class="flex-shrink-0 rounded-full size-2 bg-n-ruby-9" />
         <span>{{ recordingAudioDurationText }}</span>
       </div>
-      <div class="flex-1 min-w-16 h-9 overflow-hidden">
-        <slot name="audio-recorder" />
+      <div
+        class="flex-1 min-w-16 h-2 overflow-hidden rounded-full bg-n-slate-5"
+      >
+        <div
+          class="w-full h-full rounded-full bg-n-ruby-8"
+          :class="{ 'animate-pulse': !recordingAudioState }"
+        />
       </div>
     </div>
     <div class="flex items-center flex-shrink-0 gap-2">

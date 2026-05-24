@@ -138,7 +138,6 @@ export default {
       showVariablesMenu: false,
       newConversationModalActive: false,
       showArticleSearchPopover: false,
-      hasRecordedAudio: false,
       copilotAcceptedMessages: {},
     };
   },
@@ -225,7 +224,7 @@ export default {
     isReplyButtonDisabled() {
       if (this.isEditorDisabled) return true;
       if (this.isATwitterInbox) return true;
-      if (this.hasAttachments || this.hasRecordedAudio) return false;
+      if (this.hasAttachments) return false;
 
       return (
         this.isMessageEmpty ||
@@ -1056,7 +1055,6 @@ export default {
     },
     onFinishRecorder(file) {
       this.recordingAudioState = 'stopped';
-      this.hasRecordedAudio = true;
       // Added a new key isRecordedAudio to the file to find it's and recorded audio
       // Because to filter and show only non recorded audio and other attachments
       const autoRecordedFile = {
@@ -1111,6 +1109,7 @@ export default {
     },
     getMultipleMessagesPayload(message) {
       const multipleMessagePayload = [];
+      const hasMessage = !!trimContent(message || '');
 
       if (this.attachedFiles && this.attachedFiles.length) {
         let caption = this.isAnInstagramChannel ? '' : message;
@@ -1138,8 +1137,8 @@ export default {
       // For Instagram, we need a separate text message
       // For WhatsApp, we only need a text message if there are no attachments
       if (
-        (this.isAnInstagramChannel && this.message) ||
-        (!this.isAnInstagramChannel && hasNoAttachments)
+        (this.isAnInstagramChannel && hasMessage) ||
+        (!this.isAnInstagramChannel && hasNoAttachments && hasMessage)
       ) {
         let messagePayload = {
           conversationId: this.currentChat.id,
@@ -1247,7 +1246,6 @@ export default {
       this.recordingAudioDurationText = '00:00';
       this.isRecordingAudio = false;
       this.recordingAudioState = '';
-      this.hasRecordedAudio = false;
       // Only clear the recorded audio when we click toggle button.
       this.attachedFiles = this.attachedFiles.filter(
         file => !file?.isRecordedAudio
@@ -1320,6 +1318,15 @@ export default {
           v-model:cc-emails="ccEmails"
           v-model:bcc-emails="bccEmails"
           v-model:to-emails="toEmails"
+        />
+        <AudioRecorder
+          v-if="showAudioRecorderEditor"
+          ref="audioRecorderInput"
+          :audio-record-format="audioRecordFormat"
+          @recorder-progress-changed="onRecordProgressChanged"
+          @finish-record="onFinishRecorder"
+          @play="recordingAudioState = 'playing'"
+          @pause="recordingAudioState = 'paused'"
         />
         <CopilotEditorSection
           v-if="copilot.isActive.value && !showAudioRecorderEditor"
@@ -1444,19 +1451,7 @@ export default {
         @replace-text="replaceText"
         @toggle-insert-article="toggleInsertArticle"
         @toggle-quoted-reply="toggleQuotedReply"
-      >
-        <template #audio-recorder>
-          <AudioRecorder
-            v-if="showAudioRecorderEditor"
-            ref="audioRecorderInput"
-            :audio-record-format="audioRecordFormat"
-            @recorder-progress-changed="onRecordProgressChanged"
-            @finish-record="onFinishRecorder"
-            @play="recordingAudioState = 'playing'"
-            @pause="recordingAudioState = 'paused'"
-          />
-        </template>
-      </ReplyBottomPanel>
+      />
     </Transition>
 
     <WhatsappTemplates

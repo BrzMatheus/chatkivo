@@ -65,8 +65,8 @@ const initWaveSurfer = () => {
   });
 
   record.value.on('record-end', async blob => {
-    const audioUrl = URL.createObjectURL(blob);
     const audioBlob = await convertAudio(blob, props.audioRecordFormat);
+    const audioUrl = URL.createObjectURL(audioBlob);
     const fileName = `${getUuid()}.mp3`;
     const file = new File([audioBlob], fileName, {
       type: props.audioRecordFormat,
