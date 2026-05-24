@@ -16,5 +16,6 @@ module RegexHelper
 
   TWILIO_CHANNEL_SMS_REGEX = Regexp.new('^\+\d{1,15}\z')
   TWILIO_CHANNEL_WHATSAPP_REGEX = Regexp.new('^whatsapp:\+\d{1,15}\z')
+  WHATSAPP_BSUID_PATTERN = '[A-Za-z0-9][A-Za-z0-9._-]*'
   WHATSAPP_CHANNEL_REGEX = Regexp.new('^\d{1,15}\z')
 end

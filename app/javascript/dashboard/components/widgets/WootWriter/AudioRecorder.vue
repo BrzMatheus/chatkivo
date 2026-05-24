@@ -38,12 +38,15 @@ const formatTimeProgress = time => {
 const initWaveSurfer = () => {
   wavesurfer.value = WaveSurfer.create({
     container: waveformContainer.value,
-    waveColor: '#1F93FF',
-    progressColor: '#6E6F73',
-    height: 100,
+    waveColor: '#9CA3AF',
+    progressColor: '#F59AAF',
+    height: 28,
     barWidth: 2,
-    barGap: 1,
+    barGap: 3,
     barRadius: 2,
+    cursorWidth: 0,
+    interact: false,
+    normalize: true,
     plugins: [
       RecordPlugin.create({
         scrollingWaveform: true,
@@ -118,5 +121,8 @@ defineExpose({ playPause, stopRecording, record });
 </script>
 
 <template>
-  <div ref="waveformContainer" class="w-full p-1" />
+  <div
+    ref="waveformContainer"
+    class="flex items-center w-full h-9 overflow-hidden"
+  />
 </template>

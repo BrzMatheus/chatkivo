@@ -288,7 +288,54 @@ export default {
 </script>
 
 <template>
-  <div class="flex justify-between p-3 gap-2" :class="wrapClass">
+  <div
+    v-if="isRecordingAudio"
+    class="flex items-center justify-between gap-2 px-3 py-2 border-t border-n-weak bg-n-solid-2 rounded-b-xl"
+    :class="wrapClass"
+  >
+    <div class="flex items-center flex-1 min-w-0 gap-3">
+      <NextButton
+        v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.STOP_AUDIO_RECORDING')"
+        icon="i-ph-trash"
+        type="button"
+        slate
+        ghost
+        sm
+        class="flex-shrink-0"
+        @click="toggleAudioRecorder"
+      />
+      <div
+        class="flex items-center flex-shrink-0 gap-2 text-base font-medium tabular-nums text-n-slate-12"
+      >
+        <span class="flex-shrink-0 rounded-full size-2 bg-n-ruby-9" />
+        <span>{{ recordingAudioDurationText }}</span>
+      </div>
+      <div class="flex-1 min-w-16 h-9 overflow-hidden">
+        <slot name="audio-recorder" />
+      </div>
+    </div>
+    <div class="flex items-center flex-shrink-0 gap-2">
+      <NextButton
+        :icon="audioRecorderPlayStopIcon"
+        type="button"
+        slate
+        ghost
+        sm
+        @click="toggleAudioRecorderPlayPause"
+      />
+      <NextButton
+        v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.SEND')"
+        icon="i-ph-paper-plane-tilt-fill"
+        type="submit"
+        color="teal"
+        sm
+        :disabled="isSendDisabled"
+        class="!rounded-full !size-10 !p-0 text-lg"
+        @click="onSend"
+      />
+    </div>
+  </div>
+  <div v-else class="flex justify-between p-3 gap-2" :class="wrapClass">
     <div class="left-wrap flex-shrink min-w-0">
       <NextButton
         v-if="!isEditorDisabled"

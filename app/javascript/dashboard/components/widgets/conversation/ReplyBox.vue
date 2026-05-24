@@ -1321,15 +1321,6 @@ export default {
           v-model:bcc-emails="bccEmails"
           v-model:to-emails="toEmails"
         />
-        <AudioRecorder
-          v-if="showAudioRecorderEditor"
-          ref="audioRecorderInput"
-          :audio-record-format="audioRecordFormat"
-          @recorder-progress-changed="onRecordProgressChanged"
-          @finish-record="onFinishRecorder"
-          @play="recordingAudioState = 'playing'"
-          @pause="recordingAudioState = 'paused'"
-        />
         <CopilotEditorSection
           v-if="copilot.isActive.value && !showAudioRecorderEditor"
           :show-copilot-editor="copilot.showEditor.value"
@@ -1453,7 +1444,19 @@ export default {
         @replace-text="replaceText"
         @toggle-insert-article="toggleInsertArticle"
         @toggle-quoted-reply="toggleQuotedReply"
-      />
+      >
+        <template #audio-recorder>
+          <AudioRecorder
+            v-if="showAudioRecorderEditor"
+            ref="audioRecorderInput"
+            :audio-record-format="audioRecordFormat"
+            @recorder-progress-changed="onRecordProgressChanged"
+            @finish-record="onFinishRecorder"
+            @play="recordingAudioState = 'playing'"
+            @pause="recordingAudioState = 'paused'"
+          />
+        </template>
+      </ReplyBottomPanel>
     </Transition>
 
     <WhatsappTemplates
