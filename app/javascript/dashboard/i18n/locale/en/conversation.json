@@ -255,7 +255,7 @@
     },
     "VISIBLE_TO_AGENTS": "Private Note: Only visible to you and your team",
     "CHANGE_STATUS": "Conversation status changed",
-    "OWNERSHIP_CLEARED": "Agent and team removed from the conversation",
+    "OWNERSHIP_CLEARED": "Agent removed from the conversation",
     "CHANGE_STATUS_FAILED": "Conversation status change failed",
     "CHANGE_AGENT": "Conversation Assignee changed",
     "CHANGE_AGENT_FAILED": "Assignee change failed",

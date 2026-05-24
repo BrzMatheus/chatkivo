@@ -25,6 +25,7 @@ const ACCOUNT_SETTING_KEYS = {
 
 const APPEARANCE_CHANGE_KEY = 'dashboard_appearance';
 const AGENT_SIGNATURE_CHANGE_KEY = 'agent_message_signature';
+const AGENT_NAME_TOKEN = '{{agent_name}}';
 const AGENT_NAME_TOKEN_REGEX = /\{\{\s*agent_name\s*\}\}/g;
 const AGENT_SIGNATURE_SETTING_KEYS = {
   ENABLED: 'agent_message_signature_enabled',
@@ -37,7 +38,7 @@ const AGENT_SIGNATURE_MODES = {
 };
 const DEFAULT_AGENT_SIGNATURE_SETTINGS = {
   [AGENT_SIGNATURE_SETTING_KEYS.ENABLED]: false,
-  [AGENT_SIGNATURE_SETTING_KEYS.TEMPLATE]: 'Atendente: {{agent_name}}',
+  [AGENT_SIGNATURE_SETTING_KEYS.TEMPLATE]: `Atendente: ${AGENT_NAME_TOKEN}`,
   [AGENT_SIGNATURE_SETTING_KEYS.MODE]:
     AGENT_SIGNATURE_MODES.FIRST_MESSAGE_PER_AGENT,
 };
@@ -412,11 +413,15 @@ const saveSpecificSettings = async () => {
                 "
                 :placeholder="
                   $t(
-                    'GENERAL_SETTINGS.SPECIFIC.AGENT_SIGNATURE.TEMPLATE.PLACEHOLDER'
+                    'GENERAL_SETTINGS.SPECIFIC.AGENT_SIGNATURE.TEMPLATE.PLACEHOLDER',
+                    { token: AGENT_NAME_TOKEN }
                   )
                 "
                 :message="
-                  $t('GENERAL_SETTINGS.SPECIFIC.AGENT_SIGNATURE.TEMPLATE.HELP')
+                  $t(
+                    'GENERAL_SETTINGS.SPECIFIC.AGENT_SIGNATURE.TEMPLATE.HELP',
+                    { token: AGENT_NAME_TOKEN }
+                  )
                 "
                 class="w-full"
                 @update:model-value="

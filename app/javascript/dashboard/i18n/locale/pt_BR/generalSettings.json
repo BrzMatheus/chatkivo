@@ -106,8 +106,8 @@
         "DESCRIPTION": "Adiciona o nome do atendente nas respostas enviadas por esta conta.",
         "TEMPLATE": {
           "LABEL": "Texto da assinatura",
-          "PLACEHOLDER": "Atendente: {{agent_name}}",
-          "HELP": "Use {{agent_name}} para inserir o nome do atendente."
+          "PLACEHOLDER": "Atendente: {token}",
+          "HELP": "Use {token} para inserir o nome do atendente."
         },
         "MODE": {
           "LABEL": "Aplicar em"

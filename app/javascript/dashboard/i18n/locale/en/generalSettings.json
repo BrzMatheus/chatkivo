@@ -106,8 +106,8 @@
         "DESCRIPTION": "Add the agent name to outbound replies for this account.",
         "TEMPLATE": {
           "LABEL": "Signature text",
-          "PLACEHOLDER": "Agent: {{agent_name}}",
-          "HELP": "Use {{agent_name}} to insert the agent name."
+          "PLACEHOLDER": "Agent: {token}",
+          "HELP": "Use {token} to insert the agent name."
         },
         "MODE": {
           "LABEL": "Apply to"

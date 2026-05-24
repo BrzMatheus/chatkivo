@@ -110,11 +110,6 @@ const onCmdResolveConversation = async () => {
       conversationId: currentChat.value.id,
       agentId: null,
     });
-    await store.dispatch('assignTeam', {
-      conversationId: currentChat.value.id,
-      teamId: null,
-      skipSync: true,
-    });
     useAlert(t('CONVERSATION.OWNERSHIP_CLEARED'));
   } finally {
     isLoading.value = false;
