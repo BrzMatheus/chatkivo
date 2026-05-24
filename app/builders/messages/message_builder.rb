@@ -27,6 +27,7 @@ class Messages::MessageBuilder
     @message = @conversation.messages.build(message_params)
     process_attachments
     process_emails
+    Messages::AgentMessageSignatureService.new(message: @message).perform
     # When the message has no quoted content, it will just be rendered as a regular message
     # The frontend is equipped to handle this case
     process_email_content
@@ -74,19 +75,36 @@ class Messages::MessageBuilder
     return if @attachments.blank?
 
     @attachments.each do |uploaded_attachment|
+      attachment_file_type = file_type_for(uploaded_attachment)
+      validate_whatsapp_image_upload!(attachment_file_type)
+
       attachment = @message.attachments.build(
         account_id: @message.account_id,
         file: uploaded_attachment
       )
 
-      attachment.file_type = if uploaded_attachment.is_a?(String)
-                               file_type_by_signed_id(
-                                 uploaded_attachment
-                               )
-                             else
-                               file_type(uploaded_attachment&.content_type)
-                             end
+      attachment.file_type = attachment_file_type
     end
+  end
+
+  def file_type_for(uploaded_attachment)
+    return file_type_by_signed_id(uploaded_attachment) if uploaded_attachment.is_a?(String)
+
+    file_type(uploaded_attachment&.content_type)
+  end
+
+  def validate_whatsapp_image_upload!(attachment_file_type)
+    return unless whatsapp_image_upload_disabled?
+    return unless attachment_file_type.to_s == 'image'
+
+    raise StandardError, I18n.t('errors.messages.whatsapp_image_upload_disabled')
+  end
+
+  def whatsapp_image_upload_disabled?
+    return false if @private
+    return false unless @conversation.inbox&.whatsapp? || @conversation.inbox&.twilio_whatsapp?
+
+    ActiveModel::Type::Boolean.new.cast(@account.settings&.dig('disable_whatsapp_image_uploads'))
   end
 
   def process_emails

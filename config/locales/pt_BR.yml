@@ -35,6 +35,8 @@ pt_BR:
     saml_not_available: A autenticação SAML não está disponível nesta instalação.
     inbox_deletetion_response: Seu pedido de exclusão da caixa de entrada será processado dentro de algum tempo.
   errors:
+    messages:
+      whatsapp_image_upload_disabled: O envio de imagens está desativado para conversas de WhatsApp.
     validations:
       presence: não pode ficar em branco
     webhook:
@@ -136,6 +138,12 @@ pt_BR:
       avg_resolution_time: Tempo médio de resolução
       resolution_count: Contagem de Resolução
       avg_customer_waiting_time: Tempo médio de espera do cliente
+      whatsapp_templates_total: Total de templates WhatsApp
+      whatsapp_templates_utility: Templates WhatsApp utility
+      whatsapp_templates_marketing: Templates WhatsApp marketing
+      whatsapp_templates_authentication: Templates WhatsApp autenticação
+      whatsapp_templates_service: Templates WhatsApp serviço
+      whatsapp_templates_other: Templates WhatsApp outros
     inbox_csv:
       inbox_name: Nome da Caixa de Entrada
       inbox_type: Tipo da Caixa de Entrada

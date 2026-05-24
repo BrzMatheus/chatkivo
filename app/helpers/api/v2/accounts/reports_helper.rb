@@ -1,4 +1,6 @@
 module Api::V2::Accounts::ReportsHelper
+  WHATSAPP_TEMPLATE_USAGE_KEYS = %i[total utility marketing authentication service other].freeze
+
   def generate_agents_report
     reports = V2::Reports::AgentSummaryBuilder.new(
       account: Current.account,
@@ -7,7 +9,7 @@ module Api::V2::Accounts::ReportsHelper
 
     Current.account.users.map do |agent|
       report = reports.find { |r| r[:id] == agent.id }
-      [agent.name] + generate_readable_report_metrics(report)
+      [agent.name] + generate_readable_report_metrics(report) + generate_readable_whatsapp_template_usage(report)
     end
   end
 
@@ -77,6 +79,12 @@ module Api::V2::Accounts::ReportsHelper
       Reports::TimeFormatPresenter.new(report[:avg_reply_time]).format,
       report[:resolved_conversations_count]
     ]
+  end
+
+  def generate_readable_whatsapp_template_usage(report)
+    usage = report[:whatsapp_template_usage] || {}
+
+    WHATSAPP_TEMPLATE_USAGE_KEYS.map { |key| usage.fetch(key, 0) }
   end
 
   def generate_conversation_report_metrics(summary)

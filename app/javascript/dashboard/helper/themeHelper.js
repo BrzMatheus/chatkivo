@@ -1,6 +1,8 @@
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 
+export const COLOR_THEME_CHANGED_EVENT = 'chatwoot:color-theme-changed';
+
 export const setColorTheme = isOSOnDarkMode => {
   const selectedColorScheme =
     LocalStorage.get(LOCAL_STORAGE_KEYS.COLOR_SCHEME) || 'auto';
@@ -14,4 +16,6 @@ export const setColorTheme = isOSOnDarkMode => {
     document.body.classList.remove('dark');
     document.documentElement.style.setProperty('color-scheme', 'light');
   }
+
+  window.dispatchEvent(new CustomEvent(COLOR_THEME_CHANGED_EVENT));
 };

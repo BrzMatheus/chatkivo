@@ -9,6 +9,14 @@ import {
 } from 'shared/helpers/FileHelper';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 
+const isImageFile = file => {
+  const mime = file?.file?.type || file?.type || '';
+  if (mime.startsWith('image/')) return true;
+
+  const name = (file?.file?.name || file?.name || '').toLowerCase();
+  return /\.(apng|avif|bmp|gif|heic|heif|jpe?g|png|tiff?|webp)$/.test(name);
+};
+
 export default {
   computed: {
     ...mapGetters({
@@ -54,6 +62,11 @@ export default {
       );
     },
     onFileUpload(file) {
+      if (this.disableImageUpload && isImageFile(file)) {
+        useAlert(this.$t('CONVERSATION.WHATSAPP_IMAGE_UPLOAD_DISABLED'));
+        return;
+      }
+
       if (this.globalConfig.directUploadsEnabled) {
         this.onDirectFileUpload(file);
       } else {

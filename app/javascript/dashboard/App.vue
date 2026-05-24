@@ -9,7 +9,8 @@ import vueActionCable from './helper/actionCable';
 import { useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
 import WootSnackbarBox from './components/SnackbarContainer.vue';
-import { setColorTheme } from './helper/themeHelper';
+import { COLOR_THEME_CHANGED_EVENT, setColorTheme } from './helper/themeHelper';
+import { applyDashboardAppearance } from './helper/dashboardAppearanceHelper';
 import { isOnOnboardingView } from 'v3/helpers/RouteHelper';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useFontSize } from 'dashboard/composables/useFontSize';
@@ -51,6 +52,7 @@ export default {
     return {
       latestChatwootVersion: null,
       reconnectService: null,
+      themeMediaQuery: null,
     };
   },
   computed: {
@@ -64,6 +66,9 @@ export default {
     hideOnOnboardingView() {
       return !isOnOnboardingView(this.$route);
     },
+    currentAccount() {
+      return this.getAccount(this.currentAccountId);
+    },
   },
 
   watch: {
@@ -75,10 +80,20 @@ export default {
         }
       },
     },
+    currentAccount: {
+      deep: true,
+      handler(account) {
+        applyDashboardAppearance(account?.settings);
+      },
+    },
   },
   mounted() {
     this.initializeColorTheme();
     this.listenToThemeChanges();
+    window.addEventListener(
+      COLOR_THEME_CHANGED_EVENT,
+      this.applyCurrentAccountAppearance
+    );
     // If user locale is set, use it; otherwise use account locale
     this.setLocale(
       this.uiSettings?.locale || window.chatwootConfig.selectedLocale
@@ -88,14 +103,25 @@ export default {
     if (this.reconnectService) {
       this.reconnectService.disconnect();
     }
+
+    window.removeEventListener(
+      COLOR_THEME_CHANGED_EVENT,
+      this.applyCurrentAccountAppearance
+    );
+    if (this.themeMediaQuery) {
+      this.themeMediaQuery.onchange = null;
+    }
   },
   methods: {
     initializeColorTheme() {
       setColorTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
     },
     listenToThemeChanges() {
-      const mql = window.matchMedia('(prefers-color-scheme: dark)');
-      mql.onchange = e => setColorTheme(e.matches);
+      this.themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      this.themeMediaQuery.onchange = e => setColorTheme(e.matches);
+    },
+    applyCurrentAccountAppearance() {
+      applyDashboardAppearance(this.currentAccount?.settings);
     },
     setLocale(locale) {
       this.$root.$i18n.locale = locale;

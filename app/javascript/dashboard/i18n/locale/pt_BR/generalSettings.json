@@ -78,7 +78,47 @@
         "HIDE_PRIVATE_MESSAGES": {
           "TITLE": "Esconder mensagens privadas",
           "DESCRIPTION": "Esconde a opção de mensagem privada na barra da conversa e mantém apenas o modo responder disponível para esta conta."
+        },
+        "DISABLE_WHATSAPP_IMAGE_UPLOADS": {
+          "TITLE": "Desativar envio de imagens no WhatsApp",
+          "DESCRIPTION": "Remove e bloqueia o envio de imagens nas conversas de inbox WhatsApp. Outros anexos continuam disponíveis."
         }
+      },
+      "APPEARANCE": {
+        "TITLE": "Aparência do dashboard",
+        "DESCRIPTION": "Personalize a cor dos botões principais e o fundo do dashboard para esta conta.",
+        "RESET": "Redefinir",
+        "PRIMARY_COLOR": {
+          "LABEL": "Botões principais",
+          "DESCRIPTION": "Usado em ações principais, switches, foco e destaques da marca."
+        },
+        "BACKGROUND_COLOR_LIGHT": {
+          "LABEL": "Fundo claro",
+          "DESCRIPTION": "Aplicado quando o dashboard está no modo claro."
+        },
+        "BACKGROUND_COLOR_DARK": {
+          "LABEL": "Fundo escuro",
+          "DESCRIPTION": "Aplicado quando o dashboard está no modo escuro."
+        }
+      },
+      "AGENT_SIGNATURE": {
+        "TITLE": "Assinatura do atendente",
+        "DESCRIPTION": "Adiciona o nome do atendente nas respostas enviadas por esta conta.",
+        "TEMPLATE": {
+          "LABEL": "Texto da assinatura",
+          "PLACEHOLDER": "Atendente: {{agent_name}}",
+          "HELP": "Use {{agent_name}} para inserir o nome do atendente."
+        },
+        "MODE": {
+          "LABEL": "Aplicar em"
+        },
+        "MODES": {
+          "FIRST_MESSAGE_PER_AGENT": "Primeira mensagem de cada atendente na conversa",
+          "ALL_MESSAGES": "Todas as mensagens do atendente"
+        },
+        "PREVIEW_LABEL": "Prévia",
+        "PREVIEW_AGENT_NAME": "Maria Santos",
+        "PREVIEW_MESSAGE": "Olá, como posso ajudar?"
       }
     },
     "FORM": {

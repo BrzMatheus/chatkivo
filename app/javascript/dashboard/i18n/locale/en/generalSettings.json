@@ -78,7 +78,47 @@
         "HIDE_PRIVATE_MESSAGES": {
           "TITLE": "Hide private messages",
           "DESCRIPTION": "Hide the private message option in the conversation bar and keep only the reply mode available for this account."
+        },
+        "DISABLE_WHATSAPP_IMAGE_UPLOADS": {
+          "TITLE": "Disable WhatsApp image uploads",
+          "DESCRIPTION": "Remove and block image uploads in WhatsApp inbox conversations. Other attachments remain available."
         }
+      },
+      "APPEARANCE": {
+        "TITLE": "Dashboard appearance",
+        "DESCRIPTION": "Customize the main button color and dashboard background for this account.",
+        "RESET": "Reset",
+        "PRIMARY_COLOR": {
+          "LABEL": "Primary buttons",
+          "DESCRIPTION": "Used by primary actions, switches, focus states and brand accents."
+        },
+        "BACKGROUND_COLOR_LIGHT": {
+          "LABEL": "Light background",
+          "DESCRIPTION": "Applied when the dashboard is in light mode."
+        },
+        "BACKGROUND_COLOR_DARK": {
+          "LABEL": "Dark background",
+          "DESCRIPTION": "Applied when the dashboard is in dark mode."
+        }
+      },
+      "AGENT_SIGNATURE": {
+        "TITLE": "Agent message signature",
+        "DESCRIPTION": "Add the agent name to outbound replies for this account.",
+        "TEMPLATE": {
+          "LABEL": "Signature text",
+          "PLACEHOLDER": "Agent: {{agent_name}}",
+          "HELP": "Use {{agent_name}} to insert the agent name."
+        },
+        "MODE": {
+          "LABEL": "Apply to"
+        },
+        "MODES": {
+          "FIRST_MESSAGE_PER_AGENT": "First message from each agent in the conversation",
+          "ALL_MESSAGES": "Every agent message"
+        },
+        "PREVIEW_LABEL": "Preview",
+        "PREVIEW_AGENT_NAME": "Maria Santos",
+        "PREVIEW_MESSAGE": "Hello, how can I help?"
       }
     },
     "FORM": {

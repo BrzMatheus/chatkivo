@@ -577,6 +577,15 @@
     "AVG_FIRST_RESPONSE_TIME": "Tempo Médio de Primeira Resposta",
     "AVG_REPLY_TIME": "Tempo Médio de Espera do Cliente",
     "RESOLUTION_COUNT": "Contagem de Resolução",
-    "CONVERSATIONS": "Nº de Conversas"
+    "CONVERSATIONS": "Nº de Conversas",
+    "WHATSAPP_TEMPLATES": "Templates WhatsApp",
+    "WHATSAPP_TEMPLATE_TOTAL": "Total {count}",
+    "WHATSAPP_TEMPLATE_CATEGORIES": {
+      "UTILITY": "Utility",
+      "MARKETING": "Marketing",
+      "AUTHENTICATION": "Autenticação",
+      "SERVICE": "Serviço",
+      "OTHER": "Outros"
+    }
   }
 }

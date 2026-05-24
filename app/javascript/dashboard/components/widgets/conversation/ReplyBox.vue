@@ -62,6 +62,14 @@ const EmojiInput = defineAsyncComponent(
   () => import('shared/components/emoji/EmojiInput.vue')
 );
 
+const isImageFile = file => {
+  const mime = file?.file?.type || file?.type || '';
+  if (mime.startsWith('image/')) return true;
+
+  const name = (file?.file?.name || file?.name || '').toLowerCase();
+  return /\.(apng|avif|bmp|gif|heic|heif|jpe?g|png|tiff?|webp)$/.test(name);
+};
+
 export default {
   components: {
     ArticleSearchPopover,
@@ -178,6 +186,14 @@ export default {
     },
     hidePrivateMessages() {
       return !!this.getAccount(this.accountId)?.settings?.hide_private_messages;
+    },
+    disableImageUpload() {
+      return (
+        !this.isOnPrivateNote &&
+        this.isAWhatsAppChannel &&
+        !!this.getAccount(this.accountId)?.settings
+          ?.disable_whatsapp_image_uploads
+      );
     },
     isReplyWindowBypassedChannel() {
       // Telegram now uses can_reply for the expired badge, but this delivery
@@ -731,6 +747,14 @@ export default {
       // Filter valid files (non-zero size)
       Array.from(e.clipboardData.files)
         .filter(file => file.size > 0)
+        .filter(file => {
+          if (!this.disableImageUpload || !isImageFile(file)) {
+            return true;
+          }
+
+          useAlert(this.$t('CONVERSATION.WHATSAPP_IMAGE_UPLOAD_DISABLED'));
+          return false;
+        })
         .filter(file => {
           const isAllowed = isFileTypeAllowedForChannel(file, {
             channelType: this.channelType || this.inbox?.channel_type,
@@ -1436,6 +1460,7 @@ export default {
         :recording-audio-state="recordingAudioState"
         :send-button-text="replyButtonLabel"
         :show-audio-recorder="showAudioRecorder"
+        :disable-image-upload="disableImageUpload"
         :show-emoji-picker="showEmojiPicker"
         :show-file-upload="showFileUpload"
         :show-quoted-reply-toggle="shouldShowQuotedReplyToggle"

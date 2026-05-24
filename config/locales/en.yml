@@ -48,6 +48,8 @@ en:
     inbox_deletetion_response: Your inbox deletion request will be processed in some time.
 
   errors:
+    messages:
+      whatsapp_image_upload_disabled: Image uploads are disabled for WhatsApp conversations.
     validations:
       presence: must not be blank
     webhook:
@@ -151,6 +153,12 @@ en:
       avg_resolution_time: Avg resolution time
       resolution_count: Resolution Count
       avg_customer_waiting_time: Avg customer waiting time
+      whatsapp_templates_total: WhatsApp templates total
+      whatsapp_templates_utility: WhatsApp utility templates
+      whatsapp_templates_marketing: WhatsApp marketing templates
+      whatsapp_templates_authentication: WhatsApp authentication templates
+      whatsapp_templates_service: WhatsApp service templates
+      whatsapp_templates_other: WhatsApp other templates
     inbox_csv:
       inbox_name: Inbox name
       inbox_type: Inbox type

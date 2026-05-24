@@ -41,6 +41,13 @@ class Account < ApplicationRecord
         'audio_transcriptions': { 'type': %w[boolean null] },
         'auto_resolve_label': { 'type': %w[string null] },
         'hide_private_messages': { 'type': %w[boolean null] },
+        'disable_whatsapp_image_uploads': { 'type': %w[boolean null] },
+        'dashboard_primary_color': { 'type': %w[string null], 'pattern': '^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$' },
+        'dashboard_background_color_light': { 'type': %w[string null], 'pattern': '^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$' },
+        'dashboard_background_color_dark': { 'type': %w[string null], 'pattern': '^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$' },
+        'agent_message_signature_enabled': { 'type': %w[boolean null] },
+        'agent_message_signature_template': { 'type': %w[string null], 'maxLength': 160 },
+        'agent_message_signature_mode': { 'type': %w[string null], 'enum': %w[all_messages first_message_per_agent] + [nil] },
         'keep_pending_on_bot_failure': { 'type': %w[boolean null] },
         'conversation_required_attributes': {
           'type': %w[array null],
@@ -90,7 +97,9 @@ class Account < ApplicationRecord
 
   store_accessor :settings, :audio_transcriptions, :auto_resolve_label
   store_accessor :settings, :captain_models, :captain_features
-  store_accessor :settings, :hide_private_messages, :keep_pending_on_bot_failure
+  store_accessor :settings, :hide_private_messages, :disable_whatsapp_image_uploads, :keep_pending_on_bot_failure
+  store_accessor :settings, :dashboard_primary_color, :dashboard_background_color_light, :dashboard_background_color_dark
+  store_accessor :settings, :agent_message_signature_enabled, :agent_message_signature_template, :agent_message_signature_mode
 
   has_many :account_users, dependent: :destroy_async
   has_many :agent_bot_inboxes, dependent: :destroy_async

@@ -45,6 +45,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    disableImageUpload: {
+      type: Boolean,
+      default: false,
+    },
     showAudioRecorder: {
       type: Boolean,
       default: false,
@@ -224,10 +228,20 @@ export default {
         channelType = INBOX_TYPES.INSTAGRAM;
       }
 
-      return getAllowedFileTypesByChannel({
+      const allowedTypes = getAllowedFileTypesByChannel({
         channelType,
         medium: this.inbox?.medium,
       });
+
+      if (!this.disableImageUpload) {
+        return allowedTypes;
+      }
+
+      return allowedTypes
+        .split(',')
+        .map(type => type.trim())
+        .filter(type => !type.startsWith('image/'))
+        .join(', ');
     },
     enableDragAndDrop() {
       return !this.newConversationModalActive;

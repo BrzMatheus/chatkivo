@@ -12,6 +12,7 @@ import {
   getCoreRowModel,
 } from '@tanstack/vue-table';
 import { computed, onMounted, ref, h } from 'vue';
+import WhatsappTemplateUsageCell from './WhatsappTemplateUsageCell.vue';
 
 const props = defineProps({
   type: {
@@ -71,7 +72,7 @@ const defaulSpanRender = cellProps =>
     cellProps.getValue()
   );
 
-const columns = computed(() => [
+const baseColumns = computed(() => [
   columnHelper.accessor('name', {
     header: t(`SUMMARY_REPORTS.${props.type.toUpperCase()}`),
     width: 300,
@@ -104,6 +105,24 @@ const columns = computed(() => [
   }),
 ]);
 
+const agentTemplateUsageColumns = computed(() => {
+  if (props.type !== 'agent') return [];
+
+  return [
+    columnHelper.accessor('whatsappTemplateUsage', {
+      header: t('SUMMARY_REPORTS.WHATSAPP_TEMPLATES'),
+      width: 320,
+      cell: cellProps =>
+        h(WhatsappTemplateUsageCell, { usage: cellProps.getValue() }),
+    }),
+  ];
+});
+
+const columns = computed(() => [
+  ...baseColumns.value,
+  ...agentTemplateUsageColumns.value,
+]);
+
 const renderAvgTime = value => (value ? formatTime(value) : '--');
 
 const renderCount = value => (value ? value.toLocaleString() : '--');
@@ -117,6 +136,7 @@ const tableData = computed(() =>
       avgResolutionTime,
       avgReplyTime,
       resolvedConversationsCount,
+      whatsappTemplateUsage,
     } = rowMetrics;
     return {
       id: row.id,
@@ -128,6 +148,7 @@ const tableData = computed(() =>
       avgReplyTime: renderAvgTime(avgReplyTime),
       avgResolutionTime: renderAvgTime(avgResolutionTime),
       resolutionsCount: renderCount(resolvedConversationsCount),
+      whatsappTemplateUsage,
     };
   })
 );

@@ -107,7 +107,14 @@ class Api::V1::AccountsController < Api::BaseController
       :auto_resolve_ignore_waiting,
       :audio_transcriptions,
       :auto_resolve_label,
-      :hide_private_messages
+      :hide_private_messages,
+      :disable_whatsapp_image_uploads,
+      :dashboard_primary_color,
+      :dashboard_background_color_light,
+      :dashboard_background_color_dark,
+      :agent_message_signature_enabled,
+      :agent_message_signature_template,
+      :agent_message_signature_mode
     ]
   end
 
