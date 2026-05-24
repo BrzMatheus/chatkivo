@@ -436,7 +436,8 @@ class Message < ApplicationRecord
 
     Conversations::AssignmentService.new(
       conversation: conversation,
-      assignee_id: sender_id
+      assignee_id: sender_id,
+      assigned_at: created_at
     ).perform
   end
 

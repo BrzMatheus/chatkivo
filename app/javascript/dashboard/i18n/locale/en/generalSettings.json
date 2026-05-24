@@ -107,13 +107,13 @@
         "TEMPLATE": {
           "LABEL": "Signature text",
           "PLACEHOLDER": "Agent: {token}",
-          "HELP": "Use {token} to insert the agent name."
+          "HELP": "Use {token} to insert the agent name. Add blank lines to control the spacing before the message."
         },
         "MODE": {
           "LABEL": "Apply to"
         },
         "MODES": {
-          "FIRST_MESSAGE_PER_AGENT": "First message from each agent in the conversation",
+          "FIRST_MESSAGE_PER_AGENT": "First message after the agent takes over the conversation",
           "ALL_MESSAGES": "Every agent message"
         },
         "PREVIEW_LABEL": "Preview",

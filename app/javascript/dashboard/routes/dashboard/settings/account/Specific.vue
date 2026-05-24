@@ -6,7 +6,7 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import NextButton from 'dashboard/components-next/button/Button.vue';
-import NextInput from 'dashboard/components-next/input/Input.vue';
+import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import ColorPicker from 'dashboard/components-next/colorpicker/ColorPicker.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import {
@@ -181,11 +181,14 @@ const agentSignaturePreview = computed(() => {
   const agentName = t(
     'GENERAL_SETTINGS.SPECIFIC.AGENT_SIGNATURE.PREVIEW_AGENT_NAME'
   );
-  const signature = template.match(AGENT_NAME_TOKEN_REGEX)
+  const signatureText = template.match(AGENT_NAME_TOKEN_REGEX)
     ? template.replace(AGENT_NAME_TOKEN_REGEX, agentName)
     : `${template} ${agentName}`;
+  const signaturePrefix = signatureText.endsWith('\n')
+    ? signatureText
+    : `${signatureText}\n`;
 
-  return `${signature.trim()}\n${t(
+  return `${signaturePrefix}${t(
     'GENERAL_SETTINGS.SPECIFIC.AGENT_SIGNATURE.PREVIEW_MESSAGE'
   )}`;
 });
@@ -404,7 +407,7 @@ const saveSpecificSettings = async () => {
             </div>
 
             <div v-if="agentSignatureEnabledModel" class="grid gap-4">
-              <NextInput
+              <TextArea
                 :model-value="
                   agentSignatureSettings[AGENT_SIGNATURE_SETTING_KEYS.TEMPLATE]
                 "
@@ -424,6 +427,11 @@ const saveSpecificSettings = async () => {
                   )
                 "
                 class="w-full"
+                :max-length="160"
+                show-character-count
+                auto-height
+                resize
+                min-height="5rem"
                 @update:model-value="
                   value =>
                     updateAgentSignatureSetting(

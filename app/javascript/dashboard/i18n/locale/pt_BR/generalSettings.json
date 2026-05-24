@@ -107,13 +107,13 @@
         "TEMPLATE": {
           "LABEL": "Texto da assinatura",
           "PLACEHOLDER": "Atendente: {token}",
-          "HELP": "Use {token} para inserir o nome do atendente."
+          "HELP": "Use {token} para inserir o nome do atendente. Adicione linhas em branco para controlar o espaço antes da mensagem."
         },
         "MODE": {
           "LABEL": "Aplicar em"
         },
         "MODES": {
-          "FIRST_MESSAGE_PER_AGENT": "Primeira mensagem de cada atendente na conversa",
+          "FIRST_MESSAGE_PER_AGENT": "Primeira mensagem depois que o agente assume a conversa",
           "ALL_MESSAGES": "Todas as mensagens do atendente"
         },
         "PREVIEW_LABEL": "Prévia",
