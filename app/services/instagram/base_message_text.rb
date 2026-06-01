@@ -54,8 +54,7 @@ class Instagram::BaseMessageText < Instagram::WebhooksBaseService
     )
     return if message_to_delete.blank?
 
-    message_to_delete.attachments.destroy_all
-    message_to_delete.update!(content: I18n.t('conversations.messages.deleted'), deleted: true)
+    Messages::DeleteService.apply_local_deletion!(message_to_delete)
   end
 
   # Methods to be implemented by subclasses

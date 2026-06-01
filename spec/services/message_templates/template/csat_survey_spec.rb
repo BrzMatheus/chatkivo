@@ -36,6 +36,15 @@ describe MessageTemplates::Template::CsatSurvey do
         expect(message.content).to eq('Please rate your experience')
         expect(message.content_attributes['display_type']).to eq('star')
       end
+
+      it 'stores the assigned agent id when provided' do
+        agent = create(:user, account: account, role: :agent)
+
+        described_class.new(conversation: conversation, assigned_agent_id: agent.id).perform
+
+        message = conversation.messages.template.last
+        expect(message.content_attributes['csat_assigned_agent_id']).to eq(agent.id)
+      end
     end
   end
 end

@@ -5,12 +5,36 @@ describe Messages::DeleteService do
     context 'when outgoing message can be deleted locally' do
       let(:message) { create(:message, message_type: :outgoing, content: 'hello') }
 
+      it 'marks the message as deleted and preserves the content by default' do
+        result = described_class.new(message: message).perform
+
+        expect(result[:success]).to be(true)
+        expect(message.reload.deleted).to be(true)
+        expect(message.content).to eq('hello')
+        expect(message.content_attributes).to include(
+          'deleted' => true,
+          'deleted_content_preserved' => true
+        )
+      end
+    end
+
+    context 'when deleted content preservation is disabled' do
+      let(:message) { create(:message, message_type: :outgoing, content: 'hello') }
+
+      before do
+        message.account.update!(preserve_deleted_message_content: false)
+      end
+
       it 'applies local tombstone' do
         result = described_class.new(message: message).perform
 
         expect(result[:success]).to be(true)
         expect(message.reload.deleted).to be(true)
         expect(message.content).to eq('This message was deleted')
+        expect(message.content_attributes).to include(
+          'deleted' => true,
+          'deleted_content_preserved' => false
+        )
       end
     end
 
@@ -38,12 +62,16 @@ describe Messages::DeleteService do
         )
       end
 
-      it 'applies local tombstone' do
+      it 'marks the message as deleted and preserves the content by default' do
         result = described_class.new(message: message).perform
 
         expect(result[:success]).to be(true)
         expect(message.reload.deleted).to be(true)
-        expect(message.content).to eq('This message was deleted')
+        expect(message.content).to eq('hello from api')
+        expect(message.content_attributes).to include(
+          'deleted' => true,
+          'deleted_content_preserved' => true
+        )
       end
     end
 

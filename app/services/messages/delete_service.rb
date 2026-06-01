@@ -22,7 +22,10 @@ class Messages::DeleteService
   end
 
   def self.preserve_deleted_content?(message)
-    ActiveModel::Type::Boolean.new.cast(message.account.preserve_deleted_message_content)
+    setting = message.account.preserve_deleted_message_content
+    return true if setting.nil?
+
+    ActiveModel::Type::Boolean.new.cast(setting)
   end
 
   def self.deleted_content_attributes(message, preserve_content: false)

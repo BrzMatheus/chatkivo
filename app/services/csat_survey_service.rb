@@ -1,5 +1,5 @@
 class CsatSurveyService
-  pattr_initialize [:conversation!]
+  pattr_initialize [:conversation!, :assigned_agent_id, :allow_unresolved]
 
   def perform
     return unless should_send_csat_survey?
@@ -9,7 +9,7 @@ class CsatSurveyService
     elsif inbox.twilio_whatsapp? && twilio_template_available_and_approved?
       send_twilio_whatsapp_template_survey
     elsif within_messaging_window?
-      ::MessageTemplates::Template::CsatSurvey.new(conversation: conversation).perform
+      send_regular_survey
     else
       create_csat_not_sent_activity_message
     end
@@ -24,7 +24,7 @@ class CsatSurveyService
   end
 
   def conversation_allows_csat?
-    conversation.resolved? && !conversation.tweet?
+    (conversation.resolved? || allow_unresolved) && !conversation.tweet?
   end
 
   def csat_enabled?
@@ -140,8 +140,26 @@ class CsatSurveyService
       inbox: inbox,
       message_type: :outgoing,
       content: inbox.csat_config&.dig('message') || 'Please rate this conversation',
-      content_type: :input_csat
+      content_type: :input_csat,
+      content_attributes: csat_content_attributes
     )
+  end
+
+  def send_regular_survey
+    params = { conversation: conversation }
+    params[:assigned_agent_id] = csat_assigned_agent_id if csat_assigned_agent_id.present?
+
+    ::MessageTemplates::Template::CsatSurvey.new(**params).perform
+  end
+
+  def csat_content_attributes
+    return {} if csat_assigned_agent_id.blank?
+
+    { csat_assigned_agent_id: csat_assigned_agent_id }
+  end
+
+  def csat_assigned_agent_id
+    assigned_agent_id.presence || conversation.additional_attributes&.dig('csat_assigned_agent_id')
   end
 
   def csat_config

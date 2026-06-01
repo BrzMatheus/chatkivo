@@ -128,7 +128,7 @@ const replyToPreview = computed(() => {
     <slot />
     <div
       v-if="shouldShowDeletedMarker"
-      class="mt-0.5 text-[11px] leading-3 text-n-slate-11/70"
+      class="flex mt-0.5 text-[11px] leading-3 text-n-slate-11/70"
       :class="flexOrientationClass"
     >
       {{ t('CONVERSATION.DELETED_MESSAGE_MARKER') }}

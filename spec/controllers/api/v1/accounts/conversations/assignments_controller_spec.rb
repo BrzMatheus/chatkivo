@@ -158,6 +158,23 @@ RSpec.describe 'Conversation Assignment API', type: :request do
         .with(conversation, { account_id: conversation.account_id, inbox_id: conversation.inbox_id, message_type: :activity,
                               content: "Conversation unassigned by #{agent.name}" }))
       end
+
+      it 'triggers CSAT survey when unassigning from resolve action' do
+        csat_service = instance_double(CsatSurveyService, perform: true)
+        params = { assignee_id: nil, send_csat_survey: true }
+
+        expect(CsatSurveyService).to receive(:new)
+          .with(conversation: conversation, assigned_agent_id: agent.id, allow_unresolved: true)
+          .and_return(csat_service)
+
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: params,
+             headers: agent.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(csat_service).to have_received(:perform)
+      end
     end
 
     context 'when conversation already has a team' do

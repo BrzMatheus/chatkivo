@@ -95,6 +95,7 @@ describe('#ConversationAPI', () => {
         `/api/v1/conversations/12/assignments`,
         {
           assignee_id: 34,
+          send_csat_survey: false,
         }
       );
     });

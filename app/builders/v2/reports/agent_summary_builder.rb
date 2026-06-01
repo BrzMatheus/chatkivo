@@ -2,6 +2,7 @@ class V2::Reports::AgentSummaryBuilder < V2::Reports::BaseSummaryBuilder
   pattr_initialize [:account!, :params!]
 
   TEMPLATE_CATEGORY_KEYS = %i[authentication marketing utility service other].freeze
+  TEMPLATE_MESSAGE_TYPES = [Message.message_types[:outgoing], Message.message_types[:template]].freeze
 
   def build
     load_data
@@ -63,7 +64,7 @@ class V2::Reports::AgentSummaryBuilder < V2::Reports::BaseSummaryBuilder
            .joins(:inbox)
            .reorder(nil)
            .where(created_at: range, sender_type: 'User', private: false)
-           .where(message_type: Message.message_types[:outgoing])
+           .where(message_type: TEMPLATE_MESSAGE_TYPES)
            .where(status: [Message.statuses[:sent], Message.statuses[:delivered], Message.statuses[:read]])
            .where(inboxes: { channel_type: 'Channel::Whatsapp' })
            .where("messages.additional_attributes ? 'template_params'")

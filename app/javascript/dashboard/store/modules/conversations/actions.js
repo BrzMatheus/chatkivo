@@ -225,11 +225,15 @@ const actions = {
     }
   },
 
-  assignAgent: async ({ dispatch }, { conversationId, agentId }) => {
+  assignAgent: async (
+    { dispatch },
+    { conversationId, agentId, sendCSATSurvey = false }
+  ) => {
     try {
       const response = await ConversationApi.assignAgent({
         conversationId,
         agentId,
+        sendCSATSurvey,
       });
       dispatch('setCurrentChatAssignee', {
         conversationId,

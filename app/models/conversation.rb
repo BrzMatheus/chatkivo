@@ -240,9 +240,18 @@ class Conversation < ApplicationRecord
   def unassign_on_resolve
     return unless status_changed? && resolved?
 
+    preserve_csat_assigned_agent_id
     self.assignee_id = nil
     self.team_id = nil
     self.assignee_agent_bot_id = nil
+  end
+
+  def preserve_csat_assigned_agent_id
+    agent_id = assignee_id.presence
+    agent_id ||= Current.user.id if Current.user.is_a?(User)
+    return if agent_id.blank?
+
+    self.additional_attributes = additional_attributes.merge('csat_assigned_agent_id' => agent_id)
   end
 
   def ensure_snooze_until_reset

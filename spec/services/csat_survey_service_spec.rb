@@ -28,6 +28,19 @@ describe CsatSurveyService do
         expect(MessageTemplates::Template::CsatSurvey).to have_received(:new).with(conversation: conversation)
         expect(csat_template).to have_received(:perform)
       end
+
+      it 'sends CSAT survey for unresolved resolve actions' do
+        conversation.update(status: :open)
+        agent = create(:user, account: account, role: :agent)
+
+        described_class.new(conversation: conversation, assigned_agent_id: agent.id, allow_unresolved: true).perform
+
+        expect(MessageTemplates::Template::CsatSurvey).to have_received(:new).with(
+          conversation: conversation,
+          assigned_agent_id: agent.id
+        )
+        expect(csat_template).to have_received(:perform)
+      end
     end
 
     context 'when outside messaging window' do

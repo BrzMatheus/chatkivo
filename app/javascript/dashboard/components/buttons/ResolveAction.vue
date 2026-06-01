@@ -109,6 +109,7 @@ const onCmdResolveConversation = async () => {
     await store.dispatch('assignAgent', {
       conversationId: currentChat.value.id,
       agentId: null,
+      sendCSATSurvey: true,
     });
     useAlert(t('CONVERSATION.OWNERSHIP_CLEARED'));
   } finally {

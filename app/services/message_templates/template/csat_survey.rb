@@ -1,5 +1,5 @@
 class MessageTemplates::Template::CsatSurvey
-  pattr_initialize [:conversation!]
+  pattr_initialize [:conversation!, :assigned_agent_id]
 
   def perform
     ActiveRecord::Base.transaction do
@@ -33,8 +33,10 @@ class MessageTemplates::Template::CsatSurvey
   end
 
   def content_attributes
-    {
+    attributes = {
       display_type: csat_config['display_type'] || 'emoji'
     }
+    attributes[:csat_assigned_agent_id] = assigned_agent_id if assigned_agent_id.present?
+    attributes
   end
 end

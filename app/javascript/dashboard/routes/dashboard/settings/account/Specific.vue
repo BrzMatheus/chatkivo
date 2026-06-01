@@ -232,7 +232,7 @@ watch(
       [ACCOUNT_SETTING_KEYS.DISABLE_WHATSAPP_IMAGE_UPLOADS]:
         !!account.settings?.disable_whatsapp_image_uploads,
       [ACCOUNT_SETTING_KEYS.PRESERVE_DELETED_MESSAGE_CONTENT]:
-        !!account.settings?.preserve_deleted_message_content,
+        account.settings?.preserve_deleted_message_content !== false,
     };
     dashboardAppearanceSettings.value = getDashboardAppearanceSettings(
       account.settings

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useNumberFormatter } from 'shared/composables/useNumberFormatter';
 
 const props = defineProps({
   usage: {
@@ -9,7 +10,8 @@ const props = defineProps({
   },
 });
 
-const { t, n } = useI18n();
+const { t } = useI18n();
+const { formatFullNumber } = useNumberFormatter();
 
 const categoryKeys = [
   'utility',
@@ -49,7 +51,11 @@ const categoryItems = computed(() =>
     <span
       class="inline-flex items-center gap-1 rounded-md bg-n-alpha-2 px-2 py-1 text-xs font-medium text-n-slate-12"
     >
-      {{ t('SUMMARY_REPORTS.WHATSAPP_TEMPLATE_TOTAL', { count: n(total) }) }}
+      {{
+        t('SUMMARY_REPORTS.WHATSAPP_TEMPLATE_TOTAL', {
+          count: formatFullNumber(total),
+        })
+      }}
     </span>
     <span
       v-for="item in categoryItems"
@@ -57,7 +63,9 @@ const categoryItems = computed(() =>
       class="inline-flex items-center gap-1 rounded-md bg-n-solid-3 px-2 py-1 text-xs text-n-slate-11"
     >
       <span>{{ item.label }}</span>
-      <span class="font-medium text-n-slate-12">{{ n(item.count) }}</span>
+      <span class="font-medium text-n-slate-12">
+        {{ formatFullNumber(item.count) }}
+      </span>
     </span>
   </div>
 </template>

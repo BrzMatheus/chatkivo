@@ -36,6 +36,13 @@ const isEmpty = computed(() => {
   return !content.value && !attachments.value?.length;
 });
 
+const isDeletedContentPreserved = computed(() => {
+  return (
+    contentAttributes.value?.deleted &&
+    contentAttributes.value?.deletedContentPreserved
+  );
+});
+
 const handleSeeOriginal = () => {
   renderOriginal.value = !renderOriginal.value;
 };
@@ -47,7 +54,11 @@ const handleSeeOriginal = () => {
       <span v-if="isEmpty" class="text-n-slate-11">
         {{ $t('CONVERSATION.NO_CONTENT') }}
       </span>
-      <FormattedContent v-if="renderContent" :content="renderContent" />
+      <FormattedContent
+        v-if="renderContent"
+        :content="renderContent"
+        :class="{ 'line-through': isDeletedContentPreserved }"
+      />
       <TranslationToggle
         v-if="hasTranslations"
         class="-mt-3"

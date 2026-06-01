@@ -162,6 +162,13 @@ RSpec.describe Conversation do
                                                                     changed_attributes: changed_attributes, performed_by: nil)
     end
 
+    it 'keeps the assigned agent id for CSAT before unassigning on resolve' do
+      conversation.update!(status: :resolved)
+
+      expect(conversation.reload.assignee).to be_nil
+      expect(conversation.additional_attributes['csat_assigned_agent_id']).to eq(old_assignee.id)
+    end
+
     it 'will not run conversation_updated event for empty updates' do
       conversation.save!
       expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
