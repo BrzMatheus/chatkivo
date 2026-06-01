@@ -39,7 +39,8 @@ const isEmpty = computed(() => {
 const isDeletedContentPreserved = computed(() => {
   return (
     contentAttributes.value?.deleted &&
-    contentAttributes.value?.deletedContentPreserved
+    (contentAttributes.value?.deletedContentPreserved ||
+      contentAttributes.value?.deleted_content_preserved)
   );
 });
 

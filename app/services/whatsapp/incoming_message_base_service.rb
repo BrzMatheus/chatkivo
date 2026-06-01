@@ -76,6 +76,8 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def update_message_with_status(message, status)
+    return Messages::DeleteService.apply_local_deletion!(message) if status[:status] == 'deleted'
+
     message.status = status[:status]
     if status[:status] == 'failed' && status[:errors].present?
       error = status[:errors]&.first

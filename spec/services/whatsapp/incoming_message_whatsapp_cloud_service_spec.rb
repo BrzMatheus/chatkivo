@@ -189,6 +189,55 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
       end
     end
 
+    context 'when deleted status params are received' do
+      let(:contact) { create(:contact, account: whatsapp_channel.account, phone_number: '+2423423243') }
+      let(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: whatsapp_channel.inbox, source_id: '2423423243') }
+      let(:conversation) do
+        create(
+          :conversation,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          contact: contact,
+          contact_inbox: contact_inbox
+        )
+      end
+      let!(:message) do
+        create(
+          :message,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          conversation: conversation,
+          source_id: 'wamid.deleted-cloud-message',
+          content: 'cloud text'
+        )
+      end
+      let(:status_params) do
+        {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                statuses: [{ id: 'wamid.deleted-cloud-message', status: 'deleted' }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+      end
+
+      it 'marks the message as locally deleted and keeps the original content visible' do
+        described_class.new(inbox: whatsapp_channel.inbox, params: status_params).perform
+
+        expect(message.reload.status).to eq('sent')
+        expect(message.content).to eq('cloud text')
+        expect(message.deleted).to be(true)
+        expect(message.content_attributes).to include(
+          'deleted' => true,
+          'deleted_content_preserved' => true
+        )
+      end
+    end
+
     context 'when invalid params' do
       it 'will not throw error' do
         described_class.new(inbox: whatsapp_channel.inbox, params: { phone_number: whatsapp_channel.phone_number,

@@ -280,7 +280,7 @@ describe Whatsapp::IncomingMessageService do
         expect(message.external_error).to eq('123: abc')
       end
 
-      it 'will not throw error if unsupported status' do
+      it 'marks deleted statuses as locally deleted and preserves the content' do
         status_params = {
           'statuses' => [{ 'recipient_id' => from, 'id' => from, 'status' => 'deleted',
                            'errors' => [{ 'code': 123, 'title': 'abc' }] }]
@@ -288,7 +288,16 @@ describe Whatsapp::IncomingMessageService do
 
         message = Message.find_by!(source_id: from)
         expect(message.status).to eq('sent')
-        expect { described_class.new(inbox: whatsapp_channel.inbox, params: status_params).perform }.not_to raise_error
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: status_params).perform
+
+        expect(message.reload.status).to eq('sent')
+        expect(message.content).to eq('Test')
+        expect(message.deleted).to be(true)
+        expect(message.content_attributes).to include(
+          'deleted' => true,
+          'deleted_content_preserved' => true
+        )
       end
     end
 
