@@ -1,6 +1,5 @@
 <script>
 import { useAlert } from 'dashboard/composables';
-import Branding from 'shared/components/Branding.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import Rating from 'survey/components/Rating.vue';
 import Feedback from 'survey/components/Feedback.vue';
@@ -13,7 +12,6 @@ import { CSAT_DISPLAY_TYPES } from 'shared/constants/messages';
 export default {
   name: 'Response',
   components: {
-    Branding,
     Rating,
     Spinner,
     Banner,
@@ -195,9 +193,6 @@ export default {
           :selected-rating="selectedRating"
           @send-feedback="sendFeedback"
         />
-      </div>
-      <div class="mb-3">
-        <Branding />
       </div>
     </div>
   </div>
