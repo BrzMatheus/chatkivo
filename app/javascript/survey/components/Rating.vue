@@ -134,9 +134,23 @@ const onClick = rating => {
             stroke="currentColor"
             stroke-width="2.4"
           />
-          <g fill="currentColor">
+          <g v-if="rating.face !== 'excellent'" fill="currentColor">
             <circle cx="18" cy="19" r="2.1" />
             <circle cx="30" cy="19" r="2.1" />
+          </g>
+          <g v-else>
+            <path
+              d="M16 18.5c1.1 1.4 3.3 1.4 4.4 0"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="2.4"
+            />
+            <path
+              d="M27.6 18.5c1.1 1.4 3.3 1.4 4.4 0"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="2.4"
+            />
           </g>
           <path
             v-if="rating.face === 'verySad'"
@@ -168,7 +182,7 @@ const onClick = rating => {
           />
           <path
             v-else
-            d="M15 27.5c2.5 5.2 5.5 7.8 9 7.8s6.5-2.6 9-7.8"
+            d="M15.5 27.5c2.3 5.8 5.1 8.7 8.5 8.7s6.2-2.9 8.5-8.7"
             stroke="currentColor"
             stroke-linecap="round"
             stroke-width="2.8"
